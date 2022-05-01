@@ -1,4 +1,5 @@
 from __future__ import annotations
+import inspect
 
 import re
 from numpydoc.docscrape import NumpyDocString as process_doc, Parameter
@@ -8,11 +9,13 @@ from typing import (
     Callable,
     Dict,
     Iterable,
+    Literal,
     Mapping,
     TypeVar,
     Any,
     Generic,
     Union,
+    overload,
 )
 from typing_extensions import ParamSpec, Self, Concatenate
 
@@ -288,19 +291,6 @@ class DuckGroup(commands.GroupMixin[CogT], DuckCommand[CogT, P, T]):
         self.invoke_without_command: bool = attrs.pop('invoke_without_command', False)
         super().__init__(*args, **attrs)
 
-    def copy(self) -> Self:
-        """Creates a copy of this :class:`Group`.
-
-        Returns
-        --------
-        :class:`Group`
-            A new instance of this group.
-        """
-        ret = super().copy()
-        for cmd in self.commands:
-            ret.add_command(cmd.copy())
-        return ret
-
     def command(self, *args: Any, **kwargs: Any) -> Callable[..., DuckCommand]:
         """
         Register a function as a :class:`DuckCommand`.
@@ -438,12 +428,31 @@ class DuckHybridCommand(commands.HybridCommand, DuckCommand):
 
 @discord.utils.copy_doc(commands.HybridGroup)
 class DuckHybridGroup(commands.HybridGroup, DuckGroup):
-    def autocomplete(self, name: str, slash: bool = True, message: bool = False):
+    def autocomplete(self, name: str, slash: bool = True):
         if slash is True:
             return commands.HybridGroup.autocomplete(self, name)
-        elif message is True:
+        else:
             return DuckGroup.autocomplete(self, name)
 
+    @overload
+    def command(self, name: str, slash: Literal[True] = True, *args: Any, **kwargs: Any) -> Callable[..., DuckHybridCommand]:
+        ...
+    
+    @overload
+    def command(self, name: str, slash: Literal[False],*args: Any, **kwargs: Any) -> Callable[..., DuckCommand]:
+        ...
+
+    def command(self, name: str, slash: bool = True, *args: Any, **kwargs: Any) -> Callable[..., Union[DuckCommand, commands.HybridCommand]]:
+        if slash is True:
+            return super().command(name=name, *args, **kwargs)
+        else:
+            return DuckGroup.command(self, name=name, *args, **kwargs)
+    
+    def add_command(self, command: Union[DuckCommand, commands.HybridCommand]) -> None:
+        if isinstance(command, (commands.HybridCommand, commands.HybridGroup, DuckHybridCommand, DuckHybridGroup)):
+           super().add_command(command)
+        else:
+            DuckGroup.add_command(self, command)
 
 def command(
     name: str = MISSING,

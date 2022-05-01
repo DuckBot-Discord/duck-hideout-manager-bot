@@ -7,6 +7,7 @@ import discord
 
 from discord.ext import commands
 from utils import DuckCog, DuckContext, SilentCommandError
+from utils.command import command, group
 
 from .mod import Moderation
 
@@ -61,7 +62,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             return mod
         raise commands.BadArgument('This service is not available at the moment.')
 
-    @commands.command()
+    @command()
     @hideout_only()
     async def addbot(self, ctx: DuckContext, bot: discord.User, *, reason: commands.clean_content):
         if not bot.bot:
@@ -192,7 +193,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
 
     @hideout_only()
     @commands.is_owner()
-    @commands.command(name='register-bot', aliases=['rbot', 'rb'])
+    @command(name='register-bot', aliases=['rbot', 'rb'])
     async def _register_bot(self, ctx: DuckContext, owner: discord.Member, bot: discord.Member):
         """ Register a bot to the database. """
         if owner.bot:
@@ -207,7 +208,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             raise e
 
     @pit_owner_only()
-    @commands.group(name='pit')
+    @group(name='pit', hybrid=True)
     async def pit(self, ctx: DuckContext):
         """ Pit management commands. """
         if ctx.invoked_subcommand is None and ctx.subcommand_passed is None:
@@ -259,7 +260,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             await ctx.send(f'✅ **|** Blocked **{discord.utils.remove_markdown(str(member))}** from **{ctx.channel}**')
 
     @commands.is_owner()
-    @pit.command(name='setowner', aliases=['set-owner'])
+    @pit.command(name='setowner', aliases=['set-owner'], slash=False)
     async def pit_set_owner(self, ctx: DuckContext, member: discord.Member):
         """ Set the owner of the pit. """
         try:
@@ -270,7 +271,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
         await ctx.message.add_reaction('✅')
 
     @commands.is_owner()
-    @pit.command(name='create')
+    @pit.command(name='create', slash=False)
     async def pit_create(self, ctx: DuckContext, owner: discord.Member, *, name: str):
         """ Create a pit. """
 
