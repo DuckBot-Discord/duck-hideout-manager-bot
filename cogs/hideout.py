@@ -1,13 +1,16 @@
 import contextlib
 import logging
 import re
+from typing import Optional
 
 import asyncpg
 import discord
 
+from discord import app_commands
 from discord.ext import commands
 from utils import DuckCog, DuckContext, SilentCommandError
 from utils.command import command, group
+from utils.time import ShortTime
 
 from .mod import Moderation
 
@@ -215,8 +218,16 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             await ctx.send_help(ctx.command)
 
     @pit.command(name='ban')
-    async def pit_ban(self, ctx: DuckContext, member: discord.Member):
-        """ Ban a member from the pit. """
+    @pit_owner_only()
+    @app_commands.rename(_for='for')
+    async def pit_ban(self, ctx: DuckContext, member: discord.Member, _for: Optional[ShortTime]):
+        """ Ban a member from the pit. 
+        
+        member: discord.Member
+            The member to ban from this pit
+        for: str
+            For how much should this member stay banned? (e.g. 1h, 1d, 1h2m30s)
+        """
         if member.id == ctx.author.id:
             raise commands.BadArgument('You cannot ban yourself.')
         channel = ctx.channel
@@ -235,8 +246,12 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             await ctx.send('🥴 Something went wrong...')
         else:
             await ctx.send(f'✅ **|** Blocked **{discord.utils.remove_markdown(str(member))}** from **{ctx.channel}**')
+        if _for:
+            await self.bot.create_timer(_for.dt, 'tempblock', ctx.guild.id, ctx.channel.id, member.id, ctx.author.id, precise=False)
+
 
     @pit.command(name='unban')
+    @pit_owner_only()
     async def pit_unban(self, ctx: DuckContext, member: discord.Member):
         """ Unban a member from the pit. """
         if member.id == ctx.author.id:
