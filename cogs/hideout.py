@@ -231,6 +231,8 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             raise e
 
     @pit_owner_only()
+    @app_commands.guild_only()
+    @app_commands.default_permissions(manage_messages=True)
     @group(name='pit', hybrid=True)
     async def pit(self, ctx: DuckContext):
         """Pit management commands."""
