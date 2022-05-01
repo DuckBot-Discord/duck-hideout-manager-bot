@@ -183,7 +183,7 @@ class DuckContext(commands.Context, Generic[BotT]):
         elif isinstance(content, FormatString):
             content = await self.translate(content.id, *content.args, locale=locale)
 
-        return await super().send(content, **kwargs)
+        return await super().send(content, *args, **kwargs)
 
     async def confirm(self, content=None, /, *, timeout: int = 30, **kwargs) -> bool | None:
         """|coro|

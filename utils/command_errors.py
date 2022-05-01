@@ -40,13 +40,13 @@ async def on_command_error(ctx: DuckContext, error: Exception) -> None:
     if isinstance(error, ignored):
         return
     elif isinstance(error, errors.StringTranslatedCommandError):
-        await ctx.send(error.translation_id, *error.args, ephemerl=True)
+        await ctx.send(error.translation_id, *error.args, ephemeral=True)
     elif isinstance(error, (commands.UserInputError, errors.DuckBotException)):
-        await ctx.send(str(error), ephemerl=True)
+        await ctx.send(str(error), ephemeral=True)
     elif isinstance(error, commands.CommandInvokeError):
         return await on_command_error(ctx, error.original)
     elif isinstance(error, errors.DuckBotNotStarted):
-        await ctx.send('Oop! Duckbot has not started yet, try again soon.', ephemerl=True)
+        await ctx.send('Oop! Duckbot has not started yet, try again soon.', ephemeral=True)
     else:
         await ctx.bot.exceptions.add_error(error=error, ctx=ctx)
 
