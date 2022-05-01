@@ -30,10 +30,10 @@ async def setup(bot):
 def pit_owner_only():
     async def predicate(ctx: DuckContext):
         if (
-            isinstance(ctx.channel, discord.DMChannel)
+            isinstance(ctx.channel, (discord.DMChannel, discord.GroupChannel, discord.PartialMessageable))
             or ctx.guild.id != DUCK_HIDEOUT
             or ctx.channel.category_id != PIT_CATEGORY
-        ):  # type: ignore
+        ):
             raise SilentCommandError
 
         if await ctx.bot.is_owner(ctx.author):
@@ -343,3 +343,25 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
                 owner.id,
             )
             await ctx.send(f'✅ **|** Created **{channel}**')
+
+    @command(hybrid=True)
+    async def whoadd(self, ctx: DuckContext, bot: discord.Member):
+        """Checks who added a specific bot.
+
+        Parameters
+        ----------
+        bot: discord.User
+            The bot to check it's owner.
+        """
+        if not bot.bot:
+            raise commands.BadArgument('This user is not a bot.')
+        data = await self.bot.pool.fetchrow('SELECT * FROM addbot WHERE bot_id = $1', bot.id)
+        if not data:
+            raise commands.BadArgument('No data found...')
+        embed = discord.Embed(title='Bot info')
+        embed.add_field(name='Bot ID', value=bot.id)
+        embed.add_field(name='Reason', value=data['reason'])
+        user: discord.User = await ctx.bot.get_or_fetch_user(data['owner_id'])  # type: ignore
+        embed.add_field(name='Added by', value=f"{user.mention} (`{user.id}`)")
+        embed.add_field(name='Added at', value=discord.utils.format_dt(bot.joined_at or bot.created_at, 'R'))
+        await ctx.send(embed=embed)
