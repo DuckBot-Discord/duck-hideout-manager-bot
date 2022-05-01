@@ -1,7 +1,6 @@
 import contextlib
 import logging
 import re
-from typing import TYPE_CHECKING
 
 import asyncpg
 import discord
@@ -9,8 +8,7 @@ import discord
 from discord.ext import commands
 from utils import DuckCog, DuckContext, SilentCommandError
 
-if TYPE_CHECKING:
-    from .mod import Moderation
+from .mod import Moderation
 
 url_regex = re.compile(r"^http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|)+$")
 DUCK_HIDEOUT = 774561547930304536
@@ -21,8 +19,8 @@ GENERAL_CHANNEL = 774561548659458081
 PIT_CATEGORY = 915494807349116958
 
 
-def setup(bot):
-    bot.add_cog(Hideout(bot))
+async def setup(bot):
+    await bot.add_cog(Hideout(bot))
 
 def pit_owner_only():
     async def predicate(ctx: DuckContext):
