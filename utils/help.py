@@ -582,30 +582,20 @@ class HelpView(discord.ui.View):
             'Use `db.help <category>` for more info on a category.',
             'You can also use the menu below to view a category.',
         ]
-        getting_support: List[str] = [
-            'To get help, you can join my support server.',
-            f'{SERVERS_ICON} https://discord.gg/TdRfGKg8Wh',
-            '📨 You can also send me a DM if you prefer to.',
-        ]
 
         embed = discord.Embed(
             title='DuckBot Help Menu', description='Hello, I\'m DuckBot! A multi-purpose bot with a lot of features.'
         )
         embed.set_author(name=self.bot.user.name, icon_url=self.bot.user.display_avatar.url)
         embed.add_field(name='Getting Help', value='\n'.join(getting_help), inline=False)
-        embed.add_field(name='Getting Support', value='\n'.join(getting_support), inline=False)
         embed.add_field(
             name='Who am I?',
-            value=f'I\'m DuckBot, a multipurpose bot created and maintained by {GITHUB}[LeoCx1000](https://github.com/LeoCx1000).'
-            'and assisted by [NextChai](https://github.com/NextChai). You can use me to play games, moderate your server, mess with some images and more! '
+            value=
+            f'I\'m **{self.bot.user.name}**, the helper bot for the Duck Hideout community. Maintained by {GITHUB}[LeoCx1000](https://github.com/LeoCx1000).'
+            'You can use me to do all things related to the Duck Hideout community. '
             'Check out all my features using the dropdown below.\n\n'
             f'I\'ve been online since {self.bot.uptime_timestamp}.\n'
-            f'You can find my source code on {GITHUB}[GitHub](https://github.com/LeoCx1000/discord-bots/tree/rewrite).',
-            inline=False,
-        )
-        embed.add_field(
-            name='Support DuckBot',
-            value='If you like DuckBot, you can support by voting here:\n' '⭐ https://top.gg/bot/788278464474120202 ⭐',
+            f'You can find my source code on {GITHUB}[GitHub](https://github.com/LeoCx1000/duck-hideout-manager-bot).',
             inline=False,
         )
         embed.set_footer(text=f'{NON_MARKDOWN_INFORMATION_SOURCE} For more info on a command press {QUESTION_MARK} help.')
