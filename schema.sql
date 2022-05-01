@@ -9,13 +9,6 @@ CREATE TABLE IF NOT EXISTS guilds (
     mutes BIGINT[] NOT NULL DEFAULT ARRAY[]::BIGINT[]
 );
 
-CREATE TABLE IF NOT EXISTS news (
-    news_id BIGINT PRIMARY KEY,
-    title VARCHAR(256) NOT NULL,
-    content VARCHAR(1024) NOT NULL,
-    author_id BIGINT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS timers (
     id BIGSERIAL PRIMARY KEY,
     precise BOOLEAN DEFAULT TRUE,
@@ -47,33 +40,6 @@ CREATE TABLE IF NOT EXISTS blacklist (
     guild_id bigint NOT NULL default 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     PRIMARY KEY (blacklist_type, entity_id, guild_id)
-);
-
--- not as important as roles. But still.
-CREATE TABLE IF NOT EXISTS disabled_entities (
-    guild_id BIGINT,
-    entity_id BIGINT,
-    PRIMARY KEY (guild_id, entity_id)
-);
-
-CREATE TABLE IF NOT EXISTS disabled_commands (
-    guild_id BIGINT,
-    entity_id BIGINT,
-    command_name TEXT,
-    whitelist BOOLEAN DEFAULT FALSE,
-    PRIMARY KEY (guild_id, entity_id, command_name)
-);
-
-CREATE TABLE IF NOT EXISTS badges (
-    badge_id BIGSERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    emoji TEXT NOT NULL
-);
-
-CREATE TABLE acknowledgements (
-    user_id BIGINT,
-    badge_id BIGINT REFERENCES badges(badge_id) ON DELETE CASCADE,
-    PRIMARY KEY (user_id, badge_id)
 );
 
 -- Functions that are dispatched to a listener
