@@ -437,22 +437,25 @@ class DuckHybridGroup(commands.HybridGroup, DuckGroup):
     @overload
     def command(self, name: str, slash: Literal[True] = True, *args: Any, **kwargs: Any) -> Callable[..., DuckHybridCommand]:
         ...
-    
+
     @overload
-    def command(self, name: str, slash: Literal[False],*args: Any, **kwargs: Any) -> Callable[..., DuckCommand]:
+    def command(self, name: str, slash: Literal[False], *args: Any, **kwargs: Any) -> Callable[..., DuckCommand]:
         ...
 
-    def command(self, name: str, slash: bool = True, *args: Any, **kwargs: Any) -> Callable[..., Union[DuckCommand, commands.HybridCommand]]:
+    def command(
+        self, name: str, slash: bool = True, *args: Any, **kwargs: Any
+    ) -> Callable[..., Union[DuckCommand, commands.HybridCommand]]:
         if slash is True:
             return super().command(name=name, *args, **kwargs)
         else:
             return DuckGroup.command(self, name=name, *args, **kwargs)
-    
+
     def add_command(self, command: Union[DuckCommand, commands.HybridCommand]) -> None:
         if isinstance(command, (commands.HybridCommand, commands.HybridGroup, DuckHybridCommand, DuckHybridGroup)):
-           super().add_command(command)
+            super().add_command(command)
         else:
             DuckGroup.add_command(self, command)
+
 
 def command(
     name: str = MISSING,

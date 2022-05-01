@@ -7,16 +7,7 @@ from typing import (
 import discord
 from discord.ext import commands
 
-from utils import (
-    DuckContext,
-    HandleHTTPException,
-    TargetVerifier,
-    BanEntryConverter,
-    DuckCog,
-    safe_reason,
-    mdr,
-    command
-)
+from utils import DuckContext, HandleHTTPException, TargetVerifier, BanEntryConverter, DuckCog, safe_reason, mdr, command
 from utils.helpers import can_execute_action
 
 
@@ -30,15 +21,11 @@ class StandardModeration(DuckCog):
     @commands.has_guild_permissions(kick_members=True)
     @commands.guild_only()
     async def kick(
-        self, 
-        ctx: DuckContext, 
-        member: TargetVerifier(discord.Member),  # type: ignore
-        *,   
-        reason: str = '...'
-        ) -> Optional[discord.Message]:
-        """        
+        self, ctx: DuckContext, member: TargetVerifier(discord.Member), *, reason: str = '...'  # type: ignore
+    ) -> Optional[discord.Message]:
+        """
         Kick a member from the server.
-        
+
         Parameters
         ----------
         member: :class:`discord.Member`
@@ -49,7 +36,7 @@ class StandardModeration(DuckCog):
         guild = ctx.guild
         if guild is None:
             return
-        
+
         await ctx.defer()
 
         async with HandleHTTPException(ctx, title=f'Failed to kick {member}'):
@@ -61,7 +48,9 @@ class StandardModeration(DuckCog):
     @commands.bot_has_guild_permissions(ban_members=True)
     @commands.has_guild_permissions(ban_members=True)
     @commands.guild_only()
-    async def ban(self, ctx: DuckContext, user: discord.User, *, delete_days: Optional[int], reason: str = '...') -> Optional[discord.Message]:
+    async def ban(
+        self, ctx: DuckContext, user: discord.User, *, delete_days: Optional[int], reason: str = '...'
+    ) -> Optional[discord.Message]:
         """|coro|
 
         Ban a member from the server.
@@ -88,9 +77,9 @@ class StandardModeration(DuckCog):
     @commands.cooldown(1, 3.0, commands.BucketType.user)
     async def unban(self, ctx: DuckContext, *, user: BanEntryConverter):
         """|coro|
-        
+
         Unbans a user from this server. You can search for this by:
- 
+
         +------------------+--------------------------+----------------------------+
         |     User ID      |        Name#0000         |            Name            |
         +------------------+--------------------------+----------------------------+
@@ -105,7 +94,7 @@ class StandardModeration(DuckCog):
         guild = ctx.guild
         if guild is None:
             return
-        
+
         async with HandleHTTPException(ctx, title=f'Failed to unban {user}'):
             await guild.unban(user.user, reason=f"Unban by {ctx.author} ({ctx.author.id})")
 
@@ -126,7 +115,7 @@ class StandardModeration(DuckCog):
         nickname: Optional[:class:`str`]
             The nickname to set. If no nickname is provided, the nickname will be removed.
         """
-        await can_execute_action(ctx, member) 
+        await can_execute_action(ctx, member)
 
         if nickname is None and not member.nick:
             return await ctx.send(f'**{mdr(member)}** has no nickname to remove.')
@@ -137,6 +126,5 @@ class StandardModeration(DuckCog):
         async with HandleHTTPException(ctx, title=f'Failed to set nickname for {member}.'):
             await member.edit(nick=nickname)
 
-        message = 'Changed nickname of **{user}** to **{nick}**.' \
-            if nickname else 'Removed nickname of **{user}**.'
+        message = 'Changed nickname of **{user}** to **{nick}**.' if nickname else 'Removed nickname of **{user}**.'
         return await ctx.send(message.format(user=mdr(member), nick=mdr(nickname)))

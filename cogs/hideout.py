@@ -268,7 +268,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
                 )
                 fmt = f'until {discord.utils.format_dt(_for.dt, "R")}'
             else:
-                fmt = 'permanently'
+                fmt = ''
 
             await ctx.send(f'✅ **|** Blocked **{discord.utils.remove_markdown(str(member))}** from **{ctx.channel}** {fmt}')
 

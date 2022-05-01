@@ -590,8 +590,7 @@ class HelpView(discord.ui.View):
         embed.add_field(name='Getting Help', value='\n'.join(getting_help), inline=False)
         embed.add_field(
             name='Who am I?',
-            value=
-            f'I\'m **{self.bot.user.name}**, the helper bot for the Duck Hideout community. Maintained by {GITHUB}[LeoCx1000](https://github.com/LeoCx1000).'
+            value=f'I\'m **{self.bot.user.name}**, the helper bot for the Duck Hideout community. Maintained by {GITHUB}[LeoCx1000](https://github.com/LeoCx1000).'
             'You can use me to do all things related to the Duck Hideout community. '
             'Check out all my features using the dropdown below.\n\n'
             f'I\'ve been online since {self.bot.uptime_timestamp}.\n'
