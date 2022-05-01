@@ -273,7 +273,7 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
             case_insensitive=True,
             allowed_mentions=discord.AllowedMentions.none(),
             intents=intents,
-            activity=discord.Streaming(name="db.help", url="https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
+            activity=discord.Activity(name="-help", type=discord.ActivityType.listening),
             strip_after_prefix=True,
             chunk_guilds_at_startup=False,
             max_messages=4000,
