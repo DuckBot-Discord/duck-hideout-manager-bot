@@ -1,4 +1,3 @@
-import asyncio
 import contextlib
 import logging
 import re
@@ -368,12 +367,3 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
         embed.add_field(name='Joined at', value=discord.utils.format_dt(bot.joined_at or bot.created_at, 'R'))
         embed.set_footer(text=f'bot ID: {bot.id}')
         await ctx.send(embed=embed)
-
-    async def cog_load(self):
-        async def wraps():
-            await asyncio.sleep(1)
-            cmd = self.bot.get_command('pit')
-            cmd.app_command.default_permissions = discord.Permissions(manage_messages=True)  # type: ignore
-            # hybrid default perms not supported yet.
-
-        self.bot.create_task(wraps())
