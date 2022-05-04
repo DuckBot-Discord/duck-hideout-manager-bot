@@ -80,38 +80,28 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
         confirm = await ctx.confirm(
             f'Does your bot comply with {ctx.guild.rules_channel.mention if ctx.guild.rules_channel else "<channel deleted?>"}?'
             f'\n If so, press one of these:',
-            return_message=True,
         )
         if confirm is True:
+            await self.bot.pool.execute(
+                'INSERT INTO addbot (owner_id, bot_id, reason) VALUES ($1, $2, $3) '
+                'ON CONFLICT (owner_id, bot_id) DO UPDATE SET pending = TRUE, added = FALSE, reason = $3',
+                ctx.author.id,
+                bot.id,
+                reason,
+            )
+            bot_queue: discord.TextChannel = ctx.guild.get_channel(QUEUE_CHANNEL)  # type: ignore
+
+            url = discord.utils.oauth_url(bot.id, scopes=['bot', 'applications.commands'], guild=ctx.guild)
+
+            embed = discord.Embed(description=reason)
+            embed.set_author(icon_url=bot.display_avatar.url, name=str(bot), url=url)
+            embed.add_field(name='invite:', value=f'[invite {discord.utils.remove_markdown(str(bot))}]({url})')
+            embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
+            await bot_queue.send(embed=embed)
             await ctx.reply('✅ Done, you will be @pinged when the bot is added!')
+
         elif confirm is False:
             await ctx.send('Cancelled.')
-
-    @commands.Cog.listener('on_command_completion')
-    async def on_command_completion(self, ctx: DuckContext):
-        if ctx.invoked_with != 'addbot':
-            return
-        bot = discord.utils.find(lambda obj: isinstance(obj, discord.User), ctx.args)
-        if bot is None:
-            return
-
-        reason: str = ctx.kwargs.get('reason', 'no reason given')
-
-        await self.bot.pool.execute(
-            'INSERT INTO addbot (owner_id, bot_id) VALUES ($1, $2) '
-            'ON CONFLICT (owner_id, bot_id) DO UPDATE SET pending = TRUE, added = FALSE',
-            ctx.author.id,
-            bot.id,
-        )
-        bot_queue: discord.TextChannel = ctx.guild.get_channel(QUEUE_CHANNEL)  # type: ignore
-
-        url = discord.utils.oauth_url(bot.id, scopes=['bot', 'applications.commands'], guild=ctx.guild)
-
-        embed = discord.Embed(description=reason)
-        embed.set_author(icon_url=bot.display_avatar.url, name=str(bot), url=url)
-        embed.add_field(name='invite:', value=f'[invite {discord.utils.remove_markdown(str(bot))}]({url})')
-        embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
-        await bot_queue.send(embed=embed)
 
     @commands.Cog.listener('on_member_join')
     async def on_member_join(self, member: discord.Member):
