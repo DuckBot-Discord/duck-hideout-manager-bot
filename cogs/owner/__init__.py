@@ -20,6 +20,7 @@ class Owner(
     command_attrs=dict(hidden=True),
     emoji='<:blushycat:913554213555028069>',
     brief='Restricted! hah.',
+    hidden=True,
 ):
     """The Cog for All owner commands."""
 

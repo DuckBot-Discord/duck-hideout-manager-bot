@@ -31,6 +31,7 @@ class DuckCog(commands.Cog):
     if TYPE_CHECKING:
         emoji: Optional[str]
         brief: Optional[str]
+        hidden: Optional[bool]
 
     __slots__: Tuple[str, ...] = ('bot',)
 
@@ -42,6 +43,7 @@ class DuckCog(commands.Cog):
         """
         cls.emoji = kwargs.pop('emoji', None)
         cls.brief = kwargs.pop('brief', None)
+        cls.hidden = kwargs.pop('hidden', False)
         return super().__init_subclass__(**kwargs)
 
     def __init__(self, bot: DuckBot, *args: Any, **kwargs: Any) -> None:

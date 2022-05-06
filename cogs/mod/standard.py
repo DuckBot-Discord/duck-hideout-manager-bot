@@ -5,6 +5,7 @@ from typing import (
 )
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 from utils import DuckContext, HandleHTTPException, TargetVerifier, BanEntryConverter, DuckCog, safe_reason, mdr, command
@@ -19,6 +20,7 @@ class StandardModeration(DuckCog):
     @command(name='kick', aliases=['boot'], hybrid=True)
     @commands.bot_has_guild_permissions(kick_members=True)
     @commands.has_guild_permissions(kick_members=True)
+    @app_commands.default_permissions(kick_members=True)
     @commands.guild_only()
     async def kick(
         self, ctx: DuckContext, member: TargetVerifier(discord.Member), *, reason: str = '...'  # type: ignore
@@ -47,6 +49,7 @@ class StandardModeration(DuckCog):
     @command(name='ban')
     @commands.bot_has_guild_permissions(ban_members=True)
     @commands.has_guild_permissions(ban_members=True)
+    @app_commands.default_permissions(ban_members=True)
     @commands.guild_only()
     async def ban(
         self, ctx: DuckContext, user: discord.User, *, delete_days: Optional[int], reason: str = '...'
@@ -104,6 +107,7 @@ class StandardModeration(DuckCog):
     @command(name='nick', hybrid=True)
     @commands.bot_has_guild_permissions(manage_nicknames=True)
     @commands.has_guild_permissions(manage_nicknames=True)
+    @app_commands.default_permissions(manage_nicknames=True)
     @commands.guild_only()
     async def nick(self, ctx: DuckContext, member: discord.Member, *, nickname: Optional[str] = None):
         """Change a member's nickname.

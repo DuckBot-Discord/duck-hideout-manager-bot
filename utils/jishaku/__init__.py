@@ -10,8 +10,6 @@ from typing import (
     Any,
     Optional,
     TypeVar,
-    Union,
-    Literal,
 )
 import itertools
 import traceback
@@ -31,10 +29,6 @@ from jishaku.paginators import use_file_check, PaginatorInterface, WrappedPagina
 
 from utils.translation_helpers import TranslatedEmbed
 
-if TYPE_CHECKING:
-    from typing import List as Greedy
-else:
-    from discord.ext.commands import Greedy
 
 from ..context import DuckContext
 from .. import add_logging, DuckCog
@@ -224,6 +218,7 @@ class DuckBotJishaku(
     *OPTIONAL_FEATURES,  # type: ignore
     brief='Jishaku front end class.',
     emoji='\N{CONSTRUCTION WORKER}',
+    hidden=True,
 ):
     """
     The main frontend class for JIshaku.

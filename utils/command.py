@@ -1,5 +1,4 @@
 from __future__ import annotations
-import inspect
 
 import re
 from numpydoc.docscrape import NumpyDocString as process_doc, Parameter
@@ -32,6 +31,7 @@ from .time import human_join
 
 if TYPE_CHECKING:
     from bot import DuckBot
+    from .base_cog import DuckCog
 
 T = TypeVar('T')
 P = ParamSpec('P')
@@ -64,6 +64,9 @@ class DuckCommand(commands.Command, Generic[CogT, P, T]):
         A mapping of parameter name to autocomplete objects. This is so
         autocomplete can be added to the command.
     """
+
+    if TYPE_CHECKING:
+        cog: DuckCog
 
     def __init__(
         self,
@@ -286,6 +289,9 @@ class DuckGroup(commands.GroupMixin[CogT], DuckCommand[CogT, P, T]):
     This intherits both :class:`DuckCommand` and :class:`~commands.GroupMixin` to add
     functionality of command management.
     """
+
+    if TYPE_CHECKING:
+        cog: DuckCog
 
     def __init__(self, *args: Any, **attrs: Any) -> None:
         self.invoke_without_command: bool = attrs.pop('invoke_without_command', False)

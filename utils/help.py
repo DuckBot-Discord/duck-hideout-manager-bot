@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections import defaultdict
 
 import logging
 from fuzzywuzzy import process
@@ -633,18 +634,17 @@ class DuckHelp(commands.HelpCommand):
         cmds = sum(mapping.values(), [])
         await self.filter_commands(cmds)
 
-        cogs = {}
+        cogs = defaultdict(list)
         for command in cmds:
             if not command.cog:
                 continue
 
             key = command.cog
-            if key not in cogs:
-                cogs[key] = [command]
-            else:
-                cogs[key].append(command)
+            if getattr(key, 'hidden', False) is True:
+                continue
+            cogs[key].append(command)
 
-        return cogs  # type: ignore
+        return cogs
 
     async def send_bot_help(self, mapping: Mapping[Optional[DuckCog], List[DuckCommand]]) -> discord.Message:
         """|coro|
