@@ -64,9 +64,9 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
     @property
     def mod_cog(self) -> Moderation:
         mod = self.bot.get_cog('Moderation')
-        if isinstance(mod, Moderation):
-            return mod
-        raise commands.BadArgument('This service is not available at the moment.')
+        if not mod:
+            raise commands.BadArgument('This service is not available at the moment.')
+        return mod  # type: ignore
 
     @command()
     @hideout_only()
