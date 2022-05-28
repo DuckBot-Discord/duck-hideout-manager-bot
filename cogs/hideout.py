@@ -280,10 +280,11 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             await self.mod_cog.toggle_block(
                 channel=channel, member=member, blocked=False, reason=f'Pit Unban by {ctx.author} (ID: {ctx.author.id})'
             )
-        except (discord.Forbidden, discord.HTTPException):
+        except (discord.Forbidden, discord.HTTPException) as e:
             await ctx.send('🥴 Something went wrong...')
+            await self.bot.exceptions.add_error(error=e, ctx=ctx)
         else:
-            await ctx.send(f'✅ **|** Blocked **{discord.utils.remove_markdown(str(member))}** from **{ctx.channel}**')
+            await ctx.send(f'✅ **|** Unblocked **{discord.utils.remove_markdown(str(member))}** from **{ctx.channel}**')
 
     @commands.is_owner()
     @pit.command(name='setowner', aliases=['set-owner'], slash=False)
@@ -318,7 +319,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
                 _ent for _ent in map(lambda ent: owner.guild.get_member(ent['bot_id']), _bot_ids) if _ent is not None
             ] + [owner]
             overs = discord.PermissionOverwrite(
-                manage_messages=True, manage_channels=True, manage_threads=True, manage_webhooks=True, view_channel=True
+                manage_messages=True, manage_channels=True, manage_threads=True, view_channel=True
             )
             channel = await ctx.guild.create_text_channel(
                 name, category=category, overwrites={user: overs for user in users}

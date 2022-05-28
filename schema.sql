@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS blacklist (
     entity_id bigint,
     guild_id bigint NOT NULL default 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    reason TEXT,
     PRIMARY KEY (blacklist_type, entity_id, guild_id)
 );
 
