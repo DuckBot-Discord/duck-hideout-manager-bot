@@ -91,7 +91,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             )
             bot_queue: discord.TextChannel = ctx.guild.get_channel(QUEUE_CHANNEL)  # type: ignore
 
-            url = discord.utils.oauth_url(bot.id, scopes=['bot', 'applications.commands'], guild=ctx.guild)
+            url = discord.utils.oauth_url(bot.id, scopes=['bot'], guild=ctx.guild)
 
             embed = discord.Embed(description=reason)
             embed.set_author(icon_url=bot.display_avatar.url, name=str(bot), url=url)
