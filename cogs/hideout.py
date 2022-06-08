@@ -421,6 +421,10 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
         await message.delete()
         await webhook.send(
             content=f"<{animated}:_:{emoji_id}>",
+            files=[
+                await attachment.to_file(spoiler=attachment.is_spoiler()) 
+                for attachment in message.attachments if attachment.size <= message.guild.filesize_limit
+            ],
             avatar_url=message.author.display_avatar.url,
             username=message.author.display_name,
             allowed_mentions=discord.AllowedMentions.none(),
