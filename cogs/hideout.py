@@ -1,7 +1,7 @@
 import contextlib
 import logging
 import re
-from typing import Optional
+from typing import Optional, Union, Dict
 
 import asyncpg
 import discord
@@ -11,16 +11,21 @@ from discord.ext import commands
 from utils import DuckCog, DuckContext, SilentCommandError
 from utils.command import command, group
 from utils.time import ShortTime
+from discord import TextChannel, VoiceChannel, Thread
 
 from .mod import Moderation
 
-url_regex = re.compile(r"^http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|)+$")
+URL_REGEX = re.compile(r"^http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|)+$")
+EMOJI_URL_PATTERN = re.compile(r'(https?://)?(media|cdn)\.discord(app)?\.(com|net)/emojis/(?P<id>[0-9]+)\.(?P<fmt>[A-z]+)')
 DUCK_HIDEOUT = 774561547930304536
 QUEUE_CHANNEL = 927645247226408961
 BOTS_ROLE = 870746847071842374
 BOT_DEVS_ROLE = 775516377057722390
 GENERAL_CHANNEL = 774561548659458081
 PIT_CATEGORY = 915494807349116958
+
+
+GuildMessageable = Union[TextChannel, VoiceChannel, Thread]
 
 
 async def setup(bot):
@@ -56,10 +61,49 @@ def hideout_only():
     return commands.check(predicate)
 
 
+class WebhookStore:
+    def __init__(self):
+        self.webhooks: Dict[int, discord.Webhook] = {}
+
+    async def get(self, channel: GuildMessageable) -> discord.Webhook:
+        if isinstance(channel, discord.Thread):
+            assert channel.parent and not isinstance(channel.parent, discord.ForumChannel), 'somehow Thread.parent was None'
+            channel = channel.parent
+
+        if channel.id not in self.webhooks:
+            self.webhooks[channel.id] = await self.make(channel)
+
+        return self.webhooks[channel.id]
+
+    async def make(self, channel: GuildMessageable) -> discord.Webhook:
+        if isinstance(channel, discord.Thread):
+            assert channel.parent and not isinstance(channel.parent, discord.ForumChannel), 'somehow Thread.parent was None'
+            channel = channel.parent
+
+        webhooks = await channel.webhooks()
+        chosen: Optional[discord.Webhook] = None
+        for webhook in webhooks:
+            if not webhook.token:
+                continue
+            if webhook.name != 'Emoji Erradicator':
+                if len(webhooks) > 10:
+                    continue
+                chosen = webhook
+                break
+        if not chosen:
+            chosen = await channel.create_webhook(name='Emoji Erradicator')
+
+        return chosen
+
+
 class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands related to the server, like pits and addbot.'):
     """
     Commands related to the server, like pits and addbot.
     """
+
+    def __init__(self, bot):
+        super().__init__(bot)
+        self.webhooks = WebhookStore()
 
     @property
     def mod_cog(self) -> Moderation:
@@ -358,3 +402,26 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
         embed.add_field(name='Joined at', value=discord.utils.format_dt(bot.joined_at or bot.created_at, 'R'))
         embed.set_footer(text=f'bot ID: {bot.id}')
         await ctx.send(embed=embed)
+
+    @commands.Cog.listener('on_message')
+    async def begone_fake_emojis(self, message: discord.Message):
+        if message.author.bot or not message.content or not message.guild:
+            return
+        if message.guild.id != 774561547930304536:
+            return
+        if not URL_REGEX.fullmatch(message.content):
+            return
+        result = EMOJI_URL_PATTERN.match(message.content)
+        if not result:
+            return
+        emoji_id = result.group('id')
+        animated = {True: 'a', False: ''}[result.group('fmt') == 'gif']
+
+        webhook = await self.webhooks.get(message.channel)  # type: ignore
+        await message.delete()
+        await webhook.send(
+            content=f"<{animated}:_:{emoji_id}>",
+            avatar_url=message.author.display_avatar.url,
+            username=message.author.display_name,
+            allowed_mentions=discord.AllowedMentions.none(),
+        )
