@@ -431,7 +431,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
         )
 
     @commands.Cog.listener('on_message_edit')
-    async def begone_fake_emojis_edit(self, __, message: discord.Message):
+    async def begone_fake_emojis_edit(self, before: discord.Message, message: discord.Message):
         if message.author.bot or not message.content or not message.guild:
             return
         if message.guild.id != 774561547930304536:
@@ -441,6 +441,9 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
         result = EMOJI_URL_PATTERN.match(message.content)
         if not result:
             return
+        if before.content == message.content:
+            return
+       
         emoji_id = result.group('id')
         animated = {True: 'a', False: ''}[result.group('fmt') == 'gif']
 
