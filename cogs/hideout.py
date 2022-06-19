@@ -336,7 +336,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
         """Set the owner of the pit."""
         try:
             await ctx.bot.pool.execute(
-                '''INSERT INTO pits (pit_id, pit_owner) VALUES ($1, $2) 
+                '''INSERT INTO pits (pit_id, pit_owner) VALUES ($1, $2)
                                         ON CONFLICT (pit_id) DO UPDATE SET pit_owner = $2''',
                 ctx.channel.id,
                 member.id,
@@ -372,7 +372,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             raise commands.BadArgument('I do not have permission to create a channel.')
         else:
             await ctx.bot.pool.execute(
-                '''INSERT INTO pits (pit_id, pit_owner) VALUES ($1, $2) 
+                '''INSERT INTO pits (pit_id, pit_owner) VALUES ($1, $2)
                                           ON CONFLICT (pit_id) DO UPDATE SET pit_owner = $2''',
                 channel.id,
                 owner.id,
@@ -414,6 +414,36 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
         result = EMOJI_URL_PATTERN.match(message.content)
         if not result:
             return
+        emoji_id = result.group('id')
+        animated = {True: 'a', False: ''}[result.group('fmt') == 'gif']
+
+        webhook = await self.webhooks.get(message.channel)  # type: ignore
+        await message.delete()
+        await webhook.send(
+            content=f"<{animated}:_:{emoji_id}>",
+            files=[
+                await attachment.to_file(spoiler=attachment.is_spoiler()) 
+                for attachment in message.attachments if attachment.size <= message.guild.filesize_limit
+            ],
+            avatar_url=message.author.display_avatar.url,
+            username=message.author.display_name,
+            allowed_mentions=discord.AllowedMentions.none(),
+        )
+
+    @commands.Cog.listener('on_message_edit')
+    async def begone_fake_emojis_edit(self, before: discord.Message, message: discord.Message):
+        if message.author.bot or not message.content or not message.guild:
+            return
+        if message.guild.id != 774561547930304536:
+            return
+        if not URL_REGEX.fullmatch(message.content):
+            return
+        result = EMOJI_URL_PATTERN.match(message.content)
+        if not result:
+            return
+        if before.content == message.content:
+            return
+       
         emoji_id = result.group('id')
         animated = {True: 'a', False: ''}[result.group('fmt') == 'gif']
 
