@@ -32,7 +32,7 @@ logging.basicConfig(
 log = logging.getLogger('DuckBot.launcher')
 
 
-async def run_bot(to_dump: str | None, to_load: str | None, run: bool) -> None:
+async def run_bot(to_dump: str | None, to_load: str | None, run: bool, verbose: bool = False) -> None:
     async with aiohttp.ClientSession() as session, DuckBot.temporary_pool(uri=URI) as pool, DuckBot(
         session=session, pool=pool, error_wh=ERROR_WH
     ) as duck:
@@ -41,7 +41,7 @@ async def run_bot(to_dump: str | None, to_load: str | None, run: bool) -> None:
         elif to_load:
             await duck.load_translations(to_load)
         elif run:
-            await duck.start(TOKEN, reconnect=True, verbose=False)
+            await duck.start(TOKEN, reconnect=True, verbose=verbose)
 
 
 if __name__ == '__main__':
