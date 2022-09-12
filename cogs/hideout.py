@@ -358,7 +358,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             else:
                 fmt = ''
 
-            await ctx.send(f'✅ **|** Blocked **{discord.utils.remove_markdown(str(member))}** from **{ctx.channel}** {fmt}')
+            await ctx.send(f'✅ **|** Pit-banned **{discord.utils.remove_markdown(str(member))}** {fmt}')
 
     @pit.command(name='unban')
     @pit_owner_only()
@@ -380,7 +380,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             await ctx.send('🥴 Something went wrong...')
             await self.bot.exceptions.add_error(error=e, ctx=ctx)
         else:
-            await ctx.send(f'✅ **|** Unblocked **{discord.utils.remove_markdown(str(member))}** from **{ctx.channel}**')
+            await ctx.send(f'✅ **|** Pit-unbanned **{discord.utils.remove_markdown(str(member))}** from **{ctx.channel}**')
 
     @commands.is_owner()
     @pit.command(name='setowner', aliases=['set-owner'], slash=False)
@@ -425,7 +425,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
         else:
             await ctx.bot.pool.execute(
                 '''INSERT INTO pits (pit_id, pit_owner) VALUES ($1, $2)
-                                          ON CONFLICT (pit_id) DO UPDATE SET pit_owner = $2''',
+                                          ON CONFLICT (pit_owner) DO UPDATE SET pit_id = $1''',
                 channel.id,
                 owner.id,
             )
