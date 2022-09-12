@@ -1,7 +1,8 @@
+import asyncio
 import contextlib
 import logging
 import re
-from typing import Optional, Union, Dict
+from typing import Optional, Union
 
 import asyncpg
 import discord
@@ -10,10 +11,12 @@ from discord import app_commands
 from discord.ext import commands
 from utils import DuckCog, DuckContext, SilentCommandError
 from utils.command import command, group
+from utils.errors import ActionNotExecutable
 from utils.time import ShortTime
 from discord import TextChannel, VoiceChannel, Thread
 
-from .mod import Moderation
+from utils.timer import Timer
+
 
 URL_REGEX = re.compile(r"^http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|)+$")
 EMOJI_URL_PATTERN = re.compile(r'(https?://)?(media|cdn)\.discord(app)?\.(com|net)/emojis/(?P<id>[0-9]+)\.(?P<fmt>[A-z]+)')
@@ -25,6 +28,9 @@ GENERAL_CHANNEL = 774561548659458081
 PIT_CATEGORY = 915494807349116958
 
 
+log = logging.getLogger(__name__)
+
+
 GuildMessageable = Union[TextChannel, VoiceChannel, Thread]
 
 
@@ -34,15 +40,15 @@ async def setup(bot):
 
 def pit_owner_only():
     async def predicate(ctx: DuckContext):
+        if await ctx.bot.is_owner(ctx.author):
+            return True
+
         if (
             isinstance(ctx.channel, (discord.DMChannel, discord.GroupChannel, discord.PartialMessageable))
             or ctx.guild.id != DUCK_HIDEOUT
             or ctx.channel.category_id != PIT_CATEGORY
         ):
             raise SilentCommandError
-
-        if await ctx.bot.is_owner(ctx.author):
-            return True
 
         channel_id = await ctx.bot.pool.fetchval('SELECT pit_id FROM pits WHERE pit_owner = $1', ctx.author.id)
         if ctx.channel.id != channel_id:
@@ -61,41 +67,6 @@ def hideout_only():
     return commands.check(predicate)
 
 
-class WebhookStore:
-    def __init__(self):
-        self.webhooks: Dict[int, discord.Webhook] = {}
-
-    async def get(self, channel: GuildMessageable) -> discord.Webhook:
-        if isinstance(channel, discord.Thread):
-            assert channel.parent and not isinstance(channel.parent, discord.ForumChannel), 'somehow Thread.parent was None'
-            channel = channel.parent
-
-        if channel.id not in self.webhooks:
-            self.webhooks[channel.id] = await self.make(channel)
-
-        return self.webhooks[channel.id]
-
-    async def make(self, channel: GuildMessageable) -> discord.Webhook:
-        if isinstance(channel, discord.Thread):
-            assert channel.parent and not isinstance(channel.parent, discord.ForumChannel), 'somehow Thread.parent was None'
-            channel = channel.parent
-
-        webhooks = await channel.webhooks()
-        chosen: Optional[discord.Webhook] = None
-        for webhook in webhooks:
-            if not webhook.token:
-                continue
-            if webhook.name != 'Emoji Erradicator':
-                if len(webhooks) > 10:
-                    continue
-                chosen = webhook
-                break
-        if not chosen:
-            chosen = await channel.create_webhook(name='Emoji Erradicator')
-
-        return chosen
-
-
 class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands related to the server, like pits and addbot.'):
     """
     Commands related to the server, like pits and addbot.
@@ -103,14 +74,95 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
 
     def __init__(self, bot):
         super().__init__(bot)
-        self.webhooks = WebhookStore()
 
-    @property
-    def mod_cog(self) -> Moderation:
-        mod = self.bot.get_cog('Moderation')
-        if not mod:
-            raise commands.BadArgument('This service is not available at the moment.')
-        return mod  # type: ignore
+    async def toggle_block(
+        self,
+        channel: discord.TextChannel,
+        member: discord.Member,
+        blocked: bool = True,
+        update_db: bool = True,
+        reason: Optional[str] = None,
+    ) -> None:
+        """|coro|
+
+        Toggle the block status of a member in a channel.
+
+        Parameters
+        ----------
+        channel : `discord.abc.Messageable`
+            The channel to block/unblock the member in.
+        member : `discord.Member`
+            The member to block/unblock.
+        blocked : `bool`, optional
+            Whether to block or unblock the member. Defaults to ``True``, which means block.
+        update_db : `bool`, optional
+            Whether to update the database with the new block status.
+        reason : `str`, optional
+            The reason for the block/unblock.
+        """
+        if isinstance(channel, discord.abc.PrivateChannel):
+            raise commands.NoPrivateMessage()
+
+        if isinstance(channel, discord.Thread):
+            channel = channel.parent  # type: ignore
+            if not channel:
+                raise ActionNotExecutable("Couldn't block! This thread has no parent channel... somehow.")
+
+        val = False if blocked else None
+        overwrites = channel.overwrites_for(member)
+
+        overwrites.update(
+            send_messages=val,
+            add_reactions=val,
+            create_public_threads=val,
+            create_private_threads=val,
+            send_messages_in_threads=val,
+        )
+        try:
+            await channel.set_permissions(member, reason=reason, overwrite=overwrites)
+        finally:
+            if update_db:
+                if blocked:
+                    query = (
+                        'INSERT INTO blocks (guild_id, channel_id, user_id) VALUES ($1, $2, $3) '
+                        'ON CONFLICT (guild_id, channel_id, user_id) DO NOTHING'
+                    )
+                else:
+                    query = "DELETE FROM blocks WHERE guild_id = $1 AND channel_id = $2 AND user_id = $3"
+
+                async with self.bot.safe_connection() as conn:
+                    await conn.execute(query, channel.guild.id, channel.id, member.id)
+
+    async def format_block(self, guild: discord.Guild, user_id: int, channel_id: Optional[int] = None):
+        """|coro|
+
+        Format a block entry from the database into a human-readable string.
+
+        Parameters
+        ----------
+        guild: :class:`discord.Guild`
+            The guild the block is in.
+        channel_id: :class:`int`
+            The channel ID of the block.
+        user_id: :class:`int`
+            The user ID of the block.
+
+        Returns
+        -------
+        :class:`str`
+            The formatted block entry.
+        """
+        if channel_id:
+            channel = guild.get_channel(channel_id)
+            if channel is None:
+                channel = '#deleted-channel - '
+            else:
+                channel = f"#{channel} ({channel_id}) - "
+        else:
+            channel = ''
+        user = await self.bot.get_or_fetch_member(guild, user_id) or f"Unknown User"
+
+        return f"{channel}@{user} ({user_id})"
 
     @command()
     @hideout_only()
@@ -148,7 +200,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             await ctx.send('Cancelled.')
 
     @commands.Cog.listener('on_member_join')
-    async def on_member_join(self, member: discord.Member):
+    async def dhm_bot_queue_handler(self, member: discord.Member):
         with contextlib.suppress(discord.HTTPException):
             queue_channel: discord.TextChannel = member.guild.get_channel(QUEUE_CHANNEL)  # type: ignore
             if not member.bot or member.guild.id != DUCK_HIDEOUT:
@@ -292,7 +344,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
         if not isinstance(channel, discord.TextChannel):
             raise commands.BadArgument('Somehow, this channel does not exist or is not a text channel.')
         try:
-            await self.mod_cog.toggle_block(
+            await self.toggle_block(
                 channel=channel, member=member, blocked=True, reason=f'Pit Ban by {ctx.author} (ID: {ctx.author.id})'
             )
         except (discord.Forbidden, discord.HTTPException):
@@ -321,7 +373,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             raise commands.BadArgument('Somehow, this channel does not exist or is not a text channel.')
 
         try:
-            await self.mod_cog.toggle_block(
+            await self.toggle_block(
                 channel=channel, member=member, blocked=False, reason=f'Pit Unban by {ctx.author} (ID: {ctx.author.id})'
             )
         except (discord.Forbidden, discord.HTTPException) as e:
@@ -403,59 +455,6 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
         embed.set_footer(text=f'bot ID: {bot.id}')
         await ctx.send(embed=embed)
 
-    @commands.Cog.listener('on_message')
-    async def begone_fake_emojis(self, message: discord.Message):
-        if message.author.bot or not message.content or not message.guild:
-            return
-        if message.guild.id != 774561547930304536:
-            return
-        if not URL_REGEX.fullmatch(message.content):
-            return
-        result = EMOJI_URL_PATTERN.match(message.content)
-        if not result:
-            return
-        emoji_id = result.group('id')
-        animated = {True: 'a', False: ''}[result.group('fmt') == 'gif']
-
-        webhook = await self.webhooks.get(message.channel)  # type: ignore
-        await message.delete()
-        await webhook.send(
-            content=f"<{animated}:_:{emoji_id}>",
-            files=[
-                await attachment.to_file(spoiler=attachment.is_spoiler()) 
-                for attachment in message.attachments if attachment.size <= message.guild.filesize_limit
-            ],
-            avatar_url=message.author.display_avatar.url,
-            username=message.author.display_name,
-            allowed_mentions=discord.AllowedMentions.none(),
-        )
-
-    @commands.Cog.listener('on_message_edit')
-    async def begone_fake_emojis_edit(self, before: discord.Message, message: discord.Message):
-        if message.author.bot or not message.content or not message.guild:
-            return
-        if message.guild.id != 774561547930304536:
-            return
-        if not URL_REGEX.fullmatch(message.content):
-            return
-        result = EMOJI_URL_PATTERN.match(message.content)
-        if not result:
-            return
-        if before.content == message.content:
-            return
-       
-        emoji_id = result.group('id')
-        animated = {True: 'a', False: ''}[result.group('fmt') == 'gif']
-
-        webhook = await self.webhooks.get(message.channel)  # type: ignore
-        await message.delete()
-        await webhook.send(
-            content=f"<{animated}:_:{emoji_id}>",
-            avatar_url=message.author.display_avatar.url,
-            username=message.author.display_name,
-            allowed_mentions=discord.AllowedMentions.none(),
-        )
-
     @command()
     async def spooki(self, ctx: DuckContext, *, member: discord.Member):
         """toggles spooki role for a member."""
@@ -467,3 +466,82 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             return await ctx.message.add_reaction('\N{HEAVY MINUS SIGN}')
         await member.add_roles(discord.Object(id=role_id))
         await ctx.message.add_reaction('\N{HEAVY PLUS SIGN}')
+
+    @commands.Cog.listener('on_member_join')
+    async def block_handler(self, member: discord.Member):
+        """Blocks a user from your channel."""
+        guild = member.guild
+        if guild is None:
+            return
+
+        channel_ids = await self.bot.pool.fetch(
+            'SELECT channel_id FROM blocks WHERE guild_id = $1 AND user_id = $2', guild.id, member.id
+        )
+
+        for record in channel_ids:
+            channel_id = record['channel_id']
+            try:
+                channel = guild.get_channel(channel_id) or await guild.fetch_channel(channel_id)
+            except discord.HTTPException:
+                log.debug(f"Discarding blocked users for channel id {channel_id} as it can't be found.")
+                await self.bot.pool.execute(
+                    'DELETE FROM blocks WHERE guild_id = $1 AND channel_id = $2', guild.id, channel_id
+                )
+                continue
+            else:
+                try:
+                    if channel.permissions_for(guild.me).manage_permissions:
+                        await self.toggle_block(
+                            channel,  # type: ignore
+                            member,
+                            blocked=True,
+                            update_db=False,
+                            reason='[MEMBER-JOIN] Automatic re-block for previously blocked user. See "db.blocked" for a list of blocked users.',
+                        )
+                        await asyncio.sleep(1)
+                except discord.Forbidden:
+                    log.debug(
+                        f"Did not unblock user {member} in channel {channel} due to missing permissions.", exc_info=False
+                    )
+                    continue
+                except discord.HTTPException:
+                    log.debug(f"Unexpected error while re-blocking user {member} in channel {channel}.", exc_info=False)
+
+    @commands.Cog.listener('on_tempblock_timer_complete')
+    async def on_tempblock_timer_complete(self, timer: Timer):
+        """Automatic temp block expire handler"""
+        guild_id, channel_id, user_id, author_id = timer.args
+
+        try:
+            guild = self.bot.get_guild(guild_id)
+            if guild is None:
+                return
+
+            channel = guild.get_channel(channel_id)
+            if channel is None:
+                return
+
+            # Can't really 100% rely on member cache, so we'll just try to fetch.
+            member = await self.bot.get_or_fetch_member(guild, user_id)
+            if not member:
+                return log.debug("Discarding blocked users for channel id {channel_id} as it can't be found.")
+
+            try:
+                mod = self.bot.get_user(author_id) or await self.bot.fetch_user(author_id)
+                f"{mod} (ID: {author_id})"
+            except discord.HTTPException:
+                mod = f"unknown moderator (ID: {author_id})"
+
+            await self.toggle_block(
+                channel,  # type: ignore
+                member,
+                blocked=False,
+                update_db=False,
+                reason=f'Expiring temp-block made on {timer.created_at} by {mod}',
+            )
+
+        finally:
+            # Finally, we remove the user from the list of blocked users, regardless of any errors.
+            await self.bot.pool.execute(
+                'DELETE FROM blocks WHERE guild_id = $1 AND channel_id = $2 AND user_id = $3', guild_id, channel_id, user_id
+            )
