@@ -1,11 +1,10 @@
 import discord
 from bot import DuckBot
 from utils.errors import DuckBotNotStarted
-from .reminders import Reminders
 from .embed import EmbedMaker
 
 
-class Meta(Reminders, EmbedMaker, emoji="\N{INFORMATION SOURCE}"):
+class Meta(EmbedMaker, emoji="\N{INFORMATION SOURCE}"):
     """All commands about the bot itself."""
 
     @discord.utils.cached_property
