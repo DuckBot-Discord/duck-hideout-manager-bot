@@ -24,6 +24,7 @@ DUCK_HIDEOUT = 774561547930304536
 QUEUE_CHANNEL = 927645247226408961
 BOTS_ROLE = 870746847071842374
 BOT_DEVS_ROLE = 775516377057722390
+COUNSELORS_ROLE = 896178155486855249
 GENERAL_CHANNEL = 774561548659458081
 PIT_CATEGORY = 915494807349116958
 
@@ -64,6 +65,15 @@ def hideout_only():
             return True
         raise SilentCommandError
 
+    return commands.check(predicate)
+
+
+def counselor_only():
+    def predicate(ctx: DuckContext):
+        if ctx.guild.get_role(COUNSELORS_ROLE) in ctx.author.roles:
+            return True
+        raise SilentCommandError
+    
     return commands.check(predicate)
 
 
@@ -168,15 +178,19 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
     @hideout_only()
     async def addbot(self, ctx: DuckContext, bot: discord.User, *, reason: commands.clean_content):
         if not bot.bot:
-            raise commands.BadArgument('That dos not seem to be a bot...')
+            raise commands.BadArgument('That does not seem to be a bot...')
+
         if bot in ctx.guild.members:
-            raise commands.BadArgument('That bot is already on this server...')
+            raise commands.BadArgument('That bot is already in this server...')
+
         if await self.bot.pool.fetchval('SELECT owner_id FROM addbot WHERE bot_id = $1 AND pending = TRUE', bot.id):
             raise commands.BadArgument('That bot is already in the queue...')
+        
         confirm = await ctx.confirm(
             f'Does your bot comply with {ctx.guild.rules_channel.mention if ctx.guild.rules_channel else "<channel deleted?>"}?'
             f'\n If so, press one of these:',
         )
+
         if confirm is True:
             await self.bot.pool.execute(
                 'INSERT INTO addbot (owner_id, bot_id, reason) VALUES ($1, $2, $3) '
@@ -397,7 +411,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             raise commands.BadArgument('This user is already the owner of a pit.')
         await ctx.message.add_reaction('✅')
 
-    @commands.is_owner()
+    @counselor_only()
     @pit.command(name='create', slash=False)
     async def pit_create(self, ctx: DuckContext, owner: discord.Member, *, name: str):
         """Create a pit."""
@@ -458,7 +472,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
     @command()
     async def spooki(self, ctx: DuckContext, *, member: discord.Member):
         """toggles spooki role for a member."""
-        if ctx.author.id != 564890536947875868:
+        if ctx.author.id != 1022842005920940063:
             return
         role_id = 988046268104335371
         if member._roles.has(role_id):
