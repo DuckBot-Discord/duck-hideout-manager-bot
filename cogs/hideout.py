@@ -186,7 +186,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
 
         Parameters
         ----------
-        bot: discord.USer
+        bot: discord.User
             The bot to add to the queue.
         reason: commands.clean_content
             The reason why we should add your bot.
