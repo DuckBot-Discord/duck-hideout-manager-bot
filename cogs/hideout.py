@@ -235,7 +235,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             if not member.bot or member.guild.id != DUCK_HIDEOUT:
                 return
 
-            if len(member.roles) > 1:
+            if len(member.roles) > 1 and member.id != 216303189073461248:
                 await member.kick(reason='Was invited with permissions')
                 return await queue_channel.send(f'{member} automatically kicked for having a role.')
 
