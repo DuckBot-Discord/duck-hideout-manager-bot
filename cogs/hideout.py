@@ -576,20 +576,6 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
         embed.set_footer(text=f'bot ID: {bot.id}')
         await ctx.send(embed=embed)
 
-    @command()
-    async def spooki(self, ctx: DuckContext, *, member: discord.Member):
-        """toggles spooki role for a member."""
-        if ctx.author.id != 1022842005920940063:
-            return
-
-        role_id = 988046268104335371
-        if member._roles.has(role_id):
-            await member.remove_roles(discord.Object(id=role_id))
-            return await ctx.message.add_reaction('\N{HEAVY MINUS SIGN}')
-
-        await member.add_roles(discord.Object(id=role_id))
-        await ctx.message.add_reaction('\N{HEAVY PLUS SIGN}')
-
     @commands.Cog.listener('on_member_join')
     async def block_handler(self, member: discord.Member):
         """Blocks a user from your channel."""
