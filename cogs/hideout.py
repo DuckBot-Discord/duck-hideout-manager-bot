@@ -620,7 +620,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             raise commands.BadArgument('I do not have permission to edit channels.')
 
         else:
-            await ctx.send(f'✅ **|** Archived **{pit.name}**')
+            await ctx.send(f'✅ **|** Unarchived **{pit.name}**')
 
     @command(hybrid=True)
     async def whoadd(self, ctx: DuckContext, bot: discord.Member):
