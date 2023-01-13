@@ -70,10 +70,12 @@ def hideout_only():
 
 def counselor_only():
     def predicate(ctx: DuckContext):
+        if not isinstance(ctx.author, discord.Member):
+            return False
         if ctx.guild.get_role(COUNSELORS_ROLE) in ctx.author.roles:
             return True
         raise SilentCommandError
-    
+
     return commands.check(predicate)
 
 
@@ -110,7 +112,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
         reason : `str`, optional
             The reason for the block/unblock.
         """
-        
+
         if isinstance(channel, discord.abc.PrivateChannel):
             raise commands.NoPrivateMessage()
 
@@ -182,7 +184,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
     @command()
     @hideout_only()
     async def addbot(self, ctx: DuckContext, bot: discord.User, *, reason: commands.clean_content):
-        """ Adds a bot to the bot queue.
+        """Adds a bot to the bot queue.
 
         Parameters
         ----------
@@ -200,7 +202,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
 
         if await self.bot.pool.fetchval('SELECT owner_id FROM addbot WHERE bot_id = $1 AND pending = TRUE', bot.id):
             raise commands.BadArgument('That bot is already in the queue...')
-        
+
         confirm = await ctx.confirm(
             f'Does your bot comply with {ctx.guild.rules_channel.mention if ctx.guild.rules_channel else "<channel deleted?>"}?'
             f'\n If so, press one of these:',
@@ -280,7 +282,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
         if member.bot:
             await self.bot.pool.execute('UPDATE addbot SET added = FALSE WHERE bot_id = $1', member.id)
             embed = discord.Embed(title='Bot removed', description=f'{member} left.', colour=discord.Colour.red())
-            mem_id = await self.bot.pool.fetchval('SELECT owner_id FROM addbot WHERE bot_id = $1', member.id)
+            mem_id: int = await self.bot.pool.fetchval('SELECT owner_id FROM addbot WHERE bot_id = $1', member.id)  # type: ignore
             mem = member.guild.get_member(mem_id)
 
             if mem:
@@ -341,9 +343,9 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
     @hideout_only()
     @commands.is_owner()
     @command(name='register-bot', aliases=['rbot', 'rb'])
-    async def _register_bot(self, ctx: DuckContext, owner: discord.Member, bot: discord.User):
-        """ Register a bot to the database.
-        
+    async def _register_bot(self, ctx: DuckContext, owner: discord.Member, *, bot: discord.User):
+        """Register a bot to the database.
+
         Parameters
         ----------
         owner: discord.Member
@@ -373,7 +375,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
     @app_commands.guild_only()
     @app_commands.default_permissions(manage_messages=True)
     async def pit(self, ctx: DuckContext):
-        """ Pit management commands. """
+        """Pit management commands."""
 
         if ctx.invoked_subcommand is None and ctx.subcommand_passed is None:
             await ctx.send_help(ctx.command)
@@ -382,7 +384,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
     @pit_owner_only()
     @app_commands.rename(_for='for')
     async def pit_ban(self, ctx: DuckContext, member: discord.Member, _for: Optional[ShortTime]):
-        """ Ban a member from the pit.
+        """Ban a member from the pit.
 
         Parameters
         ----------
@@ -423,9 +425,9 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
 
     @pit.command(name='unban')
     @pit_owner_only()
-    async def pit_unban(self, ctx: DuckContext, member: discord.Member):
-        """ Unban a member from the pit.
-        
+    async def pit_unban(self, ctx: DuckContext, *, member: discord.Member):
+        """Unban a member from the pit.
+
         Parameters
         ----------
         member: discord.Member
@@ -457,9 +459,9 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
 
     @commands.is_owner()
     @pit.command(name='setowner', aliases=['set-owner'], slash=False)
-    async def pit_set_owner(self, ctx: DuckContext, member: discord.Member):
-        """ Set the owner of a pit.
-        
+    async def pit_set_owner(self, ctx: DuckContext, *, member: discord.Member):
+        """Set the owner of a pit.
+
         Parameters
         ----------
         member: discord.Member
@@ -482,8 +484,8 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
     @counselor_only()
     @pit.command(name='create', slash=False)
     async def pit_create(self, ctx: DuckContext, owner: discord.Member, *, name: str):
-        """ Create a pit.
-        
+        """Create a pit.
+
         Parameters
         ----------
         owner: discord.Member
@@ -492,8 +494,8 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             The name of the pit to create.
         """
 
-        pit = await ctx.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_owner = $1''', owner.id)
-        if pit is not None and ctx.guild.get_channel(pit):
+        pit_id: int = await ctx.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_owner = $1''', owner.id)  # type: ignore
+        if pit_id is not None and ctx.guild.get_channel(pit_id):
             raise commands.BadArgument('User already owns a pit.')
 
         category: discord.CategoryChannel = ctx.guild.get_channel(PIT_CATEGORY)  # type: ignore
@@ -524,27 +526,29 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
                 owner.id,
             )
             await ctx.send(f'✅ **|** Created **{channel}**')
-    
+
     @counselor_only()
     @pit.command(name='delete', slash=False)
-    async def pit_delete(self, ctx: DuckContext):
-        """ Deletes a pit. """
+    async def pit_delete(self, ctx: DuckContext, *, channel: discord.TextChannel = commands.CurrentChannel):
+        """Deletes a pit."""
 
-        pit = await ctx.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_id = $1''', ctx.channel.id)
-        if pit is None:
-            raise commands.BadArgument('You are not in a pit.')
-        
+        pit_id = await ctx.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_id = $1''', channel.id)
+        if pit_id is None:
+            raise commands.BadArgument('Could not find pit id')
+
         try:
-            channel = ctx.guild.get_channel(pit)
-            await channel.delete(reason=f"pit delete command executed | {ctx.author} ({ctx.author.id})")
-        
+            pit = ctx.guild.get_channel(pit_id)
+            if pit is None:
+                raise commands.BadArgument('Could not find pit')
+
+            await pit.delete(reason=f"pit delete command executed | {ctx.author} ({ctx.author.id})")
+
         except discord.Forbidden:
             raise commands.BadArgument('I do not have permission to delete a channel.')
-        
+
         else:
-            await ctx.bot.pool.execute('''DELETE FROM pits WHERE pit_id = $1''', ctx.channel.id)
-            await ctx.send(f'✅ **|** Deleted **{channel.name}**')
-            
+            await ctx.bot.pool.execute('''DELETE FROM pits WHERE pit_id = $1''', pit.id)
+            await ctx.send(f'✅ **|** Deleted **{pit.name}**')
 
     @command(hybrid=True)
     async def whoadd(self, ctx: DuckContext, bot: discord.Member):
