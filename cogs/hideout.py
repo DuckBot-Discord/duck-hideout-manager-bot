@@ -559,7 +559,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             raise commands.BadArgument('Could not find pit id')
 
         try:
-            pit = ctx.guild.get_channel(pit_id)
+            pit: discord.TextChannel = ctx.guild.get_channel(pit_id)  # type: ignore
             if pit is None:
                 raise commands.BadArgument('Could not find pit')
 
@@ -576,9 +576,46 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
                 ctx.guild.default_role: discord.PermissionOverwrite(view_channel=False),
                 counselors: discord.PermissionOverwrite(view_channel=True),
             }
-            await channel.edit(
+            await pit.edit(
                 overwrites=new_overwrites, category=archive, reason=f"Pit archived by {ctx.author} ({ctx.author.id})"
             )
+        except discord.Forbidden:
+            raise commands.BadArgument('I do not have permission to edit channels.')
+
+        else:
+            await ctx.send(f'✅ **|** Archived **{pit.name}**')
+
+    @counselor_only()
+    @pit.command(name='unarchive', slash=False)
+    async def pit_unarchive(self, ctx: DuckContext, *, channel: discord.TextChannel = commands.CurrentChannel):
+        """Archives a pit."""
+
+        record = await ctx.bot.pool.fetchrow('''SELECT * FROM pits WHERE pit_id = $1''', channel.id)
+        if record is None:
+            raise commands.BadArgument('Could not find pit')
+
+        owner = await self.bot.get_or_fetch_member(ctx.guild, record['pit_owner'])
+        if owner is None:
+            raise commands.BadArgument('Could not find pit owner from id')
+
+        try:
+            pit: discord.TextChannel = ctx.guild.get_channel(record["pit_id"])  # type: ignore
+            if pit is None:
+                raise commands.BadArgument('Could not find pit from id')
+
+            pits_category: Optional[discord.CategoryChannel] = ctx.guild.get_channel(PIT_CATEGORY)  # type: ignore
+            if pits_category is None:
+                raise commands.BadArgument('Could not find pit category')
+
+            _bot_ids = await self.bot.pool.fetch('SELECT bot_id FROM addbot WHERE owner_id = $1 AND added = TRUE', owner.id)
+            users = [
+                _ent for _ent in map(lambda ent: owner.guild.get_member(ent['bot_id']), _bot_ids) if _ent is not None
+            ] + [owner]
+            overs = discord.PermissionOverwrite(
+                manage_messages=True, manage_channels=True, manage_threads=True, view_channel=True
+            )
+
+            await pit.edit(category=pits_category, overwrites={user: overs for user in users})
         except discord.Forbidden:
             raise commands.BadArgument('I do not have permission to edit channels.')
 
