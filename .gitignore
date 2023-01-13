@@ -123,3 +123,4 @@ dmypy.json
 /utils/ignored/*
 /utils/ignored
 /utils/ignored/
+.vscode
