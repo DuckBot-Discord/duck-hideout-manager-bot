@@ -282,7 +282,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
         if member.bot:
             await self.bot.pool.execute('UPDATE addbot SET added = FALSE WHERE bot_id = $1', member.id)
             embed = discord.Embed(title='Bot removed', description=f'{member} left.', colour=discord.Colour.red())
-            mem_id: int = await self.bot.pool.fetchval('SELECT owner_id FROM addbot WHERE bot_id = $1', member.id)  # type: ignore
+            mem_id: int = await self.bot.pool.fetchval('SELECT owner_id FROM addbot WHERE bot_id = $1', member.id)
             mem = member.guild.get_member(mem_id)
 
             if mem:
@@ -493,7 +493,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             The name of the pit to create.
         """
 
-        pit_id: int = await ctx.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_owner = $1''', owner.id)  # type: ignore
+        pit_id: int = await ctx.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_owner = $1''', owner.id)
         if pit_id is not None and ctx.guild.get_channel(pit_id):
             raise commands.BadArgument('User already owns a pit.')
 
@@ -548,6 +548,42 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
         else:
             await ctx.bot.pool.execute('''DELETE FROM pits WHERE pit_id = $1''', pit.id)
             await ctx.send(f'✅ **|** Deleted **{pit.name}**')
+
+    @counselor_only()
+    @pit.command(name='archive', slash=False)
+    async def pit_archive(self, ctx: DuckContext, *, channel: discord.TextChannel = commands.CurrentChannel):
+        """Archives a pit."""
+
+        pit_id: int = await ctx.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_id = $1''', channel.id)
+        if pit_id is None:
+            raise commands.BadArgument('Could not find pit id')
+
+        try:
+            pit = ctx.guild.get_channel(pit_id)
+            if pit is None:
+                raise commands.BadArgument('Could not find pit')
+
+            archive: Optional[discord.CategoryChannel] = ctx.guild.get_channel(ARCHIVE_CATEGORY)  # type: ignore
+            if archive is None:
+                raise commands.BadArgument('Could not find archive category')
+
+            counselors = ctx.guild.get_role(COUNSELORS_ROLE)
+            if counselors is None:
+                raise commands.BadArgument('Could not find counselors role')
+
+            new_overwrites = {
+                **pit.overwrites,
+                ctx.guild.default_role: discord.PermissionOverwrite(view_channel=False),
+                counselors: discord.PermissionOverwrite(view_channel=True),
+            }
+            await channel.edit(
+                overwrites=new_overwrites, category=archive, reason=f"Pit archived by {ctx.author} ({ctx.author.id})"
+            )
+        except discord.Forbidden:
+            raise commands.BadArgument('I do not have permission to edit channels.')
+
+        else:
+            await ctx.send(f'✅ **|** Archived **{pit.name}**')
 
     @command(hybrid=True)
     async def whoadd(self, ctx: DuckContext, bot: discord.Member):
