@@ -27,7 +27,7 @@ BOT_DEVS_ROLE = 775516377057722390
 COUNSELORS_ROLE = 896178155486855249
 GENERAL_CHANNEL = 774561548659458081
 PIT_CATEGORY = 915494807349116958
-
+ARCHIVE_CATEGORY = 973896686290223134
 
 log = logging.getLogger(__name__)
 
@@ -382,16 +382,15 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
 
     @pit.command(name='ban')
     @pit_owner_only()
-    @app_commands.rename(_for='for')
-    async def pit_ban(self, ctx: DuckContext, member: discord.Member, _for: Optional[ShortTime]):
+    async def pit_ban(self, ctx: DuckContext, member: discord.Member, duration: Optional[ShortTime]):
         """Ban a member from the pit.
 
         Parameters
         ----------
         member: discord.Member
             The member to ban from this pit
-        for: str
-            For how much should this member stay banned? (e.g. 1h, 1d, 1h2m30s)
+        duration: str
+            How long should this member stay banned? (e.g. 1h, 1d, 1h2m30s)
         """
 
         if member.id == ctx.author.id:
@@ -412,11 +411,11 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             await ctx.send('🥴 Something went wrong...')
 
         else:
-            if _for:
+            if duration:
                 await self.bot.create_timer(
-                    _for.dt, 'tempblock', ctx.guild.id, ctx.channel.id, member.id, ctx.author.id, precise=False
+                    duration.dt, 'tempblock', ctx.guild.id, ctx.channel.id, member.id, ctx.author.id, precise=False
                 )
-                fmt = f'until {discord.utils.format_dt(_for.dt, "R")}'
+                fmt = f'until {discord.utils.format_dt(duration.dt, "R")}'
 
             else:
                 fmt = ''
