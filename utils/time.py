@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING, Any, Callable, Optional, Sequence, Tuple, Type
 from discord.ext import commands
 
 if TYPE_CHECKING:
-    from .context import DuckContext
+    from .context import HideoutContext
 
 # Monkey patch mins and secs into the units
 units = pdt.pdtLocales['en_US'].units
@@ -78,7 +78,7 @@ class ShortTime:
         self.dt = now + relativedelta(**data)
 
     @classmethod
-    async def convert(cls: Type[STT], ctx: DuckContext, argument: str) -> STT:
+    async def convert(cls: Type[STT], ctx: HideoutContext, argument: str) -> STT:
         return cls(argument, now=ctx.message.created_at)
 
 
@@ -101,7 +101,7 @@ class HumanTime:
         self._past = dt < now
 
     @classmethod
-    async def convert(cls: Type[HTT], ctx: DuckContext, argument: str) -> HTT:
+    async def convert(cls: Type[HTT], ctx: HideoutContext, argument: str) -> HTT:
         return cls(argument, now=ctx.message.created_at)
 
 
@@ -140,7 +140,7 @@ class UserFriendlyTime(commands.Converter):
 
     def __init__(
         self,
-        converter: Optional[Union[Callable[[DuckContext, str], Any], Type[commands.Converter], commands.Converter]] = None,
+        converter: Optional[Union[Callable[[HideoutContext, str], Any], Type[commands.Converter], commands.Converter]] = None,
         *,
         default: Optional[str] = None,
     ) -> None:
@@ -152,11 +152,11 @@ class UserFriendlyTime(commands.Converter):
 
         self.converter = (
             converter
-        )  # type: Optional[Union[Callable[[DuckContext, str], Any], Type[commands.Converter], commands.Converter]] # Fuck you im commenting it
+        )  # type: Optional[Union[Callable[[HideoutContext, str], Any], Type[commands.Converter], commands.Converter]] # Fuck you im commenting it
         self.default: Optional[str] = default
 
     async def check_constraints(
-        self, ctx: DuckContext, now: datetime.datetime, remaining: Union[str, datetime.datetime]
+        self, ctx: HideoutContext, now: datetime.datetime, remaining: Union[str, datetime.datetime]
     ) -> UserFriendlyTime:
         if self.dt < now:
             raise commands.BadArgument('This time is in the past.')
@@ -180,7 +180,7 @@ class UserFriendlyTime(commands.Converter):
         obj.default = self.default
         return obj
 
-    async def convert(self, ctx: DuckContext, argument: str) -> UserFriendlyTime:
+    async def convert(self, ctx: HideoutContext, argument: str) -> UserFriendlyTime:
         # Create a copy of ourselves to prevent race conditions from two
         # events modifying the same instance of a converter
         result = self.copy()

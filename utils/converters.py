@@ -11,7 +11,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import FlagConverter
 
-from .context import DuckContext
+from .context import HideoutContext
 
 
 BET = TypeVar('BET', bound='discord.guild.BanEntry')
@@ -38,7 +38,7 @@ class UntilFlag(Generic[FCT]):
             reply: Optional[discord.Message] = None
 
         @commands.command()
-        async def send(self, ctx: DuckContext, *, text: UntilFlag[SendFlags]):
+        async def send(self, ctx: HideoutContext, *, text: UntilFlag[SendFlags]):
             '''Send a message to a channel.'''
             channel = text.flags.channel or ctx.channel
             await channel.send(text.value)
@@ -87,7 +87,7 @@ class UntilFlag(Generic[FCT]):
             raise commands.BadArgument(f'No body has been specified before the flags.')
         return True
 
-    async def convert(self, ctx: DuckContext, argument: str) -> UntilFlag:
+    async def convert(self, ctx: HideoutContext, argument: str) -> UntilFlag:
         """|coro|
 
         The main convert method of the converter. This will take the given flag converter and
@@ -95,7 +95,7 @@ class UntilFlag(Generic[FCT]):
 
         Parameters
         ----------
-        ctx: :class:`DuckContext`
+        ctx: :class:`HideoutContext`
             The context of the command.
         argument: :class:`str`
             The argument to convert.

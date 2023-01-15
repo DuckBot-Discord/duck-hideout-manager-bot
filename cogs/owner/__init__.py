@@ -1,4 +1,4 @@
-from utils import DuckContext, HandleHTTPException, cb
+from utils import HideoutContext, HandleHTTPException, cb
 from discord.ext.commands import NotOwner, command, Paginator, ExtensionFailed
 from traceback import format_exception
 
@@ -11,14 +11,14 @@ class Owner(
 ):
     """The Cog for All owner commands."""
 
-    async def cog_check(self, ctx: DuckContext) -> bool:
+    async def cog_check(self, ctx: HideoutContext) -> bool:
         """Check if the user is a bot owner."""
         if await ctx.bot.is_owner(ctx.author):
             return True
         raise NotOwner
 
     @command()
-    async def sync(self, ctx: DuckContext):
+    async def sync(self, ctx: HideoutContext):
         """Syncs commands."""
         msg = await ctx.send('Syncing...')
         ctx.bot.tree.copy_global_to(guild=ctx.guild)

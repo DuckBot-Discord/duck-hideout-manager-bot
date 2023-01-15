@@ -10,18 +10,18 @@ from typing import Tuple, Optional, Dict, List, Generator, Any, TYPE_CHECKING, T
 
 import discord
 
-from utils.context import DuckContext
-from utils.errors import DuckBotException, SilentCommandError, log
-from utils.types.exception import DuckTraceback, _DuckTracebackOptional
+from utils.context import HideoutContext
+from utils.errors import HideoutManagerException, SilentCommandError, log
+from utils.types.exception import HideoutTraceback, _HideoutTracebackOptional
 
 if TYPE_CHECKING:
-    from bot import DuckBot
+    from bot import HideoutManager
 
 
-__all__: Tuple[str, ...] = ('DuckExceptionManager', 'HandleHTTPException')
+__all__: Tuple[str, ...] = ('HideoutExceptionManager', 'HandleHTTPException')
 
 
-class DuckExceptionManager:
+class HideoutExceptionManager:
     """A simple exception handler that sends all exceptions to a error
     Webhook and then logs them to the console.
 
@@ -35,7 +35,7 @@ class DuckExceptionManager:
 
     Attributes
     ----------
-    bot: :class:`DuckBot`
+    bot: :class:`HideoutManager`
         The bot instance.
     cooldown: :class:`datetime.timedelta`
         The cooldown between sending errors. This defaults to 5 seconds.
@@ -49,17 +49,17 @@ class DuckExceptionManager:
 
     __slots__: Tuple[str, ...] = ('bot', 'cooldown', '_lock', '_most_recent', 'errors', 'code_blocker', 'error_webhook')
 
-    def __init__(self, bot: DuckBot, *, cooldown: datetime.timedelta = datetime.timedelta(seconds=5)) -> None:
+    def __init__(self, bot: HideoutManager, *, cooldown: datetime.timedelta = datetime.timedelta(seconds=5)) -> None:
         if not bot.error_webhook_url:
-            raise DuckBotException('No error webhokk set in .env!')
+            raise HideoutManagerException('No error webhokk set in .env!')
 
-        self.bot: DuckBot = bot
+        self.bot: HideoutManager = bot
         self.cooldown: datetime.timedelta = cooldown
 
         self._lock: asyncio.Lock = asyncio.Lock()
         self._most_recent: Optional[datetime.datetime] = None
 
-        self.errors: Dict[str, List[DuckTraceback]] = {}
+        self.errors: Dict[str, List[HideoutTraceback]] = {}
         self.code_blocker: str = '```py\n{}```'
         self.error_webhook: discord.Webhook = discord.Webhook.from_url(
             bot.error_webhook_url, session=bot.session, bot_token=bot.http.token
@@ -71,7 +71,7 @@ class DuckExceptionManager:
         for i in range(0, len(iterable), chunksize - cbs):
             yield self.code_blocker.format(iterable[i : i + chunksize - cbs])
 
-    async def release_error(self, traceback: str, packet: DuckTraceback) -> None:
+    async def release_error(self, traceback: str, packet: HideoutTraceback) -> None:
         """|coro|
 
         Releases an error to the webhook and logs it to the console. It is not recommended
@@ -123,7 +123,7 @@ class DuckExceptionManager:
             fmt['command'] = command.qualified_name
             display = f'in command "{command.qualified_name}"'
         else:
-            display = f'in no command (in DuckBot)'
+            display = f'in no command (in HideoutManager)'
 
         embed = discord.Embed(title=f'An error has occured in {display}', timestamp=packet['time'])
         embed.add_field(
@@ -162,7 +162,7 @@ class DuckExceptionManager:
         if embeds:
             await webhook.send(embeds=embeds, **kwargs)
 
-    async def add_error(self, *, error: Exception, ctx: Optional[DuckContext] = None) -> None:
+    async def add_error(self, *, error: Exception, ctx: Optional[HideoutContext] = None) -> None:
         """|coro|
 
         Add an error to the error manager. This will handle all cooldowns and internal cache management
@@ -172,15 +172,15 @@ class DuckExceptionManager:
         ----------
         error: :class:`Exception`
             The error to add.
-        ctx: Optional[:class:`DuckContext`]
+        ctx: Optional[:class:`HideoutContext`]
             The invocation context of the error, if any.
         """
         log.info('Adding error "%s" to log.', str(error))
 
-        packet: DuckTraceback = {'time': (ctx and ctx.message.created_at) or discord.utils.utcnow(), 'exception': error}
+        packet: HideoutTraceback = {'time': (ctx and ctx.message.created_at) or discord.utils.utcnow(), 'exception': error}
 
         if ctx is not None:
-            addons: _DuckTracebackOptional = {
+            addons: _HideoutTracebackOptional = {
                 'command': ctx.command,
                 'author': ctx.author.id,
                 'guild': (ctx.guild and ctx.guild.id) or None,

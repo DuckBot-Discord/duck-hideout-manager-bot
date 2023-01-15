@@ -7,18 +7,18 @@ from discord.ext import commands
 
 if TYPE_CHECKING:
     from discord.message import Message
-    from bot import DuckBot
+    from bot import HideoutManager
 
 __all__: Tuple[str, ...] = (
-    'DuckContext',
+    'HideoutContext',
     'ConfirmationView'
 )
 
-BotT = TypeVar('BotT', bound='DuckBot')
+BotT = TypeVar('BotT', bound='HideoutManager')
 
 
 class ConfirmationView(discord.ui.View):
-    def __init__(self, ctx: DuckContext, *, timeout: int = 60) -> None:
+    def __init__(self, ctx: HideoutContext, *, timeout: int = 60) -> None:
         super().__init__(timeout=timeout)
         self.ctx = ctx
         self.value = None
@@ -57,11 +57,11 @@ class ConfirmationView(discord.ui.View):
         await interaction.message.delete()
 
 
-class DuckContext(commands.Context, Generic[BotT]):
+class HideoutContext(commands.Context, Generic[BotT]):
     """The subclassed Context to allow some extra functionality."""
 
     if TYPE_CHECKING:
-        bot: DuckBot
+        bot: HideoutManager
         guild: discord.Guild
 
     __slots__: Tuple[str, ...] = ()
@@ -72,7 +72,7 @@ class DuckContext(commands.Context, Generic[BotT]):
 
     @discord.utils.cached_property
     def color(self) -> discord.Color:
-        """:class:`~discord.Color`: Returns DuckBot's color, or the author's color. Falls back to blurple"""
+        """:class:`~discord.Color`: Returns HideoutManager's color, or the author's color. Falls back to blurple"""
 
         def check(color):
             return color not in {discord.Color.default(), None}
@@ -146,23 +146,23 @@ class DuckContext(commands.Context, Generic[BotT]):
             return None
 
 
-async def setup(bot: DuckBot) -> None:
-    """Sets up the DuckContext class.
+async def setup(bot: HideoutManager) -> None:
+    """Sets up the HideoutContext class.
 
     Parameters
     ----------
-    bot: DuckBot
-        The bot to set up the DuckContext class for.
+    bot: HideoutManager
+        The bot to set up the HideoutContext class for.
     """
-    bot._context_cls = DuckContext
+    bot._context_cls = HideoutContext
 
 
-async def teardown(bot: DuckBot) -> None:
-    """Tears down the DuckContext class.
+async def teardown(bot: HideoutManager) -> None:
+    """Tears down the HideoutContext class.
 
     Parameters
     ----------
-    bot: DuckBot
-        The bot to tear down the DuckContext class for.
+    bot: HideoutManager
+        The bot to tear down the HideoutContext class for.
     """
     bot._context_cls = commands.Context

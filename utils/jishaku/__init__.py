@@ -31,8 +31,8 @@ from jishaku.repl import AsyncCodeExecutor
 from jishaku.repl.repl_builtins import get_var_dict_from_ctx
 from jishaku.paginators import use_file_check, PaginatorInterface, WrappedPaginator
 
-from utils.context import DuckContext
-from .. import add_logging, DuckCog
+from utils.context import HideoutContext
+from .. import add_logging, HideoutCog
 
 try:
     import psutil
@@ -40,7 +40,7 @@ except ImportError:
     psutil = None
 
 if TYPE_CHECKING:
-    from bot import DuckBot
+    from bot import HideoutManager
 
 T = TypeVar("T")
 
@@ -52,7 +52,7 @@ class OverwrittenRootCommand(RootCommand):
         aliases=["jishaku", "jishacum"],
         invoke_without_command=True,
     )
-    async def jsk(self, ctx: DuckContext):
+    async def jsk(self, ctx: HideoutContext):
         """
         The Jishaku debug and diagnostic commands.
 
@@ -155,7 +155,7 @@ class OverwrittenRootCommand(RootCommand):
 
 class OverwrittenManagementFeature(ManagementFeature):
     @Feature.Command(parent="jsk", name="load", aliases=["reload"])
-    async def jsk_load(self, ctx: DuckContext, *extensions: ExtensionConverter):
+    async def jsk_load(self, ctx: HideoutContext, *extensions: ExtensionConverter):
         """
         Loads or reloads the given extension names.
 
@@ -193,7 +193,7 @@ class OverwrittenManagementFeature(ManagementFeature):
             await ctx.send(page)
 
     @Feature.Command(parent="jsk", name="sync")
-    async def jsk_sync(self, ctx: DuckContext, sync_globally: Optional[bool], *guild_ids: int):
+    async def jsk_sync(self, ctx: HideoutContext, sync_globally: Optional[bool], *guild_ids: int):
         """
         Sync global or guild application commands to Discord.
         """
@@ -224,8 +224,8 @@ features.remove(ManagementFeature)
 features.append(OverwrittenManagementFeature)
 
 
-class DuckBotJishaku(
-    DuckCog,
+class HideoutManagerJishaku(
+    HideoutCog,
     *features,
     *OPTIONAL_FEATURES,
 ):
@@ -236,7 +236,7 @@ class DuckBotJishaku(
 
     Attributes
     ----------
-    bot: :class:`DuckBot`
+    bot: :class:`HideoutManager`
         The bot instance this frontend is attached to.
     """
 
@@ -244,7 +244,7 @@ class DuckBotJishaku(
 
     async def jsk_python_result_handling(
         self,
-        ctx: DuckContext,
+        ctx: HideoutContext,
         result: Any,
         *,
         start_time: Optional[float] = None,
@@ -300,7 +300,7 @@ class DuckBotJishaku(
 
     @discord.utils.copy_doc(PythonFeature.jsk_python)
     @Feature.Command(parent="jsk", name="py", aliases=["python"])
-    async def jsk_python(self, ctx: DuckContext, *, argument: Annotated[str, codeblock_converter]) -> None:
+    async def jsk_python(self, ctx: HideoutContext, *, argument: Annotated[str, codeblock_converter]) -> None:
         """|coro|
 
         The subclassed jsk python command to implement some more functionality and features.
@@ -350,5 +350,5 @@ class DuckBotJishaku(
             scope.clear_intersection(arg_dict)
 
 
-async def setup(bot: DuckBot) -> None:
-    return await bot.add_cog(DuckBotJishaku(bot=bot))
+async def setup(bot: HideoutManager) -> None:
+    return await bot.add_cog(HideoutManagerJishaku(bot=bot))

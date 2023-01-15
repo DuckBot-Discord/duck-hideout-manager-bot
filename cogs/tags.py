@@ -13,7 +13,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands, menus
 
-from utils import DuckCog, DuckContext, ViewMenuPages
+from utils import HideoutCog, HideoutContext, ViewMenuPages
 
 T = TypeVar('T')
 CO_T = TypeVar("CO_T", bound='Union[Type[commands.Converter], commands.Converter]')
@@ -229,7 +229,7 @@ class TagsFromFetchedPageSource(menus.ListPageSource):
         *,
         per_page: int = 10,
         member: discord.Member | discord.User | None = None,
-        ctx: DuckContext,
+        ctx: HideoutContext,
     ):
         super().__init__(tags, per_page=per_page)
         self.member = member
@@ -245,7 +245,7 @@ class TagsFromFetchedPageSource(menus.ListPageSource):
         return embed
 
 
-class Tags(DuckCog):
+class Tags(HideoutCog):
     """Tags: A way to store information for quick access. Allows you to create tags
     that can be used anywhere in the server with the 'tag' command."""
 
@@ -460,7 +460,7 @@ class Tags(DuckCog):
         *,
         timeout: int = 60,
         converter: CO_T | Type[CO_T] | None = None,
-        ctx: DuckContext | None = None,
+        ctx: HideoutContext | None = None,
     ) -> Union[str, CO_T]:
         """Waits for a message to be sent in a channel.
 
@@ -527,16 +527,16 @@ class Tags(DuckCog):
 
     @commands.group(name='tag', invoke_without_command=True)
     @copy_doc(__tag)
-    async def tag(self, ctx: DuckContext, *, name: TagName):
+    async def tag(self, ctx: HideoutContext, *, name: TagName):
         await self.__tag(ctx, name, guild=ctx.guild)
 
     @tag.group(name='global', invoke_without_command=True)
     @copy_doc(__tag)
-    async def tag_global(self, ctx: DuckContext, name: TagName):
+    async def tag_global(self, ctx: HideoutContext, name: TagName):
         await self.__tag(ctx, name, guild=None)
 
     async def __tag_create(
-        self, ctx: DuckContext, tag: TagName, content: commands.clean_content, guild: discord.Guild | None
+        self, ctx: HideoutContext, tag: TagName, content: commands.clean_content, guild: discord.Guild | None
     ):
         """Creates a tag
 
@@ -554,15 +554,15 @@ class Tags(DuckCog):
 
     @tag.command(name='create', aliases=['new', 'add'])
     @copy_doc(__tag_create)
-    async def tag_create(self, ctx: DuckContext, tag: TagName(lower=False), *, content: commands.clean_content):  # type: ignore
+    async def tag_create(self, ctx: HideoutContext, tag: TagName(lower=False), *, content: commands.clean_content):  # type: ignore
         await self.__tag_create(ctx, tag, content, guild=ctx.guild)
 
     @tag_global.command(name='create', aliases=['new', 'add'])
     @copy_doc(__tag_create)
-    async def tag_global_create(self, ctx: DuckContext, tag: TagName(lower=False), *, content: commands.clean_content):  # type: ignore
+    async def tag_global_create(self, ctx: HideoutContext, tag: TagName(lower=False), *, content: commands.clean_content):  # type: ignore
         await self.__tag_create(ctx, tag, content, guild=None)
 
-    async def __tag_make(self, ctx: DuckContext, guild: discord.Guild | None):
+    async def __tag_make(self, ctx: HideoutContext, guild: discord.Guild | None):
         """Interactive prompt to make a tag.
         """
         await ctx.send('Hello, what name would you like to give this tag?')
@@ -596,17 +596,17 @@ class Tags(DuckCog):
     @tag.command(name='make', ignore_extra=False)
     @copy_doc(__tag_make)
     @commands.max_concurrency(1, commands.BucketType.member)
-    async def tag_make(self, ctx: DuckContext):
+    async def tag_make(self, ctx: HideoutContext):
         await self.__tag_make(ctx, ctx.guild)
 
     @tag_global.command(name='make', ignore_extra=False)
     @copy_doc(__tag_make)
     @commands.max_concurrency(1, commands.BucketType.member)
-    async def tag_global_make(self, ctx: DuckContext):
+    async def tag_global_make(self, ctx: HideoutContext):
         await self.__tag_make(ctx, None)
 
     @tag.command(name='claim')  # no global for you! :P
-    async def tag_claim(self, ctx: DuckContext, name: TagName):
+    async def tag_claim(self, ctx: HideoutContext, name: TagName):
         """Claims a tag from a user that isn't
         in this server anymore.
 
@@ -625,7 +625,7 @@ class Tags(DuckCog):
         await ctx.send(f'Tag {name!r} successfully claimed!')
 
     async def __tag_edit(
-        self, ctx: DuckContext, tag_name: TagName, content: commands.clean_content, guild: discord.Guild | None
+        self, ctx: HideoutContext, tag_name: TagName, content: commands.clean_content, guild: discord.Guild | None
     ):
         """Edits a tag
 
@@ -645,16 +645,16 @@ class Tags(DuckCog):
 
     @tag.command(name='edit')
     @copy_doc(__tag_edit)
-    async def tag_edit(self, ctx: DuckContext, tag: TagName, *, content: commands.clean_content):
+    async def tag_edit(self, ctx: HideoutContext, tag: TagName, *, content: commands.clean_content):
         await self.__tag_edit(ctx, tag, content, ctx.guild)
 
     @tag_global.command(name='edit')
     @copy_doc(__tag_edit)
-    async def tag_global_edit(self, ctx: DuckContext, tag: TagName, *, content: commands.clean_content):
+    async def tag_global_edit(self, ctx: HideoutContext, tag: TagName, *, content: commands.clean_content):
         await self.__tag_edit(ctx, tag, content, ctx.guild)
 
     async def __tag_append(
-        self, ctx: DuckContext, tag: TagName, content: commands.clean_content, guild: discord.Guild | None
+        self, ctx: HideoutContext, tag: TagName, content: commands.clean_content, guild: discord.Guild | None
     ):
         """Appends content to a tag.
 
@@ -687,15 +687,15 @@ class Tags(DuckCog):
 
     @tag.command(name='append')
     @copy_doc(__tag_append)
-    async def tag_append(self, ctx: DuckContext, tag: TagName, *, content: commands.clean_content):
+    async def tag_append(self, ctx: HideoutContext, tag: TagName, *, content: commands.clean_content):
         await self.__tag_append(ctx, tag, content, ctx.guild)
 
     @tag_global.command(name='append')
     @copy_doc(__tag_append)
-    async def tag_global_append(self, ctx: DuckContext, tag: TagName, *, content: commands.clean_content):
+    async def tag_global_append(self, ctx: HideoutContext, tag: TagName, *, content: commands.clean_content):
         await self.__tag_append(ctx, tag, content, ctx.guild)
 
-    async def __tag_delete(self, ctx: DuckContext, tag: TagName, guild: discord.Guild | None):
+    async def __tag_delete(self, ctx: HideoutContext, tag: TagName, guild: discord.Guild | None):
         """Deletes one of your tags.
 
         Parameters
@@ -737,16 +737,16 @@ class Tags(DuckCog):
 
     @tag.command(name='delete')
     @copy_doc(__tag_delete)
-    async def tag_delete(self, ctx: DuckContext, *, tag: TagName):
+    async def tag_delete(self, ctx: HideoutContext, *, tag: TagName):
         await self.__tag_delete(ctx, tag, ctx.guild)
 
     @tag_global.command(name='delete')
     @copy_doc(__tag_delete)
     @commands.is_owner()
-    async def tag_global_delete(self, ctx: DuckContext, *, tag: TagName):
+    async def tag_global_delete(self, ctx: HideoutContext, *, tag: TagName):
         await self.__tag_delete(ctx, tag, None)
 
-    async def __tag_delete_id(self, ctx: DuckContext, tag_id: int, guild: discord.Guild | None):
+    async def __tag_delete_id(self, ctx: HideoutContext, tag_id: int, guild: discord.Guild | None):
         """Deletes a tag by ID.
 
         Parameters
@@ -788,16 +788,16 @@ class Tags(DuckCog):
 
     @tag.command(name='delete-id')
     @copy_doc(__tag_delete_id)
-    async def tag_delete_id(self, ctx: DuckContext, *, tag_id: int):
+    async def tag_delete_id(self, ctx: HideoutContext, *, tag_id: int):
         await self.__tag_delete_id(ctx, tag_id, ctx.guild)
 
     @tag_global.command(name='delete-id')
     @copy_doc(__tag_delete_id)
     @commands.is_owner()
-    async def tag_global_delete_id(self, ctx: DuckContext, *, tag_id: int):
+    async def tag_global_delete_id(self, ctx: HideoutContext, *, tag_id: int):
         await self.__tag_delete_id(ctx, tag_id, None)
 
-    async def __tag_purge(self, ctx: DuckContext, member: discord.Member | discord.User, guild: discord.Guild | None):
+    async def __tag_purge(self, ctx: HideoutContext, member: discord.Member | discord.User, guild: discord.Guild | None):
         """Purges all tags from a user.
 
         Parameters
@@ -862,16 +862,16 @@ class Tags(DuckCog):
 
     @tag.command(name='purge')
     @copy_doc(__tag_purge)
-    async def tag_purge(self, ctx: DuckContext, member: typing.Union[discord.Member, discord.User]):
+    async def tag_purge(self, ctx: HideoutContext, member: typing.Union[discord.Member, discord.User]):
         await self.__tag_purge(ctx, member, ctx.guild)
 
     @tag_global.command(name='purge')
     @copy_doc(__tag_purge)
     @commands.is_owner()
-    async def tag_global_purge(self, ctx: DuckContext, member: typing.Union[discord.Member, discord.User]):
+    async def tag_global_purge(self, ctx: HideoutContext, member: typing.Union[discord.Member, discord.User]):
         await self.__tag_purge(ctx, member, None)
 
-    async def __tag_alias(self, ctx: DuckContext, alias: TagName, points_to: TagName, guild: discord.Guild | None):
+    async def __tag_alias(self, ctx: HideoutContext, alias: TagName, points_to: TagName, guild: discord.Guild | None):
         """Creates an alias for a tag.
 
         Parameters
@@ -897,15 +897,15 @@ class Tags(DuckCog):
 
     @tag.command(name='alias')
     @copy_doc(__tag_alias)
-    async def tag_alias(self, ctx: DuckContext, alias: TagName, *, points_to: TagName):
+    async def tag_alias(self, ctx: HideoutContext, alias: TagName, *, points_to: TagName):
         await self.__tag_alias(ctx, alias, points_to, ctx.guild)
 
     @tag_global.command(name='alias')
     @copy_doc(__tag_alias)
-    async def tag_global_alias(self, ctx: DuckContext, alias: TagName, *, points_to: TagName):
+    async def tag_global_alias(self, ctx: HideoutContext, alias: TagName, *, points_to: TagName):
         await self.__tag_alias(ctx, alias, points_to, None)
 
-    async def __tag_info(self, ctx: DuckContext, tag: TagName, guild: discord.Guild | None):
+    async def __tag_info(self, ctx: HideoutContext, tag: TagName, guild: discord.Guild | None):
         """Gets information about a tag
 
         Parameters
@@ -949,15 +949,15 @@ class Tags(DuckCog):
 
     @tag.command(name='info', aliases=['owner'])
     @copy_doc(__tag_info)
-    async def tag_info(self, ctx: DuckContext, *, tag: TagName):
+    async def tag_info(self, ctx: HideoutContext, *, tag: TagName):
         await self.__tag_info(ctx, tag, ctx.guild)
 
     @tag_global.command(name='info')
     @copy_doc(__tag_info)
-    async def tag_global_info(self, ctx: DuckContext, *, tag: TagName):
+    async def tag_global_info(self, ctx: HideoutContext, *, tag: TagName):
         await self.__tag_info(ctx, tag, None)
 
-    async def __tag_list(self, ctx: DuckContext, member: discord.Member | discord.User | None, guild: discord.Guild | None):
+    async def __tag_list(self, ctx: HideoutContext, member: discord.Member | discord.User | None, guild: discord.Guild | None):
         """Lists all tags owned by a member.
 
         Parameters
@@ -988,15 +988,15 @@ class Tags(DuckCog):
 
     @tag.command(name='list')
     @copy_doc(__tag_list)
-    async def tag_list(self, ctx: DuckContext, *, member: Optional[discord.Member] = None):
+    async def tag_list(self, ctx: HideoutContext, *, member: Optional[discord.Member] = None):
         await self.__tag_list(ctx, member, ctx.guild)
 
     @tag_global.command(name='list')
     @copy_doc(__tag_list)
-    async def tag_global_list(self, ctx: DuckContext, *, user: Optional[discord.User] = None):
+    async def tag_global_list(self, ctx: HideoutContext, *, user: Optional[discord.User] = None):
         await self.__tag_list(ctx, user, None)
 
-    async def __tag_search(self, ctx: DuckContext, query: str, guild: discord.Guild | None):
+    async def __tag_search(self, ctx: HideoutContext, query: str, guild: discord.Guild | None):
         """Searches for tags.
 
         Parameters
@@ -1021,15 +1021,15 @@ class Tags(DuckCog):
 
     @tag.command(name='search')
     @copy_doc(__tag_search)
-    async def tag_search(self, ctx: DuckContext, *, query: str):
+    async def tag_search(self, ctx: HideoutContext, *, query: str):
         await self.__tag_search(ctx, query, ctx.guild)
 
     @tag_global.command(name='search')
     @copy_doc(__tag_search)
-    async def tag_global_search(self, ctx: DuckContext, *, query: str):
+    async def tag_global_search(self, ctx: HideoutContext, *, query: str):
         await self.__tag_search(ctx, query, None)
 
-    async def __tag_raw(self, ctx: DuckContext, tag_name: TagName, guild: discord.Guild | None):
+    async def __tag_raw(self, ctx: HideoutContext, tag_name: TagName, guild: discord.Guild | None):
         """Sends a raw tag.
 
         Parameters
@@ -1042,20 +1042,20 @@ class Tags(DuckCog):
 
     @tag.command(name='raw')
     @copy_doc(__tag_raw)
-    async def tag_raw(self, ctx: DuckContext, *, tag: TagName):
+    async def tag_raw(self, ctx: HideoutContext, *, tag: TagName):
         await self.__tag_raw(ctx, tag, ctx.guild)
 
     @tag_global.command(name='raw')
     @copy_doc(__tag_raw)
-    async def tag_global_raw(self, ctx: DuckContext, *, tag: TagName):
+    async def tag_global_raw(self, ctx: HideoutContext, *, tag: TagName):
         await self.__tag_raw(ctx, tag, None)
 
-    async def get_guild_or_global_stats(self, ctx: DuckContext, guild: discord.Guild | None, embed):
+    async def get_guild_or_global_stats(self, ctx: HideoutContext, guild: discord.Guild | None, embed):
         """Gets the tag stats of a guild.
 
         Parameters
         ----------
-        ctx: DuckContext
+        ctx: HideoutContext
             The context of the command.
         guild: discord.Guild
             The guild to get the tag stats of.
@@ -1129,12 +1129,12 @@ class Tags(DuckCog):
 
         await ctx.send(embed=embed)
 
-    async def user_tag_stats(self, ctx: DuckContext, member: discord.Member | discord.User, guild: discord.Guild | None):
+    async def user_tag_stats(self, ctx: HideoutContext, member: discord.Member | discord.User, guild: discord.Guild | None):
         """Gets the tag stats of a member.
 
         Parameters
         ----------
-        ctx: DuckContext
+        ctx: HideoutContext
             The context to get the number of tags in.
         member: discord.Member
             The member to get the stats for.
@@ -1197,7 +1197,7 @@ class Tags(DuckCog):
         await ctx.send(embed=embed)
 
     @tag.command(name='stats')
-    async def tag_stats(self, ctx: DuckContext, member: Optional[discord.Member] = None):
+    async def tag_stats(self, ctx: HideoutContext, member: Optional[discord.Member] = None):
         """Gets the tag stats of a member or this server.
 
         Parameters
@@ -1215,7 +1215,7 @@ class Tags(DuckCog):
             await self.user_tag_stats(ctx, member, ctx.guild)
 
     @tag_global.command(name='stats')
-    async def tag_global_stats(self, ctx: DuckContext, user: Optional[discord.User] = None):
+    async def tag_global_stats(self, ctx: HideoutContext, user: Optional[discord.User] = None):
         """Gets the tag stats of a user or global.
 
         Parameters
@@ -1232,7 +1232,7 @@ class Tags(DuckCog):
         else:
             await self.user_tag_stats(ctx, user, None)
 
-    async def __tag_remove_embed(self, ctx: DuckContext, tag: TagName, guild: discord.Guild | None = None):
+    async def __tag_remove_embed(self, ctx: HideoutContext, tag: TagName, guild: discord.Guild | None = None):
         """Removes an embed from a tag. 
         
         To add an embed, use the ``embed`` command. 
@@ -1271,12 +1271,12 @@ class Tags(DuckCog):
 
     @tag.command(name='remove-embed')
     @copy_doc(__tag_remove_embed)
-    async def tag_remove_embed(self, ctx: DuckContext, *, tag: TagName):
+    async def tag_remove_embed(self, ctx: HideoutContext, *, tag: TagName):
         await self.__tag_remove_embed(ctx, tag, ctx.guild)
 
     @tag_global.command(name='remove-embed')
     @copy_doc(__tag_remove_embed)
-    async def tag_global_remove_embed(self, ctx: DuckContext, *, tag: TagName):
+    async def tag_global_remove_embed(self, ctx: HideoutContext, *, tag: TagName):
         await self.__tag_remove_embed(ctx, tag, None)
 
     @app_commands.command(name='tag')

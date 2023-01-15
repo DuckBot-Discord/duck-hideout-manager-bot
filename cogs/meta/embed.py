@@ -3,7 +3,7 @@ import typing
 import discord
 from discord.ext import commands
 
-from utils import DuckContext, DuckCog
+from utils import HideoutContext, HideoutCog
 from cogs.tags import TagName
 
 try:
@@ -50,7 +50,7 @@ class AuthorFlags(commands.FlagConverter, prefix='--', delimiter='', case_insens
 
 class EmbedFlags(commands.FlagConverter, prefix='--', delimiter='', case_insensitive=True):
     @classmethod
-    async def convert(cls, ctx: DuckContext, argument: str):
+    async def convert(cls, ctx: HideoutContext, argument: str):
         argument = strip_codeblock(argument).replace(' —', ' --')
         # Here we strip the code block if any and replace the iOS dash with
         # a regular double-dash for ease of use.
@@ -67,9 +67,9 @@ class EmbedFlags(commands.FlagConverter, prefix='--', delimiter='', case_insensi
     save: TagName = None  # type: ignore
 
 
-class EmbedMaker(DuckCog):
+class EmbedMaker(HideoutCog):
     @commands.command()
-    async def embed(self, ctx: DuckContext, *, flags: typing.Union[typing.Literal['--help'], EmbedFlags]):
+    async def embed(self, ctx: HideoutContext, *, flags: typing.Union[typing.Literal['--help'], EmbedFlags]):
         """Sends an embed, using flags or adds it to a tag.
 
         Parameters

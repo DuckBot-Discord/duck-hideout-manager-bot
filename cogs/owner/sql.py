@@ -8,7 +8,7 @@ from typing import List
 from import_expression import eval
 from discord import File
 from discord.ext.commands import FlagConverter, Flag, Converter, command
-from utils import DuckCog, DuckContext, UntilFlag
+from utils import HideoutCog, HideoutContext, UntilFlag
 
 def cleanup_code(content: str):
     """Automatically removes code blocks from the code."""
@@ -33,7 +33,7 @@ class plural:
 
 
 class EvaluatedArg(Converter):
-    async def convert(self, ctx: DuckContext, argument: str) -> str:
+    async def convert(self, ctx: HideoutContext, argument: str) -> str:
         return eval(cleanup_code(argument), {'bot': ctx.bot, 'ctx': ctx})
 
 
@@ -41,9 +41,9 @@ class SqlCommandFlags(FlagConverter, prefix="--", delimiter=" ", case_insensitiv
     args: List[str] = Flag(name='argument', aliases=['a', 'arg'], annotation=List[EvaluatedArg], default=[])  # type: ignore
 
 
-class SQLCommands(DuckCog):
+class SQLCommands(HideoutCog):
     @command()
-    async def sql(self, ctx: DuckContext, *, query: UntilFlag[SqlCommandFlags]):
+    async def sql(self, ctx: HideoutContext, *, query: UntilFlag[SqlCommandFlags]):
         """|coro|
 
         Executes an SQL query

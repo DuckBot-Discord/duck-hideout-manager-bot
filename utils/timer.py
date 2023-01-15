@@ -18,14 +18,14 @@ import discord
 from discord.ext import commands
 
 from . import time
-from .context import DuckContext
+from .context import HideoutContext
 from .errors import TimerNotFound
 
 if TYPE_CHECKING:
-    from bot import DuckBot
+    from bot import HideoutManager
     from asyncpg import Record, Connection
 
-log = logging.getLogger('DuckBot.utils.timer')
+log = logging.getLogger('HideoutManager.utils.timer')
 
 
 if TYPE_CHECKING:
@@ -113,14 +113,14 @@ class Timer:
         """:class:`str`: Returns the timer's event name."""
         return f'{self.event}_timer_complete'
 
-    async def delete(self, bot: DuckBot):
+    async def delete(self, bot: HideoutManager):
         """|coro|
 
         Deletes this timer.
 
         Parameters
         ----------
-        bot: :class:`DuckBot`
+        bot: :class:`HideoutManager`
             The bot instance.
         """
         await bot.delete_timer(self.id)
@@ -134,14 +134,14 @@ class TimerManager:
 
     Attributes
     ----------
-    bot: :class:`~.DuckBot`
+    bot: :class:`~.HideoutManager`
         The bot instance.
     """
 
     __slots__: Tuple[str, ...] = ('name', 'bot', '_have_data', '_current_timer', '_task', '_cs_display_emoji')
 
-    def __init__(self, bot: DuckBot):
-        self.bot: DuckBot = bot
+    def __init__(self, bot: HideoutManager):
+        self.bot: HideoutManager = bot
 
         self._have_data = asyncio.Event()
         self._current_timer = None
@@ -156,7 +156,7 @@ class TimerManager:
         """Called when the cog is unloaded to cancel the current running task."""
         self._task.cancel()
 
-    async def cog_command_error(self, ctx: DuckContext, error: Exception) -> discord.Message:
+    async def cog_command_error(self, ctx: HideoutContext, error: Exception) -> discord.Message:
         """|coro|
 
         Called when the cog encounters an error. This will only be called if the class is
@@ -164,7 +164,7 @@ class TimerManager:
 
         Parameters
         ----------
-        ctx: :class:`~.DuckContext`
+        ctx: :class:`~.HideoutContext`
             The invocation context.
         error: :class:`Exception`
             The error that was encountered.

@@ -5,7 +5,7 @@ import os
 import aiohttp
 import asyncio
 
-from bot import DuckBot
+from bot import HideoutManager
 from dotenv import load_dotenv
 from utils.helpers import col
 
@@ -30,14 +30,14 @@ logging.basicConfig(
     format=f'{col()}[{col(7)}%(asctime)s{col()} | {col(4)}%(name)s{col()}:{col(3)}%(levelname)s{col()}] %(message)s{col()}',
 )
 
-log = logging.getLogger('DuckBot.launcher')
+log = logging.getLogger('HideoutManager.launcher')
 
 
 async def run_bot(verbose: bool = False) -> None:
-    async with aiohttp.ClientSession() as session, DuckBot.temporary_pool(uri=URI) as pool, DuckBot(
+    async with aiohttp.ClientSession() as session, HideoutManager.temporary_pool(uri=URI) as pool, HideoutManager(
         session=session, pool=pool, error_wh=ERROR_WH, prefix=PREFIX
-    ) as duck:
-        await duck.start(TOKEN, reconnect=True, verbose=verbose)
+    ) as bot:
+        await bot.start(TOKEN, reconnect=True, verbose=verbose)
 
 
 if __name__ == '__main__':

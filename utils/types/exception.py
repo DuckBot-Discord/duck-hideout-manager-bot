@@ -11,13 +11,13 @@ if TYPE_CHECKING:
     import datetime
 
 
-class _DuckTracebackOptional(TypedDict, total=False):
+class _HideoutTracebackOptional(TypedDict, total=False):
     author: int
     guild: Optional[int]
     channel: int
     command: Optional[commands.Command]
 
 
-class DuckTraceback(_DuckTracebackOptional):
+class HideoutTraceback(_HideoutTracebackOptional):
     time: datetime.datetime
     exception: Exception

@@ -31,8 +31,8 @@ from discord.ext import commands
 
 from utils import (
     constants,
-    DuckContext,
-    DuckExceptionManager,
+    HideoutContext,
+    HideoutExceptionManager,
     col,
     human_timedelta,
     TimerManager,
@@ -50,12 +50,12 @@ if TYPE_CHECKING:
     from aiohttp import ClientSession
     import datetime
 
-DBT = TypeVar('DBT', bound='DuckBot')
-DCT = TypeVar('DCT', bound='DuckContext')
+DBT = TypeVar('DBT', bound='HideoutManager')
+DCT = TypeVar('DCT', bound='HideoutContext')
 T = TypeVar('T')
 P = ParamSpec('P')
 
-log = logging.getLogger('DuckBot.main')
+log = logging.getLogger('HideoutManager.main')
 
 initial_extensions: Tuple[str, ...] = (
     # Helpers
@@ -81,8 +81,8 @@ class DbTempContextManager(Generic[DBT]):
 
     Attributes
     ----------
-    bot: Type[:class:`DuckBot`]
-        A class reference to DuckBot.
+    bot: Type[:class:`HideoutManager`]
+        A class reference to HideoutManager.
     uri: :class:`str`
         The URI to connect to the database with.
     """
@@ -113,7 +113,7 @@ class DbContextManager(Generic[DBT]):
 
     Attributes
     ----------
-    bot: :class:`DuckBot`
+    bot: :class:`HideoutManager`
         The bot instance.
     timeout: :class:`float`
         The timeout for acquiring a connection.
@@ -151,8 +151,8 @@ class DbContextManager(Generic[DBT]):
             await self._pool.release(self._conn)
 
 
-class DuckHelper(TimerManager):
-    def __init__(self, *, bot: DuckBot) -> None:
+class HideoutHelper(TimerManager):
+    def __init__(self, *, bot: HideoutManager) -> None:
         super().__init__(bot=bot)
 
     @overload
@@ -197,7 +197,7 @@ class DuckHelper(TimerManager):
             locale = self.validate_locale(default)
         return locale
 
-class DuckBot(commands.AutoShardedBot, DuckHelper):
+class HideoutManager(commands.AutoShardedBot, HideoutHelper):
     if TYPE_CHECKING:
         user: discord.ClientUser
 
@@ -223,7 +223,7 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
         self._start_time: Optional[datetime.datetime] = None
         self.allowed_locales: Set[str] = {'en_us', 'es_es', 'it'}
 
-        self.exceptions: DuckExceptionManager = DuckExceptionManager(self)
+        self.exceptions: HideoutExceptionManager = HideoutExceptionManager(self)
         self.thread_pool: concurrent.futures.ThreadPoolExecutor = concurrent.futures.ThreadPoolExecutor(max_workers=20)
 
         self.constants = constants
@@ -240,7 +240,7 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
 
         self.tree.copy_global_to(guild=discord.Object(id=774561547930304536))
 
-        super(DuckHelper, self).__init__(bot=self)
+        super(HideoutHelper, self).__init__(bot=self)
 
     @classmethod
     def temporary_pool(cls: Type[DBT], *, uri: str) -> DbTempContextManager[DBT]:
@@ -293,7 +293,7 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
         """:class:`datetime.datetime`: The time the bot was started."""
         result = self._start_time
         if not result:
-            raise DuckBotNotStarted('The bot has not hit on-ready yet.')
+            raise HideoutManagerNotStarted('The bot has not hit on-ready yet.')
 
         return result
 
@@ -314,11 +314,11 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
 
         Raises
         ------
-        DuckBotNotStarted
+        HideoutManagerNotStarted
             The bot has not hit on-ready yet.
         """
         if not self.is_ready():
-            raise DuckBotNotStarted('The bot has not hit on-ready yet.')
+            raise HideoutManagerNotStarted('The bot has not hit on-ready yet.')
 
         return discord.utils.oauth_url(
             self.user.id, permissions=discord.Permissions(8), scopes=('bot', 'applications.commands')
@@ -330,11 +330,11 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
 
         Raises
         ------
-        DuckBotNotStarted
+        HideoutManagerNotStarted
             The bot has not hit on-ready yet.
         """
         if not self.is_ready():
-            raise DuckBotNotStarted('The bot has not hit on-ready yet.')
+            raise HideoutManagerNotStarted('The bot has not hit on-ready yet.')
 
         return discord.utils.format_dt(self.start_time)
 
@@ -354,7 +354,7 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
 
         Raises
         ------
-        DuckBotNotStarted
+        HideoutManagerNotStarted
             The bot has not hit on-ready yet.
         """
         return human_timedelta(self.start_time)
@@ -376,7 +376,7 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
         """
         return DbContextManager(self, timeout=timeout)
 
-    async def get_context(self, message: discord.Message, *, cls: Type[DCT] = None) -> Union[DuckContext, commands.Context]:
+    async def get_context(self, message: discord.Message, *, cls: Type[DCT] = None) -> Union[HideoutContext, commands.Context]:
         """|coro|
 
         Used to get the invocation context from the message.
@@ -385,7 +385,7 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
         ----------
         message: :class:`~discord.Message`
             The message to get the prefix of.
-        cls: Type[:class:`DuckContext`]
+        cls: Type[:class:`HideoutContext`]
             The class to use for the context.
         """
         new_cls = cls or self._context_cls
@@ -586,7 +586,7 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
         except discord.HTTPException:
             return None
 
-    async def on_command(self, ctx: DuckContext):
+    async def on_command(self, ctx: HideoutContext):
         """|coro|
 
         Called when a command is invoked.
@@ -594,7 +594,7 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
 
         Parameters
         ----------
-        ctx: DuckContext
+        ctx: HideoutContext
             The context of the command.
         """
         assert ctx.command is not None

@@ -11,25 +11,25 @@ from discord.ext import commands
 from .errors import *
 
 if TYPE_CHECKING:
-    from bot import DuckBot
+    from bot import HideoutManager
 
-__all__: Tuple[str, ...] = ('DuckCog',)
+__all__: Tuple[str, ...] = ('HideoutCog',)
 
 
-class DuckCog(commands.Cog):
-    """The base class for all DuckBot cogs.
+class HideoutCog(commands.Cog):
+    """The base class for all HideoutManager cogs.
 
     Attributes
     ----------
-    bot: DuckBot
+    bot: HideoutManager
         The bot instance.
     """
 
     __slots__: Tuple[str, ...] = ('bot',)
 
 
-    def __init__(self, bot: DuckBot, *args: Any, **kwargs: Any) -> None:
-        self.bot: DuckBot = bot
+    def __init__(self, bot: HideoutManager, *args: Any, **kwargs: Any) -> None:
+        self.bot: HideoutManager = bot
 
         next_in_mro = next(iter(self.__class__.__mro__))
         if hasattr(next_in_mro, '__is_jishaku__') or isinstance(next_in_mro, self.__class__):

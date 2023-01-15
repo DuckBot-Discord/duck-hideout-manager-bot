@@ -9,12 +9,12 @@ from discord.ext import menus
 from discord.ui import Modal, TextInput
 
 
-from .context import DuckContext
+from .context import HideoutContext
 
 __all__: Tuple[str, ...] = ("ViewMenuPages",)
 
 
-log = logging.getLogger('DuckBot.paginators')  # noqa
+log = logging.getLogger('HideoutManager.paginators')  # noqa
 
 
 class SkipToModal(Modal, title='Skip to page...'):
@@ -40,7 +40,7 @@ class ViewMenuPages(discord.ui.View):
         self,
         source: menus.PageSource,
         *,
-        ctx: DuckContext,
+        ctx: HideoutContext,
         check_embeds: bool = True,
         compact: bool = False,
     ):
@@ -48,7 +48,7 @@ class ViewMenuPages(discord.ui.View):
         self.current_modal: typing.Optional[SkipToModal] = None
         self.source: menus.PageSource = source
         self.check_embeds: bool = check_embeds
-        self.ctx: DuckContext = ctx
+        self.ctx: HideoutContext = ctx
         self.message: Optional[discord.Message] = None
         self.current_page: int = 0
         self.compact: bool = compact

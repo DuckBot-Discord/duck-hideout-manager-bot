@@ -9,7 +9,7 @@ import discord
 
 from discord import app_commands
 from discord.ext import commands
-from utils import DuckCog, DuckContext, SilentCommandError
+from utils import HideoutCog, HideoutContext, SilentCommandError
 from utils.errors import ActionNotExecutable
 from utils.time import ShortTime
 from discord import TextChannel, VoiceChannel, Thread
@@ -39,7 +39,7 @@ async def setup(bot):
 
 
 def pit_owner_only():
-    async def predicate(ctx: DuckContext):
+    async def predicate(ctx: HideoutContext):
         if await ctx.bot.is_owner(ctx.author):
             return True
 
@@ -59,7 +59,7 @@ def pit_owner_only():
 
 
 def hideout_only():
-    def predicate(ctx: DuckContext):
+    def predicate(ctx: HideoutContext):
         if ctx.guild and ctx.guild.id == DUCK_HIDEOUT:
             return True
         raise SilentCommandError
@@ -68,7 +68,7 @@ def hideout_only():
 
 
 def counselor_only():
-    def predicate(ctx: DuckContext):
+    def predicate(ctx: HideoutContext):
         if not isinstance(ctx.author, discord.Member):
             return False
         if ctx.guild.get_role(COUNSELORS_ROLE) in ctx.author.roles:
@@ -78,7 +78,7 @@ def counselor_only():
     return commands.check(predicate)
 
 
-class Hideout(DuckCog, name='Duck Hideout Stuff'):
+class Hideout(HideoutCog, name='Hideout Hideout Stuff'):
     """
     Commands related to the server, like pits and addbot.
     """
@@ -182,7 +182,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff'):
 
     @commands.command()
     @hideout_only()
-    async def addbot(self, ctx: DuckContext, bot: discord.User, *, reason: commands.clean_content):
+    async def addbot(self, ctx: HideoutContext, bot: discord.User, *, reason: commands.clean_content):
         """Adds a bot to the bot queue.
 
         Parameters
@@ -309,7 +309,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff'):
     async def on_ready(self):
         guild = self.bot.get_guild(DUCK_HIDEOUT)
         if not guild:
-            return logging.error('Could not find Duck Hideout!', exc_info=False)
+            return logging.error('Could not find Hideout Hideout!', exc_info=False)
 
         bots = await self.bot.pool.fetch('SELECT * FROM addbot')
         queue_channel: discord.TextChannel = guild.get_channel(QUEUE_CHANNEL)  # type: ignore
@@ -342,7 +342,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff'):
     @hideout_only()
     @commands.is_owner()
     @commands.command(name='register-bot', aliases=['rbot', 'rb'])
-    async def _register_bot(self, ctx: DuckContext, owner: discord.Member, *, bot: discord.User):
+    async def _register_bot(self, ctx: HideoutContext, owner: discord.Member, *, bot: discord.User):
         """Register a bot to the database.
 
         Parameters
@@ -373,7 +373,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff'):
     @commands.hybrid_group(name='pit')
     @app_commands.guild_only()
     @app_commands.default_permissions(manage_messages=True)
-    async def pit(self, ctx: DuckContext):
+    async def pit(self, ctx: HideoutContext):
         """Pit management commands."""
 
         if ctx.invoked_subcommand is None and ctx.subcommand_passed is None:
@@ -381,7 +381,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff'):
 
     @pit.command(name='ban')
     @pit_owner_only()
-    async def pit_ban(self, ctx: DuckContext, member: discord.Member, duration: Optional[ShortTime]):
+    async def pit_ban(self, ctx: HideoutContext, member: discord.Member, duration: Optional[ShortTime]):
         """Ban a member from the pit.
 
         Parameters
@@ -423,7 +423,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff'):
 
     @pit.command(name='unban')
     @pit_owner_only()
-    async def pit_unban(self, ctx: DuckContext, *, member: discord.Member):
+    async def pit_unban(self, ctx: HideoutContext, *, member: discord.Member):
         """Unban a member from the pit.
 
         Parameters
@@ -457,7 +457,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff'):
 
     @commands.is_owner()
     @pit.command(name='setowner', aliases=['set-owner'], slash=False)
-    async def pit_set_owner(self, ctx: DuckContext, *, member: discord.Member):
+    async def pit_set_owner(self, ctx: HideoutContext, *, member: discord.Member):
         """Set the owner of a pit.
 
         Parameters
@@ -481,7 +481,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff'):
 
     @counselor_only()
     @pit.command(name='create', slash=False)
-    async def pit_create(self, ctx: DuckContext, owner: discord.Member, *, name: str):
+    async def pit_create(self, ctx: HideoutContext, owner: discord.Member, *, name: str):
         """Create a pit.
 
         Parameters
@@ -527,7 +527,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff'):
 
     @counselor_only()
     @pit.command(name='delete', slash=False)
-    async def pit_delete(self, ctx: DuckContext, *, channel: discord.TextChannel = commands.CurrentChannel):
+    async def pit_delete(self, ctx: HideoutContext, *, channel: discord.TextChannel = commands.CurrentChannel):
         """Deletes a pit."""
 
         pit_id = await ctx.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_id = $1''', channel.id)
@@ -550,7 +550,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff'):
 
     @counselor_only()
     @pit.command(name='archive', slash=False)
-    async def pit_archive(self, ctx: DuckContext, *, channel: discord.TextChannel = commands.CurrentChannel):
+    async def pit_archive(self, ctx: HideoutContext, *, channel: discord.TextChannel = commands.CurrentChannel):
         """Archives a pit."""
 
         pit_id: int = await ctx.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_id = $1''', channel.id)
@@ -586,7 +586,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff'):
 
     @counselor_only()
     @pit.command(name='unarchive', slash=False)
-    async def pit_unarchive(self, ctx: DuckContext, *, channel: discord.TextChannel = commands.CurrentChannel):
+    async def pit_unarchive(self, ctx: HideoutContext, *, channel: discord.TextChannel = commands.CurrentChannel):
         """Archives a pit."""
 
         record = await ctx.bot.pool.fetchrow('''SELECT * FROM pits WHERE pit_id = $1''', channel.id)
@@ -622,7 +622,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff'):
             await ctx.send(f'✅ **|** Unarchived **{pit.name}**')
 
     @commands.hybrid_command()
-    async def whoadd(self, ctx: DuckContext, bot: discord.Member):
+    async def whoadd(self, ctx: HideoutContext, bot: discord.Member):
         """Checks who added a specific bot.
 
         Parameters
