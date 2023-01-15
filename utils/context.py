@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, Tuple, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Optional, Sequence, Tuple, Union, overload, TypeVar
 
 import discord
 from discord.ext import commands
@@ -8,6 +8,9 @@ from discord.ext import commands
 if TYPE_CHECKING:
     from discord.message import Message
     from bot import HideoutManager
+    from discord import Message, Embed, File, AllowedMentions, MessageReference, PartialMessage
+    from discord.ui import View
+
 
 __all__: Tuple[str, ...] = (
     'HideoutContext',
@@ -56,7 +59,6 @@ class ConfirmationView(discord.ui.View):
         self.stop()
         await interaction.message.delete()
 
-
 class HideoutContext(commands.Context, Generic[BotT]):
     """The subclassed Context to allow some extra functionality."""
 
@@ -90,7 +92,28 @@ class HideoutContext(commands.Context, Generic[BotT]):
 
         return result
 
-    async def send(self, content: str | None = None, *args: Any, **kwargs: Any) -> Message:
+    @overload
+    async def send(  # type: ignore
+        self,
+        content: Optional[str] = None,
+        *,
+        tts: bool = False,
+        embed: Optional[Embed] = None,
+        embeds: Optional[Sequence[Embed]] = None,
+        file: Optional[File] = None,
+        files: Optional[Sequence[File]] = None,
+        delete_after: Optional[float] = None,
+        nonce: Optional[Union[str, int]] = None,
+        allowed_mentions: Optional[AllowedMentions] = None,
+        reference: Optional[Union[Message, MessageReference, PartialMessage]] = None,
+        mention_author: Optional[bool] = None,
+        view: Optional[View] = None,
+        suppress_embeds: bool = False,
+        ephemeral: bool = False,
+    ) -> Message:
+        ...
+
+    async def send(self, content: str | None = None, **kwargs: Any) -> Message:
         """|coro|
 
         Sends a message to the invoking context's channel.

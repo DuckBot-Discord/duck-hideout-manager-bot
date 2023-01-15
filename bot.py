@@ -32,6 +32,7 @@ from discord.ext import commands
 from utils import (
     constants,
     HideoutContext,
+    HideoutCog,
     HideoutExceptionManager,
     col,
     human_timedelta,
@@ -200,6 +201,7 @@ class HideoutHelper(TimerManager):
 class HideoutManager(commands.AutoShardedBot, HideoutHelper):
     if TYPE_CHECKING:
         user: discord.ClientUser
+        cogs: dict[str, HideoutCog]
 
     def __init__(self, *, session: ClientSession, pool: Pool, error_wh: str, prefix: str) -> None:
         intents = discord.Intents.all()
@@ -214,7 +216,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
             strip_after_prefix=True,
             chunk_guilds_at_startup=False,
             max_messages=4000,
-            help_command=commands.DefaultHelpCommand(verify_checks=False),
+            help_command=None,
         )
         self.pool: Pool = pool
         self.session: ClientSession = session
@@ -341,12 +343,12 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
     @discord.utils.cached_property
     def color(self) -> discord.Colour:
         """:class:`~discord.Color`: The vanity color of the bot."""
-        return discord.Colour(0xF4D58C)
+        return discord.Colour(15558411)
 
     @discord.utils.cached_property
     def colour(self) -> discord.Colour:
         """:class:`~discord.Colour`: The vanity colour of the bot."""
-        return discord.Colour(0xF4D58C)
+        return discord.Colour(15558411)
 
     @property
     def human_uptime(self) -> str:
