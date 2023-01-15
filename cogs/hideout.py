@@ -78,7 +78,7 @@ def counselor_only():
     return commands.check(predicate)
 
 
-class Hideout(HideoutCog, name='Hideout Hideout Stuff'):
+class Hideout(HideoutCog, name='Duck Hideout Stuff'):
     """
     Commands related to the server, like pits and addbot.
     """
@@ -309,7 +309,7 @@ class Hideout(HideoutCog, name='Hideout Hideout Stuff'):
     async def on_ready(self):
         guild = self.bot.get_guild(DUCK_HIDEOUT)
         if not guild:
-            return logging.error('Could not find Hideout Hideout!', exc_info=False)
+            return logging.error('Could not find Duck Hideout!', exc_info=False)
 
         bots = await self.bot.pool.fetch('SELECT * FROM addbot')
         queue_channel: discord.TextChannel = guild.get_channel(QUEUE_CHANNEL)  # type: ignore
