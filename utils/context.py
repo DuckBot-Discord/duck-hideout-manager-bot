@@ -12,10 +12,7 @@ if TYPE_CHECKING:
     from discord.ui import View
 
 
-__all__: Tuple[str, ...] = (
-    'HideoutContext',
-    'ConfirmationView'
-)
+__all__: Tuple[str, ...] = ('HideoutContext', 'ConfirmationView')
 
 BotT = TypeVar('BotT', bound='HideoutManager')
 
@@ -58,6 +55,7 @@ class ConfirmationView(discord.ui.View):
         self.value = False
         self.stop()
         await interaction.message.delete()
+
 
 class HideoutContext(commands.Context, Generic[BotT]):
     """The subclassed Context to allow some extra functionality."""

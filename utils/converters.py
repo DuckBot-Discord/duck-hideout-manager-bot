@@ -18,9 +18,8 @@ BET = TypeVar('BET', bound='discord.guild.BanEntry')
 FCT = TypeVar('FCT', bound='FlagConverter')
 T = TypeVar('T')
 
-__all__: Tuple[str, ...] = (
-    'UntilFlag',
-)
+__all__: Tuple[str, ...] = ('UntilFlag',)
+
 
 class UntilFlag(Generic[FCT]):
     """A converter that will convert until a flag is reached.

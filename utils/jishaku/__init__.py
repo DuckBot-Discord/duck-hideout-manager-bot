@@ -192,6 +192,7 @@ class OverwrittenManagementFeature(ManagementFeature):
         for page in paginator.pages:
             await ctx.send(page)
 
+
 features = list(STANDARD_FEATURES)
 features.remove(RootCommand)
 features.append(OverwrittenRootCommand)
@@ -295,7 +296,12 @@ class HideoutManagerJishaku(
         arg_dict.update(
             add_logging=add_logging,
             self=self,
-            _=self.last_result
+            _=self.last_result,
+            _r=getattr(ctx.message.reference, 'resolved', None),
+            _a=ctx.author,
+            _m=ctx.message,
+            _now=discord.utils.utcnow,
+            _g=ctx.guild,
         )
 
         scope = self.scope

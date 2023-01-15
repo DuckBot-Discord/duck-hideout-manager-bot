@@ -198,6 +198,7 @@ class HideoutHelper(TimerManager):
             locale = self.validate_locale(default)
         return locale
 
+
 class HideoutManager(commands.AutoShardedBot, HideoutHelper):
     if TYPE_CHECKING:
         user: discord.ClientUser
@@ -378,7 +379,9 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         """
         return DbContextManager(self, timeout=timeout)
 
-    async def get_context(self, message: discord.Message, *, cls: Type[DCT] = None) -> Union[HideoutContext, commands.Context]:
+    async def get_context(
+        self, message: discord.Message, *, cls: Type[DCT] = None
+    ) -> Union[HideoutContext, commands.Context]:
         """|coro|
 
         Used to get the invocation context from the message.
@@ -423,9 +426,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
             The message that was created for replying to the user.
         """
         if self.mention_regex.fullmatch(message.content):
-            return await message.reply(
-                f"My prefix is `-`!"
-            )
+            return await message.reply(f"My prefix is `-`!")
 
         await self.process_commands(message)
 

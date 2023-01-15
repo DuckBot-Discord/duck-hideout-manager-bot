@@ -27,7 +27,6 @@ class HideoutCog(commands.Cog):
 
     __slots__: Tuple[str, ...] = ('bot',)
 
-
     def __init__(self, bot: HideoutManager, *args: Any, **kwargs: Any) -> None:
         self.bot: HideoutManager = bot
 

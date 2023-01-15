@@ -140,7 +140,9 @@ class UserFriendlyTime(commands.Converter):
 
     def __init__(
         self,
-        converter: Optional[Union[Callable[[HideoutContext, str], Any], Type[commands.Converter], commands.Converter]] = None,
+        converter: Optional[
+            Union[Callable[[HideoutContext, str], Any], Type[commands.Converter], commands.Converter]
+        ] = None,
         *,
         default: Optional[str] = None,
     ) -> None:

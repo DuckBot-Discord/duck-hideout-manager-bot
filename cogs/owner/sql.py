@@ -10,6 +10,7 @@ from discord import File
 from discord.ext.commands import FlagConverter, Flag, Converter, command
 from utils import HideoutCog, HideoutContext, UntilFlag
 
+
 def cleanup_code(content: str):
     """Automatically removes code blocks from the code."""
     # remove ```py\n```
@@ -18,6 +19,7 @@ def cleanup_code(content: str):
 
     # remove `foo`
     return content.strip('` \n')
+
 
 class plural:
     def __init__(self, value):

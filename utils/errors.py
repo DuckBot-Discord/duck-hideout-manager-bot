@@ -19,7 +19,7 @@ __all__: Tuple[str, ...] = (
     'TimerNotFound',
     'SilentCommandError',
     'EntityBlacklisted',
-    'ActionNotExecutable'
+    'ActionNotExecutable',
 )
 
 
@@ -42,6 +42,7 @@ class HideoutManagerNotStarted(HideoutManagerException):
 
     __slots__: Tuple[str, ...] = ()
 
+
 class ActionNotExecutable(HideoutManagerCommandError):
     def __init__(self, message):
         super().__init__(f'{message}')
@@ -63,6 +64,7 @@ class TimerNotFound(TimerError):
     def __init__(self, id: int) -> None:
         self.id: int = id
         super().__init__(f'Timer with ID {id} not found.')
+
 
 class SilentCommandError(HideoutManagerCommandError):
     """This exception will be purposely ignored by the error handler
