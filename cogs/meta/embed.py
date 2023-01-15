@@ -113,15 +113,17 @@ class EmbedMaker(HideoutCog):
             except Exception as e:
                 raise commands.BadArgument(f'An unexpected error occurred: {type(e).__name__}: {e}')
         else:
+            is_mod = await self.bot.is_owner(ctx.author)
+            is_mod = is_mod or ctx.author.guild_permissions.manage_messages
             query = """
                 SELECT EXISTS (
                     SELECT * FROM tags
                     WHERE name = $1
                     AND guild_id = $2
-                    AND owner_id = $3
+                    AND (owner_id = $3 OR $4::BOOL = TRUE)
                 )
             """
-            confirm = await ctx.bot.pool.fetchval(query, flags.save, ctx.guild.id, ctx.author.id)
+            confirm = await ctx.bot.pool.fetchval(query, flags.save, ctx.guild.id, ctx.author.id, is_mod)
             if confirm is True:
                 confirm = await ctx.confirm(
                     f"{ctx.author.mention} do you want to add this embed to "
@@ -137,17 +139,21 @@ class EmbedMaker(HideoutCog):
                             SET embed = $1
                             WHERE name = $2
                             AND guild_id = $3
-                            AND owner_id = $4
+                            AND (owner_id = $3 OR $4::BOOL = TRUE)
                             RETURNING *
                         )
                          SELECT EXISTS ( SELECT * FROM upsert )   
                     """
-                    added = await ctx.bot.pool.fetchval(query, embed.to_dict(), flags.save, ctx.guild.id, ctx.author.id)
+                    added = await ctx.bot.pool.fetchval(
+                        query, embed.to_dict(), flags.save, ctx.guild.id, ctx.author.id, is_mod
+                    )
                     if added is True:
                         await ctx.send(f'Added embed to tag {flags.save!r}!')
                     else:
-                        await ctx.send(f'Could not edit tag. Are you sure it exists and you own it?')
+                        await ctx.send(f"Could not edit tag. Are you sure it exists{'' if is_mod else ' and you own it'}?")
                 elif confirm is False:
                     await ctx.send(f'Cancelled!')
             else:
-                await ctx.send(f'Could not find tag {flags.save!r}. Are you sure it exists and you own it?')
+                await ctx.send(
+                    f"Could not edit tag {flags.save!r}. Are you sure it exists{'' if is_mod else ' and you own it'}?"
+                )

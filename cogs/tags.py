@@ -210,8 +210,11 @@ class TagName(commands.clean_content):
         if first_word in root.all_commands:
             raise error('This tag name starts with a reserved word.')
 
-        if lower.startswith('topic') and not ctx.author.get_role(COUNSELORS_ROLE): 
-            raise error('Tag name starts with a reserved word.')
+        if lower.startswith('topic:') and not ctx.author.get_role(COUNSELORS_ROLE):
+            raise error('Tag name starts with a reserved key (`topic:` - moderator only)')
+
+        if lower.startswith('category:') and not await ctx.bot.is_owner(ctx.author):
+            raise error('Tag name starts with a reserved key (`category:` - owner only)')
 
         return converted if not self.lower else lower
 
@@ -323,9 +326,6 @@ class Tags(HideoutCog):
             The guild id to get the tag from. If
             None, the tag will be retrieved from
             the global tags.
-        find_global: bool
-            Whether to search the global tags.
-            Defaults to False.
         connection: Optional[Union[asyncpg.Connection, asyncpg.Pool]]
             The connection to use. If None,
             the bot's pool will be used.
@@ -482,7 +482,6 @@ class Tags(HideoutCog):
         except asyncio.TimeoutError:
             raise commands.BadArgument(f'Timed out waiting for message from {str(author)}...')
 
-
     @commands.group(name='tag', invoke_without_command=True)
     async def tag(self, ctx: HideoutContext, *, name: TagName):
         """Base tags command. Also shows a tag.
@@ -498,7 +497,6 @@ class Tags(HideoutCog):
         else:
             await ctx.channel.send(tag.content)
         await tag.use(self.bot.pool)
-
 
     @tag.command(name='create', aliases=['new', 'add'])
     async def tag_create(self, ctx: HideoutContext, tag: TagName(lower=False), *, content: commands.clean_content):  # type: ignore
@@ -516,13 +514,10 @@ class Tags(HideoutCog):
         tag_ = await self.make_tag(ctx.guild, ctx.author, tag, content)
         await ctx.send(f"Tag {tag_.name!r} successfully created!")
 
-
-
     @tag.command(name='make', ignore_extra=False)
     @commands.max_concurrency(1, commands.BucketType.member)
     async def tag_make(self, ctx: HideoutContext):
-        """Interactive prompt to make a tag.
-        """
+        """Interactive prompt to make a tag."""
         await ctx.send('Hello, what name would you like to give this tag?')
         try:
             name = await self.wait_for(ctx.channel, ctx.author, converter=TagName(lower=False), ctx=ctx)
@@ -581,10 +576,14 @@ class Tags(HideoutCog):
         content: str
             The new content of the tag
         """
+        is_mod = await self.bot.is_owner(ctx.author)
+        is_mod = is_mod or ctx.author.guild_permissions.manage_messages
         async with self.bot.safe_connection() as conn:
             tagobj = await self.get_tag(tag, ctx.guild.id, connection=conn)
-            if tagobj.owner_id != ctx.author.id:
-                raise commands.BadArgument("Could not edit tag. Are you sure it exists and you own it?")
+            if tagobj.owner_id != ctx.author.id or not is_mod:
+                raise commands.BadArgument(
+                    f"Could not edit tag. Are you sure it exists{'' if is_mod else ' and you own it'}?"
+                )
             await tagobj.edit(conn, content)
         await ctx.send(f'Successfully edited tag!')
 
@@ -601,6 +600,8 @@ class Tags(HideoutCog):
         content: str
             The content to append
         """
+        is_mod = await self.bot.is_owner(ctx.author)
+        is_mod = is_mod or ctx.author.guild_permissions.manage_messages
         async with self.bot.safe_connection() as conn:
             query = """
                 WITH edited AS (
@@ -608,18 +609,17 @@ class Tags(HideoutCog):
                     SET content = content || E'\n' || $1
                     WHERE name = $2
                     AND CASE WHEN ( $3::BIGINT = 0 ) THEN ( guild_id IS NULL ) ELSE ( guild_id = $3 ) END
-                    AND owner_id = $4
+                    AND (owner_id = $4 OR $5::BOOL = TRUE)
+                        -- $5 will be true for moderators
                     RETURNING *
                 )
                 SELECT EXISTS ( SELECT * FROM edited )
             """
-            confirm = await conn.fetchval(query, content, tag, ctx.guild.id, ctx.author.id)
+            confirm = await conn.fetchval(query, content, tag, ctx.guild.id, ctx.author.id, is_mod)
             if confirm:
                 await ctx.send(f'Succesfully edited tag!')
             else:
-                await ctx.send('Could not edit tag. Are you sure it exists and you own it?')
-
-
+                await ctx.send(f"Could not edit tag. Are you sure it exists{'' if is_mod else ' and you own it'}?")
 
     @tag.command(name='delete')
     async def tag_delete(self, ctx: HideoutContext, *, tag: TagName):
@@ -660,7 +660,6 @@ class Tags(HideoutCog):
             else:
                 await ctx.send(f"Tag {tag_p['name']!r} and corresponding aliases deleted!")
 
-
     @tag.command(name='delete-id')
     async def tag_delete_id(self, ctx: HideoutContext, *, tag_id: int):
         """Deletes a tag by ID.
@@ -699,7 +698,6 @@ class Tags(HideoutCog):
                 await ctx.send(f"Tag {tag_p['name']!r} that points to {tag_p['parent']!r} deleted!")
             else:
                 await ctx.send(f"Tag {tag_p['name']!r} and corresponding aliases deleted!")
-
 
     @tag.command(name='purge')
     async def tag_purge(self, ctx: HideoutContext, member: typing.Union[discord.Member, discord.User]):
@@ -761,8 +759,6 @@ class Tags(HideoutCog):
 
             await ctx.send(f"Deleted all of {member}'s tags ({tag_p} tags deleted)!")
 
-
-
     @tag.command(name='alias')
     async def tag_alias(self, ctx: HideoutContext, alias: TagName, *, points_to: TagName):
         """Creates an alias for a tag.
@@ -787,8 +783,6 @@ class Tags(HideoutCog):
                 await self.bot.exceptions.add_error(error=e, ctx=ctx)
                 return await ctx.send(f"Could not create alias!")
             await ctx.send(f"Alias {alias!r} that points to {points_to!r} created!")
-
-
 
     @tag.command(name='info', aliases=['owner'])
     async def tag_info(self, ctx: HideoutContext, *, tag: TagName):
@@ -836,7 +830,6 @@ class Tags(HideoutCog):
             embed.set_footer(text='Tag created at')
         await ctx.send(embed=embed)
 
-
     @tag.command(name='list')
     async def tag_list(self, ctx: HideoutContext, *, member: Optional[discord.Member] = None):
         """Lists all tags owned by a member.
@@ -858,17 +851,10 @@ class Tags(HideoutCog):
         tags = await self.bot.pool.fetch(query, *args)
 
         if not tags:
-            return await ctx.send(
-                "This server has no tags!"
-                if not member
-                else f"{member} owns no tags!"
-            )
+            return await ctx.send("This server has no tags!" if not member else f"{member} owns no tags!")
 
         paginator = ViewMenuPages(source=TagsFromFetchedPageSource(tags, member=member, ctx=ctx), ctx=ctx)
         await paginator.start()
-
-
-
 
     @tag.command(name='search')
     async def tag_search(self, ctx: HideoutContext, *, query: str):
@@ -893,7 +879,6 @@ class Tags(HideoutCog):
 
         paginator = ViewMenuPages(source=TagsFromFetchedPageSource(tags, member=None, ctx=ctx), ctx=ctx)
         await paginator.start()
-
 
     @tag.command(name='raw')
     async def tag_raw(self, ctx: HideoutContext, *, tag: TagName):
@@ -1071,13 +1056,12 @@ class Tags(HideoutCog):
         else:
             await self.user_tag_stats(ctx, member, ctx.guild)
 
-
     @tag.command(name='remove-embed')
     async def tag_remove_embed(self, ctx: HideoutContext, *, tag: TagName):
-        """Removes an embed from a tag. 
-        
-        To add an embed, use the ``embed`` command. 
-        
+        """Removes an embed from a tag.
+
+        To add an embed, use the ``embed`` command.
+
         Example:
          ``-embed <flags> --save <tag name>`` where flags are the embed flags.
          See ``-embed --help`` for more information about the flags.
@@ -1109,7 +1093,6 @@ class Tags(HideoutCog):
         if not exists:
             return await ctx.send(f"Could not edit tag. Are you sure it exists{'' if is_mod else '  and you own it'}?")
         await ctx.send(f"Successfully edited tag!")
-
 
     @app_commands.command(name='tag')
     @app_commands.describe(
