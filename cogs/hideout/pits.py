@@ -1,90 +1,26 @@
+from __future__ import annotations
+
 import asyncio
-import contextlib
-import logging
-import re
-from typing import Optional, Union
+from typing import Optional
+from logging import getLogger
 
-import asyncpg
 import discord
-
+import asyncpg
 from discord import app_commands
 from discord.ext import commands
-from utils import HideoutCog, HideoutContext, SilentCommandError
-from utils.errors import ActionNotExecutable
-from utils.time import ShortTime
-from discord import TextChannel, VoiceChannel, Thread
 
-from utils.timer import Timer
+from ._checks import pit_owner_only, counselor_only, COUNSELORS_ROLE, PIT_CATEGORY, ARCHIVE_CATEGORY
+from utils import (
+    HideoutCog,
+    HideoutContext,
+    ShortTime,
+    Timer,
+    ActionNotExecutable
+)
 
+log = getLogger('HM.pit')
 
-URL_REGEX = re.compile(r"^http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|)+$")
-EMOJI_URL_PATTERN = re.compile(r'(https?://)?(media|cdn)\.discord(app)?\.(com|net)/emojis/(?P<id>[0-9]+)\.(?P<fmt>[A-z]+)')
-DUCK_HIDEOUT = 774561547930304536
-QUEUE_CHANNEL = 927645247226408961
-BOTS_ROLE = 870746847071842374
-BOT_DEVS_ROLE = 775516377057722390
-COUNSELORS_ROLE = 896178155486855249
-GENERAL_CHANNEL = 774561548659458081
-PIT_CATEGORY = 915494807349116958
-ARCHIVE_CATEGORY = 973896686290223134
-
-log = logging.getLogger(__name__)
-
-
-GuildMessageable = Union[TextChannel, VoiceChannel, Thread]
-
-
-async def setup(bot):
-    await bot.add_cog(Hideout(bot))
-
-
-def pit_owner_only():
-    async def predicate(ctx: HideoutContext):
-        if await ctx.bot.is_owner(ctx.author):
-            return True
-
-        if (
-            isinstance(ctx.channel, (discord.DMChannel, discord.GroupChannel, discord.PartialMessageable))
-            or ctx.guild.id != DUCK_HIDEOUT
-            or ctx.channel.category_id != PIT_CATEGORY
-        ):
-            raise SilentCommandError
-
-        channel_id = await ctx.bot.pool.fetchval('SELECT pit_id FROM pits WHERE pit_owner = $1', ctx.author.id)
-        if ctx.channel.id != channel_id:
-            raise SilentCommandError
-        return True
-
-    return commands.check(predicate)
-
-
-def hideout_only():
-    def predicate(ctx: HideoutContext):
-        if ctx.guild and ctx.guild.id == DUCK_HIDEOUT:
-            return True
-        raise SilentCommandError
-
-    return commands.check(predicate)
-
-
-def counselor_only():
-    def predicate(ctx: HideoutContext):
-        if not isinstance(ctx.author, discord.Member):
-            return False
-        if ctx.guild.get_role(COUNSELORS_ROLE) in ctx.author.roles:
-            return True
-        raise SilentCommandError
-
-    return commands.check(predicate)
-
-
-class Hideout(HideoutCog, name='Duck Hideout Stuff'):
-    """
-    Commands related to the server, like pits and addbot.
-    """
-
-    def __init__(self, bot):
-        super().__init__(bot)
+class PitsManagement(HideoutCog):
 
     async def toggle_block(
         self,
@@ -179,195 +115,6 @@ class Hideout(HideoutCog, name='Duck Hideout Stuff'):
         user = await self.bot.get_or_fetch_member(guild, user_id) or f"Unknown User"
 
         return f"{channel}@{user} ({user_id})"
-
-    @commands.command()
-    @hideout_only()
-    async def addbot(self, ctx: HideoutContext, bot: discord.User, *, reason: commands.clean_content):
-        """Adds a bot to the bot queue.
-
-        Parameters
-        ----------
-        bot: discord.User
-            The bot to add to the queue.
-        reason: commands.clean_content
-            The reason why we should add your bot.
-        """
-
-        if not bot.bot:
-            raise commands.BadArgument('That does not seem to be a bot...')
-
-        if bot in ctx.guild.members:
-            raise commands.BadArgument('That bot is already in this server...')
-
-        if await self.bot.pool.fetchval('SELECT owner_id FROM addbot WHERE bot_id = $1 AND pending = TRUE', bot.id):
-            raise commands.BadArgument('That bot is already in the queue...')
-
-        confirm = await ctx.confirm(
-            f'Does your bot comply with {ctx.guild.rules_channel.mention if ctx.guild.rules_channel else "<channel deleted?>"}?'
-            f'\n If so, press one of these:',
-        )
-
-        if confirm is True:
-            await self.bot.pool.execute(
-                'INSERT INTO addbot (owner_id, bot_id, reason) VALUES ($1, $2, $3) '
-                'ON CONFLICT (owner_id, bot_id) DO UPDATE SET pending = TRUE, added = FALSE, reason = $3',
-                ctx.author.id,
-                bot.id,
-                reason,
-            )
-            bot_queue: discord.TextChannel = ctx.guild.get_channel(QUEUE_CHANNEL)  # type: ignore
-
-            url = discord.utils.oauth_url(bot.id, scopes=['bot'], guild=ctx.guild)
-
-            embed = discord.Embed(description=reason)
-            embed.set_author(icon_url=bot.display_avatar.url, name=str(bot), url=url)
-            embed.add_field(name='invite:', value=f'[invite {discord.utils.remove_markdown(str(bot))}]({url})')
-            embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
-            await bot_queue.send(embed=embed)
-            await ctx.reply('✅ | Done, you will be @pinged when the bot is added!')
-
-        elif confirm is False:
-            await ctx.send('Cancelled.')
-
-    @commands.Cog.listener('on_member_join')
-    async def dhm_bot_queue_handler(self, member: discord.Member):
-        with contextlib.suppress(discord.HTTPException):
-            queue_channel: discord.TextChannel = member.guild.get_channel(QUEUE_CHANNEL)  # type: ignore
-            if not member.bot or member.guild.id != DUCK_HIDEOUT:
-                return
-
-            if len(member.roles) > 1 and member.id != 216303189073461248:
-                await member.kick(reason='Was invited with permissions')
-                return await queue_channel.send(f'{member} automatically kicked for having a role.')
-
-            mem_id = await self.bot.pool.fetchval('SELECT owner_id FROM addbot WHERE bot_id = $1', member.id)
-            if not mem_id:
-                await member.kick(reason='Unauthorised bot')
-                return await queue_channel.send(
-                    f'{member} automatically kicked - unauthorised. Please re-invite using the `addbot` command.'
-                )
-
-            await self.bot.pool.execute('UPDATE addbot SET added = TRUE, pending = FALSE WHERE bot_id = $1', member.id)
-
-            await member.add_roles(discord.Object(BOTS_ROLE))
-
-            embed = discord.Embed(title='Bot added', description=f'{member} joined.', colour=discord.Colour.green())
-            added_by = await discord.utils.get(
-                member.guild.audit_logs(action=discord.AuditLogAction.bot_add, limit=5), target=member
-            )
-            if added_by and (added_by := added_by.user) is not None:
-                embed.set_footer(text=f'Added by {added_by} ({added_by.id})')
-            embed.add_field(name='Added by', value=str(member.guild.get_member(mem_id)), inline=False)
-
-            await queue_channel.send(embed=embed)
-
-            if mem_id:
-                general: discord.TextChannel = member.guild.get_channel(GENERAL_CHANNEL)  # type: ignore
-                await general.send(
-                    f'{member} has been added, <@{mem_id}>', allowed_mentions=discord.AllowedMentions(users=True)
-                )
-
-                mem = member.guild.get_member(mem_id)
-                if mem is not None and not mem.get_role(BOT_DEVS_ROLE):
-                    await mem.add_roles(discord.Object(BOT_DEVS_ROLE))
-
-    @commands.Cog.listener('on_member_remove')
-    async def on_member_remove(self, member: discord.Member):
-        if member.guild.id != DUCK_HIDEOUT:
-            return
-
-        queue_channel: discord.TextChannel = member.guild.get_channel(QUEUE_CHANNEL)  # type: ignore
-
-        if member.bot:
-            await self.bot.pool.execute('UPDATE addbot SET added = FALSE WHERE bot_id = $1', member.id)
-            embed = discord.Embed(title='Bot removed', description=f'{member} left.', colour=discord.Colour.red())
-            mem_id: int = await self.bot.pool.fetchval('SELECT owner_id FROM addbot WHERE bot_id = $1', member.id)
-            mem = member.guild.get_member(mem_id)
-
-            if mem:
-                embed.add_field(name='Added by', value=str(member), inline=False)
-                await queue_channel.send(embed=embed)
-
-            return
-        _bot_ids = await self.bot.pool.fetch('SELECT bot_id FROM addbot WHERE owner_id = $1 AND added = TRUE', member.id)
-        bots = [_ent for _ent in map(lambda ent: member.guild.get_member(ent['bot_id']), _bot_ids) if _ent is not None]
-
-        if not bots:
-            return
-
-        with contextlib.suppress(discord.HTTPException):
-            for bot in bots:
-                await self.bot.pool.execute('UPDATE addbot SET added = FALSE WHERE bot_id = $1', bot.id)
-                await bot.kick(reason='Bot owner left the server.')
-
-            embed = discord.Embed(
-                title=f'{member} left!', description=f"**Kicking all their bots:**\n{', '.join(map(str, bots))}"
-            )
-            await queue_channel.send(embed=embed)
-
-    @commands.Cog.listener('on_ready')
-    async def on_ready(self):
-        guild = self.bot.get_guild(DUCK_HIDEOUT)
-        if not guild:
-            return logging.error('Could not find Duck Hideout!', exc_info=False)
-
-        bots = await self.bot.pool.fetch('SELECT * FROM addbot')
-        queue_channel: discord.TextChannel = guild.get_channel(QUEUE_CHANNEL)  # type: ignore
-
-        for bot in bots:
-            bot_user = guild.get_member(bot['bot_id'])
-            if not bot_user and bot['added'] is True:
-                await self.bot.pool.execute('UPDATE addbot SET added = FALSE WHERE bot_id = $1', bot['bot_id'])
-                await queue_channel.send(f'Bot {bot_user} was not found in the server. Updating database.')
-
-            elif bot_user and bot['added'] is False:
-                await self.bot.pool.execute(
-                    'UPDATE addbot SET added = TRUE, pending = FALSE WHERE bot_id = $1', bot['bot_id']
-                )
-
-                if not bot_user.get_role(BOTS_ROLE):
-                    await bot_user.add_roles(discord.Object(BOTS_ROLE), atomic=True)
-
-                embed = discord.Embed(title='Bot added', description=f'{bot_user} joined.', colour=discord.Colour.green())
-                mem_id = await self.bot.pool.fetchval('SELECT owner_id FROM addbot WHERE bot_id = $1', bot['bot_id'])
-                embed.add_field(name='Added by', value=str(guild.get_member(mem_id)), inline=False)
-                await queue_channel.send(embed=embed)
-
-                if (member := guild.get_member(mem_id)) and not member.get_role(mem_id):
-                    await member.add_roles(discord.Object(BOT_DEVS_ROLE), atomic=True)
-
-            else:
-                await self.bot.pool.execute('UPDATE addbot SET pending = FALSE WHERE bot_id = $1', bot['bot_id'])
-
-    @hideout_only()
-    @commands.is_owner()
-    @commands.command(name='register-bot', aliases=['rbot', 'rb'])
-    async def _register_bot(self, ctx: HideoutContext, owner: discord.Member, *, bot: discord.User):
-        """Register a bot to the database.
-
-        Parameters
-        ----------
-        owner: discord.Member
-            The owner of the bot to register to the database.
-        bot: discord.User
-            The bot to register to the database.
-        """
-
-        if owner.bot:
-            raise commands.BadArgument('Owner must be a user.')
-
-        if not bot.bot:
-            raise commands.BadArgument('Bot must be a bot.')
-
-        try:
-            await self.bot.pool.execute(
-                'INSERT INTO addbot (owner_id, bot_id, pending, added) VALUES ($1, $2, false, true)', owner.id, bot.id
-            )
-            await ctx.message.add_reaction('✅')
-
-        except Exception as e:
-            await ctx.message.add_reaction('❌')
-            raise e
 
     @pit_owner_only()
     @commands.hybrid_group(name='pit')
@@ -621,33 +368,6 @@ class Hideout(HideoutCog, name='Duck Hideout Stuff'):
         else:
             await ctx.send(f'✅ **|** Unarchived **{pit.name}**')
 
-    @commands.hybrid_command()
-    async def whoadd(self, ctx: HideoutContext, bot: discord.Member):
-        """Checks who added a specific bot.
-
-        Parameters
-        ----------
-        bot: discord.Member
-            The bot to check it's owner.
-        """
-
-        if not bot.bot:
-            raise commands.BadArgument('This user is not a bot.')
-
-        data = await self.bot.pool.fetchrow('SELECT * FROM addbot WHERE bot_id = $1', bot.id)
-
-        if not data:
-            raise commands.BadArgument('No data found...')
-
-        embed = discord.Embed(title='Bot info', timestamp=ctx.message.created_at, color=bot.color)
-        embed.set_author(name=str(bot), icon_url=bot.display_avatar.url)
-        user: discord.User = await ctx.bot.get_or_fetch_user(data['owner_id'])  # type: ignore
-        embed.add_field(name='Added by', value=f"{user.mention} (`{user.id}`)", inline=False)
-        embed.add_field(name='Reason', value=data['reason'])
-        embed.add_field(name='Joined at', value=discord.utils.format_dt(bot.joined_at or bot.created_at, 'R'))
-        embed.set_footer(text=f'bot ID: {bot.id}')
-        await ctx.send(embed=embed)
-
     @commands.Cog.listener('on_member_join')
     async def block_handler(self, member: discord.Member):
         """Blocks a user from your channel."""
@@ -679,7 +399,7 @@ class Hideout(HideoutCog, name='Duck Hideout Stuff'):
                             member,
                             blocked=True,
                             update_db=False,
-                            reason='[MEMBER-JOIN] Automatic re-block for previously blocked user. See "db.blocked" for a list of blocked users.',
+                            reason='[MEMBER-JOIN] Automatic re-block for previously blocked user.',
                         )
                         await asyncio.sleep(1)
 
@@ -709,7 +429,7 @@ class Hideout(HideoutCog, name='Duck Hideout Stuff'):
             # Can't really 100% rely on member cache, so we'll just try to fetch.
             member = await self.bot.get_or_fetch_member(guild, user_id)
             if not member:
-                return log.debug("Discarding blocked users for channel id {channel_id} as it can't be found.")
+                return log.debug(f"Discarding blocked users for channel id {channel_id} as it can't be found.")
 
             try:
                 mod = self.bot.get_user(author_id) or await self.bot.fetch_user(author_id)
