@@ -2,13 +2,6 @@
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-CREATE TABLE IF NOT EXISTS guilds (
-    guild_id BIGINT PRIMARY KEY,
-    prefixes TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
-    muted_role_id BIGINT,
-    mutes BIGINT[] NOT NULL DEFAULT ARRAY[]::BIGINT[]
-);
-
 CREATE TABLE IF NOT EXISTS timers (
     id BIGSERIAL PRIMARY KEY,
     precise BOOLEAN DEFAULT TRUE,
@@ -42,38 +35,6 @@ CREATE TABLE IF NOT EXISTS blacklist (
     reason TEXT,
     PRIMARY KEY (blacklist_type, entity_id, guild_id)
 );
-
--- Functions that are dispatched to a listener
--- that updates the prefix cache automatically
-CREATE OR REPLACE FUNCTION update_prefixes_cache()
-  RETURNS TRIGGER AS $$
-  BEGIN
-    IF TG_OP = 'DELETE' THEN
-      PERFORM pg_notify('delete_prefixes', NEW.guild_id::TEXT);
-    ELSIF TG_OP = 'UPDATE' AND OLD.prefixes <> NEW.prefixes THEN
-      PERFORM pg_notify('update_prefixes',
-        JSON_BUILD_OBJECT(
-              'guild_id', NEW.guild_id,
-              'prefixes', NEW.prefixes
-            )::TEXT
-          );
-    ELSIF TG_OP = 'INSERT' AND NEW.prefixes <> ARRAY[]::TEXT[] THEN
-        PERFORM pg_notify('update_prefixes',
-        JSON_BUILD_OBJECT(
-              'guild_id', NEW.guild_id,
-              'prefixes', NEW.prefixes
-            )::TEXT
-          );
-    END IF;
-    RETURN NEW;
-  END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER update_prefixes_cache_trigger
-  AFTER INSERT OR UPDATE OR DELETE
-  ON guilds
-  FOR EACH ROW
-  EXECUTE PROCEDURE update_prefixes_cache();
 
 -- For tags.
 CREATE TABLE IF NOT EXISTS tags (
@@ -111,21 +72,3 @@ CREATE TABLE commands (
     timestamp TIMESTAMP WITH TIME ZONE
         NOT NULL DEFAULT NOW()
 );
-
-CREATE TABLE auto_sync (
-    guild_id BIGINT,
-    payload JSONB
-);
-
-CREATE TABLE translations (
-    tr_id BIGSERIAL PRIMARY KEY,
-    en_us TEXT,
-    es_es TEXT,
-    it TEXT,
-    note TEXT
-);
-
-CREATE TABLE user_settings (
-    user_id BIGINT PRIMARY KEY,
-    locale TEXT
-)

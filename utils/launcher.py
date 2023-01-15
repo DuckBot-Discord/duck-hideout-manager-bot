@@ -23,6 +23,7 @@ def _get_or_fail(env_var: str) -> str:
 TOKEN = _get_or_fail('TOKEN')
 URI = _get_or_fail('POSTGRES')
 ERROR_WH = _get_or_fail('ERROR_WEBHOOK_URL')
+PREFIX = _get_or_fail('PREFIX')
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,17 +33,12 @@ logging.basicConfig(
 log = logging.getLogger('DuckBot.launcher')
 
 
-async def run_bot(to_dump: str | None, to_load: str | None, run: bool, verbose: bool = False) -> None:
+async def run_bot(verbose: bool = False) -> None:
     async with aiohttp.ClientSession() as session, DuckBot.temporary_pool(uri=URI) as pool, DuckBot(
-        session=session, pool=pool, error_wh=ERROR_WH
+        session=session, pool=pool, error_wh=ERROR_WH, prefix=PREFIX
     ) as duck:
-        if to_dump:
-            await duck.dump_translations(to_dump)
-        elif to_load:
-            await duck.load_translations(to_load)
-        elif run:
-            await duck.start(TOKEN, reconnect=True, verbose=verbose)
+        await duck.start(TOKEN, reconnect=True, verbose=verbose)
 
 
 if __name__ == '__main__':
-    asyncio.run(run_bot(to_dump=None, to_load=None, run=True))
+    asyncio.run(run_bot())

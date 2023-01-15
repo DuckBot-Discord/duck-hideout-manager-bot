@@ -10,7 +10,6 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from utils import DuckCog, DuckContext, SilentCommandError
-from utils.command import command, group
 from utils.errors import ActionNotExecutable
 from utils.time import ShortTime
 from discord import TextChannel, VoiceChannel, Thread
@@ -79,7 +78,7 @@ def counselor_only():
     return commands.check(predicate)
 
 
-class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands related to the server, like pits and addbot.'):
+class Hideout(DuckCog, name='Duck Hideout Stuff'):
     """
     Commands related to the server, like pits and addbot.
     """
@@ -181,7 +180,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
 
         return f"{channel}@{user} ({user_id})"
 
-    @command()
+    @commands.command()
     @hideout_only()
     async def addbot(self, ctx: DuckContext, bot: discord.User, *, reason: commands.clean_content):
         """Adds a bot to the bot queue.
@@ -342,7 +341,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
 
     @hideout_only()
     @commands.is_owner()
-    @command(name='register-bot', aliases=['rbot', 'rb'])
+    @commands.command(name='register-bot', aliases=['rbot', 'rb'])
     async def _register_bot(self, ctx: DuckContext, owner: discord.Member, *, bot: discord.User):
         """Register a bot to the database.
 
@@ -371,7 +370,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
             raise e
 
     @pit_owner_only()
-    @group(name='pit', hybrid=True)
+    @commands.hybrid_group(name='pit')
     @app_commands.guild_only()
     @app_commands.default_permissions(manage_messages=True)
     async def pit(self, ctx: DuckContext):
@@ -622,7 +621,7 @@ class Hideout(DuckCog, name='Duck Hideout Stuff', emoji='🦆', brief='Commands 
         else:
             await ctx.send(f'✅ **|** Unarchived **{pit.name}**')
 
-    @command(hybrid=True)
+    @commands.hybrid_command()
     async def whoadd(self, ctx: DuckContext, bot: discord.Member):
         """Checks who added a specific bot.
 

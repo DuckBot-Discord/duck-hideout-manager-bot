@@ -2,21 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
-import contextlib
-import functools
-from json import dump, load
 import logging
 
 import random
 import re
 import sys
-import time
 from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
-    Dict,
     Generator,
-    List,
     Optional,
     Sequence,
     Set,
@@ -24,13 +18,10 @@ from typing import (
     Type,
     Generic,
     Tuple,
-    Callable,
-    Awaitable,
     Any,
     Union,
-    Coroutine,
     DefaultDict,
-    NamedTuple,
+    overload,
 )
 
 import asyncpg
@@ -45,8 +36,6 @@ from utils import (
     col,
     human_timedelta,
     TimerManager,
-    DuckBlacklistManager,
-    human_join,
 )
 from utils.errors import *
 
@@ -60,7 +49,6 @@ if TYPE_CHECKING:
     from asyncpg.transaction import Transaction
     from aiohttp import ClientSession
     import datetime
-    from cogs.owner.eval import Eval
 
 DBT = TypeVar('DBT', bound='DuckBot')
 DCT = TypeVar('DCT', bound='DuckContext')
@@ -74,40 +62,12 @@ initial_extensions: Tuple[str, ...] = (
     'utils.jishaku',
     'utils.context',
     'utils.command_errors',
-    'utils.interactions.command_errors',
-    'utils.help',
     # Cogs
     'cogs.meta',
     'cogs.owner',
     'cogs.tags',
     'cogs.hideout',
 )
-
-
-class SyncResult(NamedTuple):
-    synced: bool
-    commands: List[app_commands.AppCommand]
-
-
-def _wrap_extension(func: Callable[P, Awaitable[T]]) -> Callable[P, Coroutine[Any, Any, Optional[T]]]:
-    async def wrapped(*args: P.args, **kwargs: P.kwargs) -> Optional[T]:
-        fmt_args = 'on ext "{}"{}'.format(args[1], f' with kwargs {kwargs}' if kwargs else '')
-        start = time.monotonic()
-
-        try:
-            result = await func(*args, **kwargs)
-        except Exception as exc:
-            log.warning(f'Failed to load extension in {(time.monotonic() - start)*1000:.2f}ms {fmt_args}')
-            bot: DuckBot = args[0]  # type: ignore
-            bot.create_task(bot.exceptions.add_error(error=exc))
-            return
-
-        fmt = f'{func.__name__} took {(time.monotonic() - start)*1000:.2f}ms {fmt_args}'
-        log.info(fmt)
-
-        return result
-
-    return wrapped
 
 
 class DbTempContextManager(Generic[DBT]):
@@ -195,6 +155,16 @@ class DuckHelper(TimerManager):
     def __init__(self, *, bot: DuckBot) -> None:
         super().__init__(bot=bot)
 
+    @overload
+    @staticmethod
+    def chunker(item: str, *, size: int = 2000) -> Generator[str, None, None]:
+        ...
+
+    @overload
+    @staticmethod
+    def chunker(item: Sequence[T], *, size: int = 2000) -> Generator[Sequence[T], None, None]:
+        ...
+
     @staticmethod
     def chunker(item: Union[str, Sequence[T]], *, size: int = 2000) -> Generator[Union[str, Sequence[T]], None, None]:
         """Split a string into chunks of a given size.
@@ -227,68 +197,32 @@ class DuckHelper(TimerManager):
             locale = self.validate_locale(default)
         return locale
 
-    async def translate(
-        self,
-        translation_id: int,
-        /,
-        *args: Any,
-        locale: str | discord.Locale | None,
-        db: asyncpg.Pool | Connection | None = None,
-    ) -> str:
-        """|coro|
-        Handles translating a translation ID.
-
-        Parameters
-        ----------
-        translation_id: :class:`int`
-            The translation ID to translate.
-        args: :class:`Any`
-            The arguments to pass to the translation.
-        locale: Optional[:class:`str` | :class:`~discord.Locale`]
-            The locale to use for the translation.
-        connection: Optional[:class:`~asyncpg.Connection` | :class:`~asyncpg.Pool`]
-            The connection to use for the transaction.
-        """
-        connection = db or self.bot.pool
-        locale = self.validate_locale(locale)
-        translations = await connection.fetchrow('SELECT * FROM translations WHERE tr_id = $1', translation_id)
-        if not translations:
-            raise RuntimeError(f'Translation ID {translation_id} does not exist')
-
-        translation = translations[locale] or translations['en_us']
-        return translation.format(*args)
-
-
 class DuckBot(commands.AutoShardedBot, DuckHelper):
     if TYPE_CHECKING:
         user: discord.ClientUser
-        _eval_cog: Eval
-        command_prefix: Set[str]
 
-    def __init__(self, *, session: ClientSession, pool: Pool, **kwargs) -> None:
+    def __init__(self, *, session: ClientSession, pool: Pool, error_wh: str, prefix: str) -> None:
         intents = discord.Intents.all()
         intents.typing = False
 
         super().__init__(
-            command_prefix={'-', ';', 'dhm.', 'dh.'},
+            command_prefix=commands.when_mentioned_or(prefix),
             case_insensitive=True,
             allowed_mentions=discord.AllowedMentions.none(),
             intents=intents,
-            activity=discord.Activity(name="-help", type=discord.ActivityType.listening),
+            activity=discord.Activity(name=f"{prefix}help", type=discord.ActivityType.listening),
             strip_after_prefix=True,
             chunk_guilds_at_startup=False,
             max_messages=4000,
+            help_command=commands.DefaultHelpCommand(verify_checks=False),
         )
         self.pool: Pool = pool
         self.session: ClientSession = session
         self._context_cls: Type[commands.Context] = commands.Context
-        self.prefix_cache: DefaultDict[int, Set[str]] = defaultdict(set)
-        self.error_webhook_url: Optional[str] = kwargs.get('error_wh')
+        self.error_webhook_url: Optional[str] = error_wh
         self._start_time: Optional[datetime.datetime] = None
-        self.listener_connection: Optional[asyncpg.Connection] = None  # type: ignore
         self.allowed_locales: Set[str] = {'en_us', 'es_es', 'it'}
 
-        self.blacklist: DuckBlacklistManager = DuckBlacklistManager(self)
         self.exceptions: DuckExceptionManager = DuckExceptionManager(self)
         self.thread_pool: concurrent.futures.ThreadPoolExecutor = concurrent.futures.ThreadPoolExecutor(max_workers=20)
 
@@ -297,7 +231,6 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
 
         self.views: Set[discord.ui.View] = set()
         self._auto_spam_count: DefaultDict[int, int] = defaultdict(int)
-        self.global_mapping = commands.CooldownMapping.from_cooldown(10, 12, commands.BucketType.user)
 
     async def setup_hook(self) -> None:
         failed = False
@@ -307,28 +240,7 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
 
         self.tree.copy_global_to(guild=discord.Object(id=774561547930304536))
 
-        await self.populate_cache()
-        await self.create_db_listeners()
-
         super(DuckHelper, self).__init__(bot=self)
-
-        async def sync_with_logging():
-            log.info(f'%sSyncing commands to discord...', col(6))
-            guild = discord.Object(id=774561547930304536)
-            try:
-                result = await self.try_syncing(guild=guild)
-            except Exception as e:
-                log.error('%sFailed to sync commands with guild %s', col(6), guild.id, exc_info=e)
-            else:
-                if result.synced is True:
-                    log.info('%sSuccessfully synced %s commands to guild %s', col(6), len(result.commands), guild.id)
-                else:
-                    log.info('%sCommands for guild %s were already synced', col(6), guild.id)
-
-        if not failed:
-            self.create_task(sync_with_logging())
-        else:
-            log.info('Not syncing commands. One or more cogs failed to load.')
 
     @classmethod
     def temporary_pool(cls: Type[DBT], *, uri: str) -> DbTempContextManager[DBT]:
@@ -375,87 +287,6 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
         log.info(f"{col(2)}Successfully created connection pool.")
         assert pool is not None, 'Pool is None'
         return pool
-
-    async def populate_cache(self) -> None:
-        """|coro|
-
-        Populates all cache that comes from the database. Please note if commands are
-        processed before this data is complete, some guilds may not have custom prefixes.
-        """
-        async with self.safe_connection() as conn:
-            data = await conn.fetch('SELECT guild_id, prefixes FROM guilds')
-            for guild_id, prefixes in data:
-                self.prefix_cache[guild_id] = set(prefixes)
-            await self.blacklist.build_cache(conn)
-
-    async def create_db_listeners(self) -> None:
-        """|coro|
-
-        Registers listeners for database events.
-        """
-        self.listener_connection: asyncpg.Connection = await self.pool.acquire()
-
-        async def _delete_prefixes_event(conn, pid, channel, payload):
-            payload = discord.utils._from_json(payload)  # noqa
-            with contextlib.suppress(Exception):
-                del self.prefix_cache[payload['guild_id']]
-
-        async def _create_or_update_event(conn, pid, channel, payload):
-            payload = discord.utils._from_json(payload)  # noqa
-            self.prefix_cache[payload['guild_id']] = set(payload['prefixes'])
-
-        await self.listener_connection.add_listener('delete_prefixes', _delete_prefixes_event)
-        await self.listener_connection.add_listener('update_prefixes', _create_or_update_event)
-
-    async def dump_translations(self, filename: str) -> None:
-        log.info('%sDumping translations to %s', col(5), f"{filename!r}")
-        translations = await self.pool.fetch('SELECT * FROM translations ORDER BY tr_id')
-        log.info(
-            '%sDumping %s translations to locales %s%s',
-            col(5),
-            len(translations),
-            col(3),
-            human_join(list(self.allowed_locales), final=f'{col(5)}and{col(3)}', delim=f'{col(5)}, {col(3)}'),
-        )
-        payload: Dict[str, Any] = dict(
-            locales=list(self.allowed_locales),
-            last_updated=discord.utils.utcnow().isoformat(),
-        )
-        for translation in translations:
-            data = dict(translation)
-            del data['tr_id']
-            payload[translation['tr_id']] = data
-        with open(filename, 'w+') as f:
-            dump(payload, f, indent=4)
-
-    async def load_translations(self, filename: str) -> None:
-        async with self.safe_connection() as conn:
-            log.info('%sLoading translations from %s', col(5), f"{filename!r}")
-            with open(filename, 'r') as f:
-                payload = load(f)
-            log.info(
-                '%sLoading %s translations from locales %s%s',
-                col(5),
-                len(payload) - 2,
-                col(3),
-                human_join(payload['locales'], final=f'{col(5)}and{col(3)}', delim=f'{col(5)}, {col(3)}'),
-            )
-            for tr_id, data in payload.items():
-                if not tr_id.isdigit():
-                    continue
-                log.debug('%sLoading translation %s', col(3), tr_id)
-                for locale, translation in data.items():
-                    if locale not in self.allowed_locales and locale != 'note':
-                        raise RuntimeError(f"Invalid locale {locale!r}")
-                    await conn.execute(
-                        f'''
-                        INSERT INTO translations (tr_id, {locale}) VALUES ($1, $2) 
-                        ON CONFLICT (tr_id) DO UPDATE SET {locale} = $2
-                    ''',
-                        int(tr_id),
-                        translation,
-                    )
-            log.info('%sSuccessfully loaded %s translations', col(5), len(payload) - 2)
 
     @property
     def start_time(self) -> datetime.datetime:
@@ -533,33 +364,6 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
         """:class:`~discord.PartialEmoji`: The emoji used to denote a command has finished processing."""
         return discord.PartialEmoji.from_str(random.choice(self.constants.DONE))
 
-    @_wrap_extension
-    @discord.utils.copy_doc(commands.Bot.load_extension)
-    async def load_extension(self, name: str, *, package: Optional[str] = None) -> bool:
-        try:
-            await super().load_extension(name, package=package)
-            return True
-        except:
-            raise
-
-    @_wrap_extension
-    @discord.utils.copy_doc(commands.Bot.unload_extension)
-    async def unload_extension(self, name: str, *, package: Optional[str] = None) -> bool:
-        try:
-            await super().unload_extension(name, package=package)
-            return True
-        except:
-            raise
-
-    @_wrap_extension
-    @discord.utils.copy_doc(commands.Bot.reload_extension)
-    async def reload_extension(self, name: str, *, package: Optional[str] = None) -> bool:
-        try:
-            await super().reload_extension(name, package=package)
-            return True
-        except:
-            raise
-
     def safe_connection(self, *, timeout: float = 10.0) -> DbContextManager:
         """A context manager that will acquire a connection from the bot's pool.
 
@@ -571,33 +375,6 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
                 await conn.execute('SELECT * FROM table')
         """
         return DbContextManager(self, timeout=timeout)
-
-    async def get_prefix(self, message: discord.Message, raw: bool = False) -> List[str]:
-        """|coro|
-
-        Returns the prefixes for the given message.
-        if raw is True, returns the prefixes without the bots mention.
-
-        Parameters
-        ----------
-        message: :class:`~discord.Message`
-            The message to get the prefix of.
-        raw: :class:`bool`
-            Whether to return the raw prefixes or not.
-        """
-        meth = commands.when_mentioned_or if raw is False else lambda *pres: lambda _, __: list(pres)
-
-        cached_prefixes = self.prefix_cache.get((message.guild and message.guild.id), None)  # type: ignore
-        if cached_prefixes is not None:
-            base = set(cached_prefixes)
-        else:
-            base = self.command_prefix
-
-        # Note you have a type error here because of `self.command_prefix`.
-        # This is because command_prefix is type hinted internally as both an iterable
-        # of strings and a coroutine. The coroutine aspect is affecting L-430. I can fix it,
-        # but it's not the neatest thing, it's up to you :P
-        return meth(*base)(self, message)
 
     async def get_context(self, message: discord.Message, *, cls: Type[DCT] = None) -> Union[DuckContext, commands.Context]:
         """|coro|
@@ -644,10 +421,8 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
             The message that was created for replying to the user.
         """
         if self.mention_regex.fullmatch(message.content):
-            prefixes = await self.get_prefix(message, raw=True)
             return await message.reply(
-                f"My prefixes here are `{'`, `'.join(prefixes[0:10])}`\n"
-                f"For a list of commands do`{prefixes[0]}help` 💞"[0:2000]
+                f"My prefix is `-`!"
             )
 
         await self.process_commands(message)
@@ -702,42 +477,6 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
 
         raise error from None
 
-    def wrap(self, func: Callable[..., T], *args, **kwargs) -> Awaitable[T]:
-        """Wrap a blocking function to be not blocking.
-
-        Parameters
-        ----------
-        func: Callable[..., :class:`T`]
-            The function to wrap.
-        *args
-            The arguments to pass to the function.
-        **kwargs
-            The keyword arguments to pass to the function.
-
-        Returns
-        -------
-        Awaitable[T]
-            The wrapped function you can await.
-        """
-        return self.loop.run_in_executor(self.thread_pool, functools.partial(func, *args, **kwargs))
-
-    def create_task(self, coro: Coroutine[T, Any, Any], *, name: Optional[str] = None) -> asyncio.Task[T]:
-        """Create a task from a coroutine object.
-
-        Parameters
-        ----------
-        coro: :class:`~asyncio.Coroutine`
-            The coroutine to create the task from.
-        name: Optional[:class:`str`]
-            The name of the task.
-
-        Returns
-        -------
-        :class:`~asyncio.Task`
-            The task that was created.
-        """
-        return self.loop.create_task(coro, name=name)
-
     # This is overridden, so we don't get so many annoying type errors when passing
     # a Member into is_owner  ## Nah chai it's your shitty type checker smh!
     @discord.utils.copy_doc(commands.Bot.is_owner)
@@ -791,12 +530,6 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
                 await self.cleanup_views()
             except Exception as e:
                 log.error('Could not wait for view cleanups', exc_info=e)
-            try:
-                if self.listener_connection:
-                    log.info('Closing listener connection...')
-                    await self.listener_connection.close()
-            except Exception as e:
-                log.error(f'Failed to close listener connection', exc_info=e)
         finally:
             await super().close()
 
@@ -865,121 +598,10 @@ class DuckBot(commands.AutoShardedBot, DuckHelper):
             The context of the command.
         """
         assert ctx.command is not None
-
-        try:
-            bucket = self.global_mapping.get_bucket(ctx.message)
-            current = ctx.message.created_at.timestamp()
-            retry_after = bucket.update_rate_limit(current)
-            author_id = ctx.author.id
-            if retry_after and not await self.is_owner(ctx.author):
-                self._auto_spam_count[author_id] += 1
-                if self._auto_spam_count[author_id] >= 5:
-                    await self._auto_blacklist_add(ctx.author)
-                    del self._auto_spam_count[author_id]
-                    await self._log_rl_excess(ctx, ctx.message, retry_after, auto_block=True)
-                else:
-                    await self._log_rl_excess(ctx, ctx.message, retry_after)
-                return
-            else:
-                self._auto_spam_count.pop(author_id, None)
-        finally:
-            await self.pool.execute(
-                "INSERT INTO commands (guild_id, user_id, command, timestamp) VALUES ($1, $2, $3, $4)",
-                (ctx.guild and ctx.guild.id),
-                ctx.author.id,
-                ctx.command.qualified_name,
-                ctx.message.created_at,
-            )
-
-    async def _log_rl_excess(self, ctx, message, retry_after, *, auto_block=False):
-        """|coro|
-
-        Logs a rate limit excess
-
-        Parameters
-        ----------
-        ctx: DuckContext
-            The context of the command.
-        message: discord.Message
-            The message that triggered the rate limit.
-        retry_after: float
-            The amount of time the user had to wait.
-        auto_block: bool
-            Whether the user was automatically blocked.
-        """
-        guild_name = getattr(ctx.guild, 'name', 'No Guild (DMs)')
-        guild_id = getattr(ctx.guild, 'id', None)
-        fmt = 'User %s (ID %s) in guild %r (ID %s) spamming, retry_after: %.2fs'
-        logging.warning(fmt, message.author, message.author.id, guild_name, guild_id, retry_after)
-        if not auto_block:
-            return
-
-        await self.bot.wait_until_ready()
-        embed = discord.Embed(title='Auto-blocked Member', colour=0xDDA453)
-        embed.add_field(name='Member', value=f'{message.author} (ID: {message.author.id})', inline=False)
-        embed.add_field(name='Guild Info', value=f'{guild_name} (ID: {guild_id})', inline=False)
-        embed.add_field(name='Channel Info', value=f'{message.channel} (ID: {message.channel.id}', inline=False)
-        embed.timestamp = discord.utils.utcnow()
-        channel: discord.abc.Messageable = self.bot.get_channel(904797860841812050)  # type: ignore
-
-        try:
-            await channel.send(embed=embed)
-        except discord.HTTPException:
-            pass
-        except AttributeError as e:
-            await self.exceptions.add_error(error=e)
-
-    async def _auto_blacklist_add(self, user: Union[discord.User, discord.Member]):
-        """|coro|
-
-        Adds a user to the auto-blacklist.
-
-        Parameters
-        ----------
-        user: :class:`discord.User`
-            The user to add to the blacklist.
-        """
-
-        query = """
-            INSERT INTO commands (user_id, command) VALUES ($1, $2)
-            RETURNING (SELECT COUNT(*) FROM commands WHERE user_id = $1 AND command = $2)
-        """
-        amount = await self.pool.fetchval(query, user.id, f'AUTO-BOT-BAN')
-        if amount >= 5:
-            await self.blacklist.add_user(user, end_time=discord.utils.utcnow() + datetime.timedelta(minutes=1 * amount))
-        else:
-            await self.blacklist.add_user(user)
-
-    async def try_syncing(self, *, guild: discord.abc.Snowflake | None = None) -> SyncResult:
-        """|coro|
-
-        Tries to sync the command tree.
-
-        Parameters
-        ----------
-        guild: discord.abc.Snowflake | None
-            The guild to sync the command tree for.
-        """
-        # safeguard. Need the app id.
-        await self.wait_until_ready()
-
-        guild_id = guild.id if guild else 0
-        all_cmds = self.bot.tree._get_all_commands(guild=guild)  # noqa F401  # private method kekw.
-        payloads = [(guild_id, cmd.to_dict()) for cmd in all_cmds]
-
-        databased = await self.pool.fetch("SELECT payload FROM auto_sync WHERE guild_id = $1", guild_id)
-        saved_payloads = [d['payload'] for d in databased]
-
-        not_synced = [p for _, p in payloads if p not in saved_payloads] + [
-            p for p in saved_payloads if p not in [p for _, p in payloads]
-        ]
-
-        if not_synced:
-            await self.pool.execute("DELETE FROM auto_sync WHERE guild_id = $1", guild_id)
-            await self.pool.executemany("INSERT INTO auto_sync (guild_id, payload) VALUES ($1, $2)", payloads)
-
-            synced = await self.bot.tree.sync(guild=guild)
-            return SyncResult(commands=synced, synced=True)
-
-        else:
-            return SyncResult(commands=[], synced=False)
+        await self.pool.execute(
+            "INSERT INTO commands (guild_id, user_id, command, timestamp) VALUES ($1, $2, $3, $4)",
+            (ctx.guild and ctx.guild.id),
+            ctx.author.id,
+            ctx.command.qualified_name,
+            ctx.message.created_at,
+        )

@@ -10,6 +10,7 @@ from typing import (
     Any,
     Optional,
     TypeVar,
+    Annotated,
 )
 import itertools
 import traceback
@@ -17,20 +18,20 @@ import traceback
 from jishaku.modules import package_version
 from jishaku.cog import STANDARD_FEATURES, OPTIONAL_FEATURES
 from jishaku.features.python import PythonFeature
-from jishaku.features.root_command import RootCommand, natural_size
-from jishaku.features.management import ManagementFeature, ExtensionConverter
+from jishaku.features.root_command import RootCommand
+from jishaku.math import natural_size
+from jishaku.features.management import ManagementFeature
+from jishaku.modules import ExtensionConverter
 from jishaku.codeblocks import codeblock_converter
 from jishaku.exception_handling import ReplResponseReactor
 from jishaku.features.baseclass import Feature
 from jishaku.flags import Flags
 from jishaku.functools import AsyncSender
-from jishaku.repl import AsyncCodeExecutor, get_var_dict_from_ctx
+from jishaku.repl import AsyncCodeExecutor
+from jishaku.repl.repl_builtins import get_var_dict_from_ctx
 from jishaku.paginators import use_file_check, PaginatorInterface, WrappedPaginator
 
-from utils.translation_helpers import TranslatedEmbed
-
-
-from ..context import DuckContext
+from utils.context import DuckContext
 from .. import add_logging, DuckCog
 
 try:
@@ -41,11 +42,16 @@ except ImportError:
 if TYPE_CHECKING:
     from bot import DuckBot
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class OverwrittenRootCommand(RootCommand):
-    @Feature.Command(parent=None, name='jsk', aliases=['jishaku', 'jishacum'], invoke_without_command=True)  # type: ignore
+    @Feature.Command(
+        parent=None,
+        name="jsk",
+        aliases=["jishaku", "jishacum"],
+        invoke_without_command=True,
+    )
     async def jsk(self, ctx: DuckContext):
         """
         The Jishaku debug and diagnostic commands.
@@ -105,7 +111,7 @@ class OverwrittenRootCommand(RootCommand):
                     f" and can see {cache_summary}."
                 )
             else:
-                shard_ids = ', '.join(str(i) for i in self.bot.shards.keys())
+                shard_ids = ", ".join(str(i) for i in self.bot.shards.keys())
                 summary.append(
                     f"This bot is automatically sharded (Shards {shard_ids} of {self.bot.shard_count})"
                     f" and can see {cache_summary}."
@@ -155,15 +161,18 @@ class OverwrittenManagementFeature(ManagementFeature):
 
         Reports any extensions that failed to load.
         """
-        paginator = WrappedPaginator(prefix='', suffix='')
+        paginator = WrappedPaginator(prefix="", suffix="")
 
         # 'jsk reload' on its own just reloads jishaku
-        if ctx.invoked_with == 'reload' and not extensions:
-            extensions = [['utils.jishaku']]  # type: ignore
+        if ctx.invoked_with == "reload" and not extensions:
+            extensions = [["utils.jishaku"]]  # type: ignore
 
         for extension in itertools.chain(*extensions):  # type: ignore
             method, icon = (
-                (self.bot.reload_extension, "\N{CLOCKWISE RIGHTWARDS AND LEFTWARDS OPEN CIRCLE ARROWS}")
+                (
+                    self.bot.reload_extension,
+                    "\N{CLOCKWISE RIGHTWARDS AND LEFTWARDS OPEN CIRCLE ARROWS}",
+                )
                 if extension in self.bot.extensions
                 else (self.bot.load_extension, "\N{INBOX TRAY}")
             )
@@ -171,9 +180,12 @@ class OverwrittenManagementFeature(ManagementFeature):
             try:
                 await discord.utils.maybe_coroutine(method, extension)
             except Exception as exc:  # pylint: disable=broad-except
-                traceback_data = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__, 1))
+                traceback_data = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__, 1))
 
-                paginator.add_line(f"{icon}\N{WARNING SIGN} `{extension}`\n```py\n{traceback_data}\n```", empty=True)
+                paginator.add_line(
+                    f"{icon}\N{WARNING SIGN} `{extension}`\n```py\n{traceback_data}\n```",
+                    empty=True,
+                )
             else:
                 paginator.add_line(f"{icon} `{extension}`", empty=True)
 
@@ -187,7 +199,7 @@ class OverwrittenManagementFeature(ManagementFeature):
         """
         guild_ids = guild_ids or (() if sync_globally else ((ctx.guild.id,) if ctx.guild else ()))
 
-        paginator = WrappedPaginator(prefix='', suffix='')
+        paginator = WrappedPaginator(prefix="", suffix="")
 
         if not guild_ids:
             synced = await self.bot.tree.sync()
@@ -214,11 +226,8 @@ features.append(OverwrittenManagementFeature)
 
 class DuckBotJishaku(
     DuckCog,
-    *features,  # type: ignore
-    *OPTIONAL_FEATURES,  # type: ignore
-    brief='Jishaku front end class.',
-    emoji='\N{CONSTRUCTION WORKER}',
-    hidden=True,
+    *features,
+    *OPTIONAL_FEATURES,
 ):
     """
     The main frontend class for JIshaku.
@@ -240,35 +249,32 @@ class DuckBotJishaku(
         *,
         start_time: Optional[float] = None,
         redirect_stdout: Optional[str] = None,
-    ) -> Optional[discord.Message]:
+    ):
         if isinstance(result, discord.Message):
-            return await ctx.send(f'<Message <{result.jump_url}>>')
+            return await ctx.send(f"<Message <{result.jump_url}>>")
 
         elif isinstance(result, discord.File):
             return await ctx.send(file=result)
 
-        elif isinstance(result, (discord.Embed, TranslatedEmbed)):
-            return await ctx.send(embed=result)
-
         elif isinstance(result, PaginatorInterface):
-            return await result.send_to(ctx)  # type: ignore
+            return await result.send_to(ctx)
 
         if not isinstance(result, str):
             result = repr(result)
 
-        stripper = '**Redirected stdout**:\n{}'
+        stripper = "**Redirected stdout**:\n{}"
         total = 2000
         if redirect_stdout:
-            total -= len(f'{stripper.format(redirect_stdout)}\n')
+            total -= len(f"{stripper.format(redirect_stdout)}\n")
 
         if len(result) <= total:
-            if result.strip == '':
-                result = '\u200b'
+            if result.strip == "":
+                result = "\u200b"
 
             if redirect_stdout:
-                result = f'{stripper.format(redirect_stdout)}\n{result}'
+                result = f"{stripper.format(redirect_stdout)}\n{result}"
 
-            return await ctx.send(result.replace(self.bot.http.token or '', "[token omitted]"))
+            return await ctx.send(result.replace(self.bot.http.token or "", "[token omitted]"))
 
         if use_file_check(ctx, len(result)):  # File "full content" preview limit
             # Discord's desktop and web client now supports an interactive file content
@@ -276,11 +282,11 @@ class DuckBotJishaku(
             # Since this avoids escape issues and is more intuitive than pagination for
             #  long results, it will now be prioritized over PaginatorInterface if the
             #  resultant content is below the filesize threshold
-            return await ctx.send(file=discord.File(filename="output.py", fp=io.BytesIO(result.encode('utf-8'))))
+            return await ctx.send(file=discord.File(filename="output.py", fp=io.BytesIO(result.encode("utf-8"))))
 
         # inconsistency here, results get wrapped in codeblocks when they are too large
         #  but don't if they're not. probably not that bad, but noting for later review
-        paginator = WrappedPaginator(prefix='```py', suffix='```', max_size=1985)
+        paginator = WrappedPaginator(prefix="```py", suffix="```", max_size=1985)
 
         if redirect_stdout:
             for chunk in self.bot.chunker(f'{stripper.format(redirect_stdout).replace("**", "")}\n', size=1975):
@@ -293,8 +299,8 @@ class DuckBotJishaku(
         return await interface.send_to(ctx)
 
     @discord.utils.copy_doc(PythonFeature.jsk_python)
-    @Feature.Command(parent='jsk', name='py', aliases=['python'])
-    async def jsk_python(self, ctx: DuckContext, *, argument: codeblock_converter) -> None:
+    @Feature.Command(parent="jsk", name="py", aliases=["python"])
+    async def jsk_python(self, ctx: DuckContext, *, argument: Annotated[str, codeblock_converter]) -> None:
         """|coro|
 
         The subclassed jsk python command to implement some more functionality and features.
@@ -311,9 +317,9 @@ class DuckBotJishaku(
         """
 
         arg_dict = get_var_dict_from_ctx(ctx, Flags.SCOPE_PREFIX)
-        arg_dict['add_logging'] = add_logging
-        arg_dict['self'] = self
-        arg_dict['_'] = self.last_result
+        arg_dict["add_logging"] = add_logging
+        arg_dict["self"] = self
+        arg_dict["_"] = self.last_result
 
         scope = self.scope
         printed = io.StringIO()
@@ -336,7 +342,7 @@ class DuckBotJishaku(
                                     ctx,
                                     result,
                                     start_time=start,
-                                    redirect_stdout=None if value == '' else value,
+                                    redirect_stdout=None if value == "" else value,
                                 )
                             )
 

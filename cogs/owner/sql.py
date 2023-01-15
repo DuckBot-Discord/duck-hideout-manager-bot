@@ -1,18 +1,23 @@
 from __future__ import annotations
 import io
 
-import os
 import time
 from tabulate import tabulate
 from typing import List
 
 from import_expression import eval
 from discord import File
-from discord.ext.commands import FlagConverter, Flag, Converter
-from utils import DuckCog, DuckContext, command, UntilFlag
+from discord.ext.commands import FlagConverter, Flag, Converter, command
+from utils import DuckCog, DuckContext, UntilFlag
 
-from .eval import cleanup_code
+def cleanup_code(content: str):
+    """Automatically removes code blocks from the code."""
+    # remove ```py\n```
+    if content.startswith('```') and content.endswith('```'):
+        return '\n'.join(content.split('\n')[1:-1])
 
+    # remove `foo`
+    return content.strip('` \n')
 
 class plural:
     def __init__(self, value):

@@ -4,7 +4,7 @@ from utils.errors import DuckBotNotStarted
 from .embed import EmbedMaker
 
 
-class Meta(EmbedMaker, emoji="\N{INFORMATION SOURCE}"):
+class Meta(EmbedMaker):
     """All commands about the bot itself."""
 
     @discord.utils.cached_property

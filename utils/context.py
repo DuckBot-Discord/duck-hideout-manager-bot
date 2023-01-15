@@ -9,38 +9,12 @@ if TYPE_CHECKING:
     from discord.message import Message
     from bot import DuckBot
 
-from .translation_helpers import FormatString, TranslatedEmbed
-
-
 __all__: Tuple[str, ...] = (
     'DuckContext',
-    'tick',
+    'ConfirmationView'
 )
 
 BotT = TypeVar('BotT', bound='DuckBot')
-
-
-def tick(opt: Optional[bool], label: Optional[str] = None) -> str:
-    """A function to convert a boolean value with label to an emoji with label.
-
-    Parameters
-    ----------
-    opt: Optional[:class:`bool`]
-        The boolean value to convert.
-    label: Optional[:class:`str`]
-        The label to use for the emoji.
-
-    Returns
-    -------
-    :class:`str`
-        The emoji with label.
-    """
-    lookup = {True: '\N{WHITE HEAVY CHECK MARK}', False: '\N{CROSS MARK}', None: '\N{BLACK QUESTION MARK ORNAMENT}'}
-    emoji = lookup.get(opt, '\N{CROSS MARK}')
-    if label is not None:
-        return f'{emoji} {label}'
-
-    return emoji
 
 
 class ConfirmationView(discord.ui.View):
@@ -96,11 +70,6 @@ class DuckContext(commands.Context, Generic[BotT]):
         super().__init__(*args, **kwargs)
         self.is_error_handled = False
 
-    @staticmethod
-    @discord.utils.copy_doc(tick)
-    def tick(opt: Optional[bool], label: Optional[str] = None) -> str:
-        return tick(opt, label)
-
     @discord.utils.cached_property
     def color(self) -> discord.Color:
         """:class:`~discord.Color`: Returns DuckBot's color, or the author's color. Falls back to blurple"""
@@ -120,35 +89,7 @@ class DuckContext(commands.Context, Generic[BotT]):
 
         return result
 
-    async def get_locale(self) -> str:
-        """|coro|
-        Gets the locale to use for the translation.
-        """
-        return self.bot.validate_locale(
-            await self.bot.pool.fetchval('SELECT locale FROM user_settings WHERE user_id = $1', self.author.id),
-            default=self.bot.validate_locale(
-                self.interaction.locale if self.interaction else None,
-                default=self.bot.validate_locale(self.guild.preferred_locale if self.guild else None, default='en_us'),
-            ),
-        )
-
-    async def translate(self, translation_id: int, /, *args: Any, locale: str | discord.Locale | None = None) -> str:
-        """|coro|
-        Handles translating a translation ID.
-
-        Parameters
-        ----------
-        translation_id: :class:`int`
-            The translation ID to translate.
-        args: :class:`Any`
-            The arguments to pass to the translation.
-        locale: Optional[:class:`str` | :class:`~discord.Locale`]
-            The locale to use for the translation.
-        """
-        locale = locale or await self.get_locale()
-        return await self.bot.translate(translation_id, *args, locale=locale)
-
-    async def send(self, content: int | str | FormatString | None = None, *args: Any, **kwargs: Any) -> Message:
+    async def send(self, content: str | None = None, *args: Any, **kwargs: Any) -> Message:
         """|coro|
 
         Sends a message to the invoking context's channel.
@@ -163,25 +104,15 @@ class DuckContext(commands.Context, Generic[BotT]):
         if kwargs.get('embed') and kwargs.get('embeds'):
             raise ValueError('Cannot send both embed and embeds')
 
-        locale = kwargs.pop('locale', await self.get_locale())
-
         embeds = kwargs.pop('embeds', []) or ([kwargs.pop('embed')] if kwargs.get('embed', None) else [])
         if embeds:
-            for i, embed in enumerate(embeds):
-                if isinstance(embed, TranslatedEmbed):
-                    embed = await embed.translate(self.bot, locale)
-                    embeds[i] = embed
+            for embed in embeds:
                 if embed.color is None:
                     # Made this the bot's vanity colour, although we'll
                     # be keeping self.color for other stuff like userinfo
                     embed.color = self.bot.color
 
             kwargs['embeds'] = embeds
-
-        if isinstance(content, int):
-            content = await self.translate(content, *args, locale=locale)
-        elif isinstance(content, FormatString):
-            content = await self.translate(content.id, *content.args, locale=locale)
 
         return await super().send(content, **kwargs)
 
