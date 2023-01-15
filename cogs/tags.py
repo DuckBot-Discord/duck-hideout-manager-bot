@@ -14,6 +14,7 @@ from discord import app_commands
 from discord.ext import commands, menus
 
 from utils import HideoutCog, HideoutContext, ViewMenuPages
+from cogs.hideout._checks import COUNSELORS_ROLE
 
 T = TypeVar('T')
 CO_T = TypeVar("CO_T", bound='Union[Type[commands.Converter], commands.Converter]')
@@ -66,11 +67,6 @@ class Tag:
     def raw(self):
         r = discord.utils.escape_markdown(self.content)
         return r.replace('<', '\\<')
-
-    @property
-    def is_global(self):
-        """bool: Whether the tag is global or not."""
-        return self.guild_id is None
 
     async def edit(
         self,
@@ -197,7 +193,7 @@ class TagName(commands.clean_content):
         return TagName(lower=attr)
 
     # Taken from R.Danny's code because I'm lazy
-    async def actual_conversion(self, converted, error: Type[discord.DiscordException], bot):
+    async def actual_conversion(self, ctx: HideoutContext, converted: str, error: Type[discord.DiscordException]):
         """The actual conversion function after clean content has done its job."""
         lower = converted.lower().strip()
 
@@ -210,16 +206,19 @@ class TagName(commands.clean_content):
         first_word, _, _ = lower.partition(' ')
 
         # get tag command.
-        root = bot.get_command('tag')
+        root: commands.Group = ctx.bot.get_command('tag')  # type: ignore # known type
         if first_word in root.all_commands:
             raise error('This tag name starts with a reserved word.')
+
+        if lower.startswith('topic') and not ctx.author.get_role(COUNSELORS_ROLE): 
+            raise error('Tag name starts with a reserved word.')
 
         return converted if not self.lower else lower
 
     # msg commands
     async def convert(self, ctx, argument):
         converted = await super().convert(ctx, argument)
-        return await self.actual_conversion(converted, commands.BadArgument, ctx.bot)
+        return await self.actual_conversion(ctx, converted, commands.BadArgument)  # type: ignore
 
 
 class TagsFromFetchedPageSource(menus.ListPageSource):
@@ -312,7 +311,6 @@ class Tags(HideoutCog):
         tag: Union[str, commands.clean_content],
         guild_id: Optional[int],
         *,
-        find_global: bool = False,
         connection: Optional[Union[asyncpg.Connection, asyncpg.Pool]] = None,
     ) -> Tag:
         """Gets a tag
@@ -338,53 +336,27 @@ class Tags(HideoutCog):
             The tag.
         """
         connection = connection or self.bot.pool
-        if find_global is not True:
-            query = """
-                SELECT id, name, content, embed, owner_id, guild_id FROM tags 
-                WHERE (LOWER(name) = LOWER($1::TEXT) and (guild_id = $2) and (content is not null)) 
-                OR (id = (
-                    SELECT points_to FROM tags 
-                        WHERE LOWER(name) = LOWER($1::TEXT) 
-                        AND guild_id = $2 
-                        AND points_to IS NOT NULL
-                    ))
-                LIMIT 1 -- just in case
-            """
-        else:
-            query = """
-                SELECT id, name, content, embed, owner_id, guild_id FROM tags 
-                WHERE (LOWER(name) = LOWER($1::TEXT) and (guild_id IS NULL or guild_id = $2) and (content is not null))
-                OR (id = (
-                    SELECT points_to FROM tags 
-                        WHERE LOWER(name) = LOWER($1::TEXT)
-                        AND (guild_id IS NULL OR guild_id = $2) 
-                        AND points_to IS NOT NULL
-                    ))
-                ORDER BY guild_id
-                    -- if global, we want local tags to 
-                    -- take priority.
-                LIMIT 1
-                    -- when there are global and local
-            """
+        query = """
+            SELECT id, name, content, embed, owner_id, guild_id FROM tags 
+            WHERE (LOWER(name) = LOWER($1::TEXT) and (guild_id = $2) and (content is not null)) 
+            OR (id = (
+                SELECT points_to FROM tags 
+                    WHERE LOWER(name) = LOWER($1::TEXT) 
+                    AND guild_id = $2 
+                    AND points_to IS NOT NULL
+                ))
+            LIMIT 1 -- just in case
+        """
 
         fetched_tag = await connection.fetchrow(query, tag, guild_id)
         if fetched_tag is None:
-            if find_global:
-                query = """
-                    SELECT name FROM tags
-                    WHERE (guild_id = $1 OR guild_id IS NULL) 
-                    AND LOWER(name) % LOWER($2::TEXT)
-                    ORDER BY similarity(name, $2) DESC
-                    LIMIT 3
-                """
-            else:
-                query = """
-                    SELECT name FROM tags
-                    WHERE guild_id = $1 
-                    AND LOWER(name) % LOWER($2::TEXT)
-                    ORDER BY similarity(name, $2) DESC
-                    LIMIT 3
-                """
+            query = """
+                SELECT name FROM tags
+                WHERE (guild_id = $1 OR guild_id IS NULL) 
+                AND LOWER(name) % LOWER($2::TEXT)
+                ORDER BY similarity(name, $2) DESC
+                LIMIT 3
+            """
             similar = await connection.fetch(query, guild_id, tag)
             if not similar:
                 raise commands.BadArgument(f"Tag not found.")
@@ -442,7 +414,7 @@ class Tags(HideoutCog):
                         guild.id if guild else None,
                         owner.id,
                     )
-                    return Tag(stuff)
+                    return Tag(stuff)  # type: ignore
             except asyncpg.UniqueViolationError:
                 raise commands.BadArgument("This tag already exists!")
             except asyncpg.StringDataRightTruncationError:
@@ -510,7 +482,9 @@ class Tags(HideoutCog):
         except asyncio.TimeoutError:
             raise commands.BadArgument(f'Timed out waiting for message from {str(author)}...')
 
-    async def __tag(self, ctx: commands.Context, name: TagName, *, guild: discord.Guild | None):
+
+    @commands.group(name='tag', invoke_without_command=True)
+    async def tag(self, ctx: HideoutContext, *, name: TagName):
         """Base tags command. Also shows a tag.
 
         Parameters
@@ -518,26 +492,16 @@ class Tags(HideoutCog):
         name: str
             The tag to show
         """
-        tag = await self.get_tag(name, guild.id if guild else None, find_global=True)
+        tag = await self.get_tag(name, ctx.guild.id)
         if tag.embed and ctx.channel.permissions_for(ctx.me).embed_links:  # type: ignore
             await ctx.channel.send(tag.content, embed=tag.embed)
         else:
             await ctx.channel.send(tag.content)
         await tag.use(self.bot.pool)
 
-    @commands.group(name='tag', invoke_without_command=True)
-    @copy_doc(__tag)
-    async def tag(self, ctx: HideoutContext, *, name: TagName):
-        await self.__tag(ctx, name, guild=ctx.guild)
 
-    @tag.group(name='global', invoke_without_command=True)
-    @copy_doc(__tag)
-    async def tag_global(self, ctx: HideoutContext, name: TagName):
-        await self.__tag(ctx, name, guild=None)
-
-    async def __tag_create(
-        self, ctx: HideoutContext, tag: TagName, content: commands.clean_content, guild: discord.Guild | None
-    ):
+    @tag.command(name='create', aliases=['new', 'add'])
+    async def tag_create(self, ctx: HideoutContext, tag: TagName(lower=False), *, content: commands.clean_content):  # type: ignore
         """Creates a tag
 
         Parameters
@@ -549,20 +513,14 @@ class Tags(HideoutCog):
         """
         if len(str(content)) > 2000:
             raise commands.BadArgument("Tag content is too long! Max 2000 characters.")
-        tag_ = await self.make_tag(guild, ctx.author, tag, content)
+        tag_ = await self.make_tag(ctx.guild, ctx.author, tag, content)
         await ctx.send(f"Tag {tag_.name!r} successfully created!")
 
-    @tag.command(name='create', aliases=['new', 'add'])
-    @copy_doc(__tag_create)
-    async def tag_create(self, ctx: HideoutContext, tag: TagName(lower=False), *, content: commands.clean_content):  # type: ignore
-        await self.__tag_create(ctx, tag, content, guild=ctx.guild)
 
-    @tag_global.command(name='create', aliases=['new', 'add'])
-    @copy_doc(__tag_create)
-    async def tag_global_create(self, ctx: HideoutContext, tag: TagName(lower=False), *, content: commands.clean_content):  # type: ignore
-        await self.__tag_create(ctx, tag, content, guild=None)
 
-    async def __tag_make(self, ctx: HideoutContext, guild: discord.Guild | None):
+    @tag.command(name='make', ignore_extra=False)
+    @commands.max_concurrency(1, commands.BucketType.member)
+    async def tag_make(self, ctx: HideoutContext):
         """Interactive prompt to make a tag.
         """
         await ctx.send('Hello, what name would you like to give this tag?')
@@ -572,7 +530,7 @@ class Tags(HideoutCog):
             cmd = f"{ctx.clean_prefix}{ctx.command.qualified_name if ctx.command else '<Unknown Command>'}"
             raise commands.BadArgument(f"{e} Please use {cmd!r} to try again.")
 
-        args = (name, guild.id if guild else 0)
+        args = (name, ctx.guild.id)
         with self.reserve_tag(*args):
             query = """
                 SELECT EXISTS(
@@ -590,22 +548,10 @@ class Tags(HideoutCog):
                 ctx.channel, ctx.author, converter=commands.clean_content, ctx=ctx, timeout=60 * 10
             )
 
-        await self.make_tag(guild, ctx.author, name, content)
+        await self.make_tag(ctx.guild, ctx.author, name, content)
         await ctx.send(f'Tag {name!r} successfully created!')
 
-    @tag.command(name='make', ignore_extra=False)
-    @copy_doc(__tag_make)
-    @commands.max_concurrency(1, commands.BucketType.member)
-    async def tag_make(self, ctx: HideoutContext):
-        await self.__tag_make(ctx, ctx.guild)
-
-    @tag_global.command(name='make', ignore_extra=False)
-    @copy_doc(__tag_make)
-    @commands.max_concurrency(1, commands.BucketType.member)
-    async def tag_global_make(self, ctx: HideoutContext):
-        await self.__tag_make(ctx, None)
-
-    @tag.command(name='claim')  # no global for you! :P
+    @tag.command(name='claim')
     async def tag_claim(self, ctx: HideoutContext, name: TagName):
         """Claims a tag from a user that isn't
         in this server anymore.
@@ -624,9 +570,8 @@ class Tags(HideoutCog):
         await tag.transfer(self.bot.pool, ctx.author)
         await ctx.send(f'Tag {name!r} successfully claimed!')
 
-    async def __tag_edit(
-        self, ctx: HideoutContext, tag_name: TagName, content: commands.clean_content, guild: discord.Guild | None
-    ):
+    @tag.command(name='edit')
+    async def tag_edit(self, ctx: HideoutContext, tag: TagName, *, content: commands.clean_content):
         """Edits a tag
 
         Parameters
@@ -637,25 +582,14 @@ class Tags(HideoutCog):
             The new content of the tag
         """
         async with self.bot.safe_connection() as conn:
-            tag = await self.get_tag(tag_name, guild.id if guild else None, connection=conn, find_global=guild is None)
-            if tag.owner_id != ctx.author.id:
+            tagobj = await self.get_tag(tag, ctx.guild.id, connection=conn)
+            if tagobj.owner_id != ctx.author.id:
                 raise commands.BadArgument("Could not edit tag. Are you sure it exists and you own it?")
-            await tag.edit(conn, content)
+            await tagobj.edit(conn, content)
         await ctx.send(f'Successfully edited tag!')
 
-    @tag.command(name='edit')
-    @copy_doc(__tag_edit)
-    async def tag_edit(self, ctx: HideoutContext, tag: TagName, *, content: commands.clean_content):
-        await self.__tag_edit(ctx, tag, content, ctx.guild)
-
-    @tag_global.command(name='edit')
-    @copy_doc(__tag_edit)
-    async def tag_global_edit(self, ctx: HideoutContext, tag: TagName, *, content: commands.clean_content):
-        await self.__tag_edit(ctx, tag, content, ctx.guild)
-
-    async def __tag_append(
-        self, ctx: HideoutContext, tag: TagName, content: commands.clean_content, guild: discord.Guild | None
-    ):
+    @tag.command(name='append')
+    async def tag_append(self, ctx: HideoutContext, tag: TagName, *, content: commands.clean_content):
         """Appends content to a tag.
 
         This will add a new line before the content being appended.
@@ -679,23 +613,16 @@ class Tags(HideoutCog):
                 )
                 SELECT EXISTS ( SELECT * FROM edited )
             """
-            confirm = await conn.fetchval(query, content, tag, guild.id if guild else 0, ctx.author.id)
+            confirm = await conn.fetchval(query, content, tag, ctx.guild.id, ctx.author.id)
             if confirm:
                 await ctx.send(f'Succesfully edited tag!')
             else:
                 await ctx.send('Could not edit tag. Are you sure it exists and you own it?')
 
-    @tag.command(name='append')
-    @copy_doc(__tag_append)
-    async def tag_append(self, ctx: HideoutContext, tag: TagName, *, content: commands.clean_content):
-        await self.__tag_append(ctx, tag, content, ctx.guild)
 
-    @tag_global.command(name='append')
-    @copy_doc(__tag_append)
-    async def tag_global_append(self, ctx: HideoutContext, tag: TagName, *, content: commands.clean_content):
-        await self.__tag_append(ctx, tag, content, ctx.guild)
 
-    async def __tag_delete(self, ctx: HideoutContext, tag: TagName, guild: discord.Guild | None):
+    @tag.command(name='delete')
+    async def tag_delete(self, ctx: HideoutContext, *, tag: TagName):
         """Deletes one of your tags.
 
         Parameters
@@ -722,11 +649,9 @@ class Tags(HideoutCog):
             """
 
             is_mod = await self.bot.is_owner(ctx.author)
+            is_mod = is_mod or ctx.author.guild_permissions.manage_messages
 
-            if guild and isinstance(ctx.author, discord.Member):
-                is_mod = is_mod or ctx.author.guild_permissions.manage_messages
-
-            tag_p = await conn.fetchrow(query, tag, guild.id if guild else 0, ctx.author.id, is_mod)
+            tag_p = await conn.fetchrow(query, tag, ctx.guild.id, ctx.author.id, is_mod)
 
             if tag_p is None:
                 await ctx.send(f"Could not delete tag. Are you sure it exists{'' if is_mod else '  and you own it'}?")
@@ -735,18 +660,9 @@ class Tags(HideoutCog):
             else:
                 await ctx.send(f"Tag {tag_p['name']!r} and corresponding aliases deleted!")
 
-    @tag.command(name='delete')
-    @copy_doc(__tag_delete)
-    async def tag_delete(self, ctx: HideoutContext, *, tag: TagName):
-        await self.__tag_delete(ctx, tag, ctx.guild)
 
-    @tag_global.command(name='delete')
-    @copy_doc(__tag_delete)
-    @commands.is_owner()
-    async def tag_global_delete(self, ctx: HideoutContext, *, tag: TagName):
-        await self.__tag_delete(ctx, tag, None)
-
-    async def __tag_delete_id(self, ctx: HideoutContext, tag_id: int, guild: discord.Guild | None):
+    @tag.command(name='delete-id')
+    async def tag_delete_id(self, ctx: HideoutContext, *, tag_id: int):
         """Deletes a tag by ID.
 
         Parameters
@@ -773,11 +689,9 @@ class Tags(HideoutCog):
             """
 
             is_mod = await self.bot.is_owner(ctx.author)
+            is_mod = is_mod or ctx.author.guild_permissions.manage_messages
 
-            if guild and isinstance(ctx.author, discord.Member):
-                is_mod = is_mod or ctx.author.guild_permissions.manage_messages
-
-            tag_p = await conn.fetchrow(query, tag_id, guild.id if guild else 0, ctx.author.id, is_mod)
+            tag_p = await conn.fetchrow(query, tag_id, ctx.guild.id, ctx.author.id, is_mod)
 
             if tag_p is None:
                 await ctx.send(f"Could not delete tag. Are you sure it exists{'' if is_mod else '  and you own it'}?")
@@ -786,18 +700,9 @@ class Tags(HideoutCog):
             else:
                 await ctx.send(f"Tag {tag_p['name']!r} and corresponding aliases deleted!")
 
-    @tag.command(name='delete-id')
-    @copy_doc(__tag_delete_id)
-    async def tag_delete_id(self, ctx: HideoutContext, *, tag_id: int):
-        await self.__tag_delete_id(ctx, tag_id, ctx.guild)
 
-    @tag_global.command(name='delete-id')
-    @copy_doc(__tag_delete_id)
-    @commands.is_owner()
-    async def tag_global_delete_id(self, ctx: HideoutContext, *, tag_id: int):
-        await self.__tag_delete_id(ctx, tag_id, None)
-
-    async def __tag_purge(self, ctx: HideoutContext, member: discord.Member | discord.User, guild: discord.Guild | None):
+    @tag.command(name='purge')
+    async def tag_purge(self, ctx: HideoutContext, member: typing.Union[discord.Member, discord.User]):
         """Purges all tags from a user.
 
         Parameters
@@ -806,11 +711,7 @@ class Tags(HideoutCog):
             The user whose tags will be purged.
         """
         is_owner = is_mod = await self.bot.is_owner(ctx.author)
-
-        if guild:
-            if not isinstance(ctx.author, discord.Member):
-                raise commands.BadArgument('Somehow, you\'re not in this server... ?')
-            is_mod = is_mod or ctx.author.guild_permissions.manage_messages
+        is_mod = is_mod or ctx.author.guild_permissions.manage_messages
 
         if not is_mod:
             await ctx.send("You do not have permission to purge tags!")
@@ -821,7 +722,7 @@ class Tags(HideoutCog):
             WHERE CASE WHEN ( $1::BIGINT = 0 ) THEN ( guild_id IS NULL ) ELSE ( guild_id = $1 ) END
             AND owner_id = $2
         """
-        args = (guild.id if guild else 0, member.id)
+        args = (ctx.guild.id, member.id)
 
         amount: int | None = self.bot.pool.fetchval(query, *args)  # type: ignore
 
@@ -842,7 +743,7 @@ class Tags(HideoutCog):
             return
 
         if not is_owner:
-            if not ctx.guild or not (ctx.guild.get_member(ctx.author.id) or ctx.author).guild_permissions.manage_messages:  # type: ignore
+            if not ctx.guild or not (ctx.guild.get_member(ctx.author.id) or ctx.author).guild_permissions.manage_messages:
                 return await ctx.send('You no longer have the required permissions to purge tags!')
 
         async with self.bot.safe_connection() as conn:
@@ -856,22 +757,14 @@ class Tags(HideoutCog):
                 SELECT COUNT(*) FROM deleted
             """
 
-            tag_p = await conn.fetchval(query, guild.id if guild else 0, member.id)
+            tag_p = await conn.fetchval(query, ctx.guild.id, member.id)
 
             await ctx.send(f"Deleted all of {member}'s tags ({tag_p} tags deleted)!")
 
-    @tag.command(name='purge')
-    @copy_doc(__tag_purge)
-    async def tag_purge(self, ctx: HideoutContext, member: typing.Union[discord.Member, discord.User]):
-        await self.__tag_purge(ctx, member, ctx.guild)
 
-    @tag_global.command(name='purge')
-    @copy_doc(__tag_purge)
-    @commands.is_owner()
-    async def tag_global_purge(self, ctx: HideoutContext, member: typing.Union[discord.Member, discord.User]):
-        await self.__tag_purge(ctx, member, None)
 
-    async def __tag_alias(self, ctx: HideoutContext, alias: TagName, points_to: TagName, guild: discord.Guild | None):
+    @tag.command(name='alias')
+    async def tag_alias(self, ctx: HideoutContext, alias: TagName, *, points_to: TagName):
         """Creates an alias for a tag.
 
         Parameters
@@ -883,7 +776,7 @@ class Tags(HideoutCog):
         """
         async with self.bot.safe_connection() as conn:
             try:
-                tag = await self.get_tag(points_to, guild.id if guild else None, connection=conn, find_global=guild is None)
+                tag = await self.get_tag(points_to, ctx.guild.id, connection=conn)
             except commands.BadArgument:
                 return await ctx.send(f"Tag {points_to!r} does not exist!")
             try:
@@ -895,17 +788,10 @@ class Tags(HideoutCog):
                 return await ctx.send(f"Could not create alias!")
             await ctx.send(f"Alias {alias!r} that points to {points_to!r} created!")
 
-    @tag.command(name='alias')
-    @copy_doc(__tag_alias)
-    async def tag_alias(self, ctx: HideoutContext, alias: TagName, *, points_to: TagName):
-        await self.__tag_alias(ctx, alias, points_to, ctx.guild)
 
-    @tag_global.command(name='alias')
-    @copy_doc(__tag_alias)
-    async def tag_global_alias(self, ctx: HideoutContext, alias: TagName, *, points_to: TagName):
-        await self.__tag_alias(ctx, alias, points_to, None)
 
-    async def __tag_info(self, ctx: HideoutContext, tag: TagName, guild: discord.Guild | None):
+    @tag.command(name='info', aliases=['owner'])
+    async def tag_info(self, ctx: HideoutContext, *, tag: TagName):
         """Gets information about a tag
 
         Parameters
@@ -931,8 +817,11 @@ class Tags(HideoutCog):
                 SELECT COUNT(*) FROM tags WHERE tags.points_to = original_tag.id ) END ) AS aliases
             FROM original_tag
         """
-        args = (query, tag, guild.id if guild else 0)
-        name, owner_id, created_at, is_alias, parent, uses, aliases_amount = await self.bot.pool.fetchrow(*args)
+        args = (query, tag, ctx.guild.id)
+        data = await self.bot.pool.fetchrow(*args)
+        if not data:
+            raise commands.BadArgument('Tag not found.')
+        name, owner_id, created_at, is_alias, parent, uses, aliases_amount = data
         owner = await self.bot.get_or_fetch_user(owner_id) or UnknownUser(owner_id)
 
         embed = discord.Embed(title=name, timestamp=created_at)
@@ -947,17 +836,9 @@ class Tags(HideoutCog):
             embed.set_footer(text='Tag created at')
         await ctx.send(embed=embed)
 
-    @tag.command(name='info', aliases=['owner'])
-    @copy_doc(__tag_info)
-    async def tag_info(self, ctx: HideoutContext, *, tag: TagName):
-        await self.__tag_info(ctx, tag, ctx.guild)
 
-    @tag_global.command(name='info')
-    @copy_doc(__tag_info)
-    async def tag_global_info(self, ctx: HideoutContext, *, tag: TagName):
-        await self.__tag_info(ctx, tag, None)
-
-    async def __tag_list(self, ctx: HideoutContext, member: discord.Member | discord.User | None, guild: discord.Guild | None):
+    @tag.command(name='list')
+    async def tag_list(self, ctx: HideoutContext, *, member: Optional[discord.Member] = None):
         """Lists all tags owned by a member.
 
         Parameters
@@ -973,30 +854,24 @@ class Tags(HideoutCog):
             AND ( owner_id = $2 OR $2::BIGINT = 0 )
             ORDER BY name
         """
-        args = (guild.id if guild else 0, member.id if member else 0)
+        args = (ctx.guild.id, member.id if member else 0)
         tags = await self.bot.pool.fetch(query, *args)
 
         if not tags:
             return await ctx.send(
-                ("This server has no tags!" if guild else "No global tags found!")
+                "This server has no tags!"
                 if not member
-                else f"{member} owns no{' global ' if not guild else ' '}tags!"
+                else f"{member} owns no tags!"
             )
 
         paginator = ViewMenuPages(source=TagsFromFetchedPageSource(tags, member=member, ctx=ctx), ctx=ctx)
         await paginator.start()
 
-    @tag.command(name='list')
-    @copy_doc(__tag_list)
-    async def tag_list(self, ctx: HideoutContext, *, member: Optional[discord.Member] = None):
-        await self.__tag_list(ctx, member, ctx.guild)
 
-    @tag_global.command(name='list')
-    @copy_doc(__tag_list)
-    async def tag_global_list(self, ctx: HideoutContext, *, user: Optional[discord.User] = None):
-        await self.__tag_list(ctx, user, None)
 
-    async def __tag_search(self, ctx: HideoutContext, query: str, guild: discord.Guild | None):
+
+    @tag.command(name='search')
+    async def tag_search(self, ctx: HideoutContext, *, query: str):
         """Searches for tags.
 
         Parameters
@@ -1011,7 +886,7 @@ class Tags(HideoutCog):
             ORDER BY similarity(name, $2) DESC
             LIMIT 200
         """
-        args = (guild.id if guild else 0, query)
+        args = (ctx.guild.id, query)
         tags = await self.bot.pool.fetch(db_query, *args)
         if not tags:
             return await ctx.send("No tags found with that query...")
@@ -1019,17 +894,9 @@ class Tags(HideoutCog):
         paginator = ViewMenuPages(source=TagsFromFetchedPageSource(tags, member=None, ctx=ctx), ctx=ctx)
         await paginator.start()
 
-    @tag.command(name='search')
-    @copy_doc(__tag_search)
-    async def tag_search(self, ctx: HideoutContext, *, query: str):
-        await self.__tag_search(ctx, query, ctx.guild)
 
-    @tag_global.command(name='search')
-    @copy_doc(__tag_search)
-    async def tag_global_search(self, ctx: HideoutContext, *, query: str):
-        await self.__tag_search(ctx, query, None)
-
-    async def __tag_raw(self, ctx: HideoutContext, tag_name: TagName, guild: discord.Guild | None):
+    @tag.command(name='raw')
+    async def tag_raw(self, ctx: HideoutContext, *, tag: TagName):
         """Sends a raw tag.
 
         Parameters
@@ -1037,18 +904,8 @@ class Tags(HideoutCog):
         tag: TagName
             The tag.
         """
-        tag = await self.get_tag(tag_name, guild.id if guild else None, find_global=guild is None)
-        await ctx.send(**self.maybe_file(tag.raw))
-
-    @tag.command(name='raw')
-    @copy_doc(__tag_raw)
-    async def tag_raw(self, ctx: HideoutContext, *, tag: TagName):
-        await self.__tag_raw(ctx, tag, ctx.guild)
-
-    @tag_global.command(name='raw')
-    @copy_doc(__tag_raw)
-    async def tag_global_raw(self, ctx: HideoutContext, *, tag: TagName):
-        await self.__tag_raw(ctx, tag, None)
+        tagobj = await self.get_tag(tag, ctx.guild.id)
+        await ctx.send(**self.maybe_file(tagobj.raw))
 
     async def get_guild_or_global_stats(self, ctx: HideoutContext, guild: discord.Guild | None, embed):
         """Gets the tag stats of a guild.
@@ -1214,25 +1071,9 @@ class Tags(HideoutCog):
         else:
             await self.user_tag_stats(ctx, member, ctx.guild)
 
-    @tag_global.command(name='stats')
-    async def tag_global_stats(self, ctx: HideoutContext, user: Optional[discord.User] = None):
-        """Gets the tag stats of a user or global.
 
-        Parameters
-        ----------
-        user: discord.User
-            The user to get the stats for.
-            If not specified, the global
-            stats will be shown.
-        """
-        if user is None:
-            embed = discord.Embed()
-            embed.set_author(name=f"Global Tag Stats", icon_url=ctx.me.display_avatar.url)
-            await self.get_guild_or_global_stats(ctx, guild=None, embed=embed)
-        else:
-            await self.user_tag_stats(ctx, user, None)
-
-    async def __tag_remove_embed(self, ctx: HideoutContext, tag: TagName, guild: discord.Guild | None = None):
+    @tag.command(name='remove-embed')
+    async def tag_remove_embed(self, ctx: HideoutContext, *, tag: TagName):
         """Removes an embed from a tag. 
         
         To add an embed, use the ``embed`` command. 
@@ -1262,22 +1103,13 @@ class Tags(HideoutCog):
         if isinstance(ctx.author, discord.Member):
             is_mod = is_mod or ctx.author.guild_permissions.manage_messages
 
-        args = (tag, guild.id if guild else 0, ctx.author.id, is_mod)
+        args = (tag, ctx.guild.id, ctx.author.id, is_mod)
         exists = await self.bot.pool.fetchval(query, *args)
 
         if not exists:
             return await ctx.send(f"Could not edit tag. Are you sure it exists{'' if is_mod else '  and you own it'}?")
         await ctx.send(f"Successfully edited tag!")
 
-    @tag.command(name='remove-embed')
-    @copy_doc(__tag_remove_embed)
-    async def tag_remove_embed(self, ctx: HideoutContext, *, tag: TagName):
-        await self.__tag_remove_embed(ctx, tag, ctx.guild)
-
-    @tag_global.command(name='remove-embed')
-    @copy_doc(__tag_remove_embed)
-    async def tag_global_remove_embed(self, ctx: HideoutContext, *, tag: TagName):
-        await self.__tag_remove_embed(ctx, tag, None)
 
     @app_commands.command(name='tag')
     @app_commands.describe(
@@ -1293,7 +1125,7 @@ class Tags(HideoutCog):
         raw: Optional[typing.Literal['Yes', 'No', 'Send As File', 'Send Using Code Block']] = None,
     ):
         """Shows a tag. For more commands, use the "tag" message command."""
-        tag = await self.get_tag(tag_name, interaction.guild.id if interaction.guild else None, find_global=True)
+        tag = await self.get_tag(tag_name, interaction.guild.id if interaction.guild else None)
         if raw == 'Yes':
             kwargs = {**self.maybe_file(tag.raw, filename=tag.name), 'ephemeral': True if ephemeral is None else ephemeral}
         elif raw == 'Send As File':
