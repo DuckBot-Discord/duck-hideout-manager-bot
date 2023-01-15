@@ -10,18 +10,12 @@ from discord import app_commands
 from discord.ext import commands
 
 from ._checks import pit_owner_only, counselor_only, COUNSELORS_ROLE, PIT_CATEGORY, ARCHIVE_CATEGORY
-from utils import (
-    HideoutCog,
-    HideoutContext,
-    ShortTime,
-    Timer,
-    ActionNotExecutable
-)
+from utils import HideoutCog, HideoutContext, ShortTime, Timer, ActionNotExecutable
 
 log = getLogger('HM.pit')
 
-class PitsManagement(HideoutCog):
 
+class PitsManagement(HideoutCog):
     async def toggle_block(
         self,
         channel: discord.TextChannel,
@@ -203,7 +197,7 @@ class PitsManagement(HideoutCog):
             await ctx.send(f'✅ **|** Pit-unbanned **{discord.utils.remove_markdown(str(member))}** from **{ctx.channel}**')
 
     @commands.is_owner()
-    @pit.command(name='setowner', aliases=['set-owner'], slash=False)
+    @pit.command(name='setowner', aliases=['set-owner'], with_app_command=False)
     async def pit_set_owner(self, ctx: HideoutContext, *, member: discord.Member):
         """Set the owner of a pit.
 
@@ -227,7 +221,7 @@ class PitsManagement(HideoutCog):
         await ctx.message.add_reaction('✅')
 
     @counselor_only()
-    @pit.command(name='create', slash=False)
+    @pit.command(name='create', with_app_command=False)
     async def pit_create(self, ctx: HideoutContext, owner: discord.Member, *, name: str):
         """Create a pit.
 
@@ -273,7 +267,7 @@ class PitsManagement(HideoutCog):
             await ctx.send(f'✅ **|** Created **{channel}**')
 
     @counselor_only()
-    @pit.command(name='delete', slash=False)
+    @pit.command(name='delete', with_app_command=False)
     async def pit_delete(self, ctx: HideoutContext, *, channel: discord.TextChannel = commands.CurrentChannel):
         """Deletes a pit."""
 
@@ -296,7 +290,7 @@ class PitsManagement(HideoutCog):
             await ctx.send(f'✅ **|** Deleted **{pit.name}**')
 
     @counselor_only()
-    @pit.command(name='archive', slash=False)
+    @pit.command(name='archive', with_app_command=False)
     async def pit_archive(self, ctx: HideoutContext, *, channel: discord.TextChannel = commands.CurrentChannel):
         """Archives a pit."""
 
@@ -332,7 +326,7 @@ class PitsManagement(HideoutCog):
             await ctx.send(f'✅ **|** Archived **{pit.name}**')
 
     @counselor_only()
-    @pit.command(name='unarchive', slash=False)
+    @pit.command(name='unarchive', with_app_command=False)
     async def pit_unarchive(self, ctx: HideoutContext, *, channel: discord.TextChannel = commands.CurrentChannel):
         """Archives a pit."""
 

@@ -12,6 +12,7 @@ PIT_CATEGORY = 915494807349116958
 ARCHIVE_CATEGORY = 973896686290223134
 GENERAL_CHANNEL = 774561548659458081
 
+
 def pit_owner_only():
     async def predicate(ctx: HideoutContext):
         if await ctx.bot.is_owner(ctx.author):

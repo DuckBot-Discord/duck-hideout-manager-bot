@@ -16,7 +16,6 @@ GuildMessageable = Union[TextChannel, VoiceChannel, Thread]
 
 
 class Addbot(HideoutCog):
-
     @commands.command()
     @hideout_only()
     async def addbot(self, ctx: HideoutContext, bot: discord.User, *, reason: commands.clean_content):
@@ -126,9 +125,7 @@ class Addbot(HideoutCog):
 
         if mem_id:
             general: discord.TextChannel = member.guild.get_channel(GENERAL_CHANNEL)  # type: ignore
-            await general.send(
-                f'{member} has been added, <@{mem_id}>', allowed_mentions=discord.AllowedMentions(users=True)
-            )
+            await general.send(f'{member} has been added, <@{mem_id}>', allowed_mentions=discord.AllowedMentions(users=True))
 
             mem = member.guild.get_member(mem_id)
             if mem is not None and not mem.get_role(BOT_DEVS_ROLE):
