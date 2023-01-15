@@ -192,31 +192,6 @@ class OverwrittenManagementFeature(ManagementFeature):
         for page in paginator.pages:
             await ctx.send(page)
 
-    @Feature.Command(parent="jsk", name="sync")
-    async def jsk_sync(self, ctx: HideoutContext, sync_globally: Optional[bool], *guild_ids: int):
-        """
-        Sync global or guild application commands to Discord.
-        """
-        guild_ids = guild_ids or (() if sync_globally else ((ctx.guild.id,) if ctx.guild else ()))
-
-        paginator = WrappedPaginator(prefix="", suffix="")
-
-        if not guild_ids:
-            synced = await self.bot.tree.sync()
-            paginator.add_line(f"\N{SATELLITE ANTENNA} Synced {len(synced)} global commands")
-        else:
-            for guild_id in guild_ids:
-                try:
-                    synced = await self.bot.tree.sync(guild=discord.Object(guild_id))
-                except discord.HTTPException as exc:
-                    paginator.add_line(f"\N{WARNING SIGN} `{guild_id}`: {exc.text}")
-                else:
-                    paginator.add_line(f"\N{SATELLITE ANTENNA} `{guild_id}` Synced {len(synced)} guild commands")
-
-        for page in paginator.pages:
-            await ctx.send(page)
-
-
 features = list(STANDARD_FEATURES)
 features.remove(RootCommand)
 features.append(OverwrittenRootCommand)
@@ -317,9 +292,11 @@ class HideoutManagerJishaku(
         """
 
         arg_dict = get_var_dict_from_ctx(ctx, Flags.SCOPE_PREFIX)
-        arg_dict["add_logging"] = add_logging
-        arg_dict["self"] = self
-        arg_dict["_"] = self.last_result
+        arg_dict.update(
+            add_logging=add_logging,
+            self=self,
+            _=self.last_result
+        )
 
         scope = self.scope
         printed = io.StringIO()
