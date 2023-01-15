@@ -63,6 +63,7 @@ class HideoutContext(commands.Context, Generic[BotT]):
     if TYPE_CHECKING:
         bot: HideoutManager
         guild: discord.Guild
+        author: discord.Member
 
     __slots__: Tuple[str, ...] = ()
 
