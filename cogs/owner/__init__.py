@@ -18,15 +18,6 @@ class Owner(
         raise NotOwner
 
     @command()
-    async def sync(self, ctx: HideoutContext):
-        """Syncs commands."""
-        msg = await ctx.send('Syncing...')
-        ctx.bot.tree.copy_global_to(guild=ctx.guild)
-        cmds = await ctx.bot.tree.sync(guild=ctx.guild)
-        async with HandleHTTPException(ctx):
-            await msg.edit(content=f'✅ Synced {len(cmds)} commands.')
-
-    @command()
     async def rall(self, ctx):
         paginator = Paginator(prefix='', suffix='')
         for extension in list(self.bot.extensions.keys()):
