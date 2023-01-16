@@ -118,7 +118,7 @@ class EmbedMaker(HideoutCog):
             query = """
                 SELECT EXISTS (
                     SELECT * FROM tags
-                    WHERE name = $1
+                    WHERE LOWER(name) = $1
                     AND guild_id = $2
                     AND (owner_id = $3 OR $4::BOOL = TRUE)
                 )
@@ -137,9 +137,9 @@ class EmbedMaker(HideoutCog):
                         with upsert as (
                             UPDATE tags
                             SET embed = $1
-                            WHERE name = $2
+                            WHERE LOWER(name) = $2
                             AND guild_id = $3
-                            AND (owner_id = $3 OR $4::BOOL = TRUE)
+                            AND (owner_id = $4) OR ($5::BOOL = TRUE)
                             RETURNING *
                         )
                          SELECT EXISTS ( SELECT * FROM upsert )   
