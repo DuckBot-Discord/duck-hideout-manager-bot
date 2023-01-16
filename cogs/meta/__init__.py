@@ -1,18 +1,13 @@
-import discord
 from bot import HideoutManager
-from utils.errors import HideoutManagerNotStarted
 from .embed import EmbedMaker
+from .help import Help
+from .tags import Tags
+from .botinfo import BotInformation
 
 
-class Meta(EmbedMaker):
-    """All commands about the bot itself."""
-
-    @discord.utils.cached_property
-    def brief(self):
-        if not self.bot.user:
-            raise HideoutManagerNotStarted('Somehow, the bot has not logged in yet')
-        return f"Commands related to {self.bot.user.name}"
+class Information(EmbedMaker, Help, Tags, BotInformation):
+    """Commands meant to display information."""
 
 
 async def setup(bot: HideoutManager):
-    await bot.add_cog(Meta(bot))
+    await bot.add_cog(Information(bot))

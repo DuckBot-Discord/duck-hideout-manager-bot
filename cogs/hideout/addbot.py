@@ -2,7 +2,6 @@ import logging
 from typing import Union
 
 import discord
-
 from discord.ext import commands
 from discord import TextChannel, VoiceChannel, Thread
 
@@ -19,15 +18,7 @@ class Addbot(HideoutCog):
     @commands.command()
     @hideout_only()
     async def addbot(self, ctx: HideoutContext, bot: discord.User, *, reason: commands.clean_content):
-        """Adds a bot to the bot queue.
-
-        Parameters
-        ----------
-        bot: discord.User
-            The bot to add to the queue.
-        reason: commands.clean_content
-            The reason why we should add your bot.
-        """
+        """Adds a bot to the bot queue."""
 
         if not bot.bot:
             raise commands.BadArgument('That does not seem to be a bot...')
@@ -64,33 +55,6 @@ class Addbot(HideoutCog):
 
         elif confirm is False:
             await ctx.send('Cancelled.')
-
-    @commands.hybrid_command()
-    async def whoadd(self, ctx: HideoutContext, bot: discord.Member):
-        """Checks who added a specific bot.
-
-        Parameters
-        ----------
-        bot: discord.Member
-            The bot to check it's owner.
-        """
-
-        if not bot.bot:
-            raise commands.BadArgument('This user is not a bot.')
-
-        data = await self.bot.pool.fetchrow('SELECT * FROM addbot WHERE bot_id = $1', bot.id)
-
-        if not data:
-            raise commands.BadArgument('No data found...')
-
-        embed = discord.Embed(title='Bot info', timestamp=ctx.message.created_at, color=bot.color)
-        embed.set_author(name=str(bot), icon_url=bot.display_avatar.url)
-        user: discord.User = await ctx.bot.get_or_fetch_user(data['owner_id'])  # type: ignore
-        embed.add_field(name='Added by', value=f"{user.mention} (`{user.id}`)", inline=False)
-        embed.add_field(name='Reason', value=data['reason'])
-        embed.add_field(name='Joined at', value=discord.utils.format_dt(bot.joined_at or bot.created_at, 'R'))
-        embed.set_footer(text=f'bot ID: {bot.id}')
-        await ctx.send(embed=embed)
 
     @commands.Cog.listener('on_member_join')
     async def dhm_bot_queue_handler(self, member: discord.Member):

@@ -46,15 +46,7 @@ class SqlCommandFlags(FlagConverter, prefix="--", delimiter=" ", case_insensitiv
 class SQLCommands(HideoutCog):
     @command()
     async def sql(self, ctx: HideoutContext, *, query: UntilFlag[SqlCommandFlags]):
-        """|coro|
-
-        Executes an SQL query
-
-        Parameters
-        ----------
-        query: str
-            The query to execute.
-        """
+        """Executes an SQL query."""
         query.value = cleanup_code(query.value)
         is_multistatement = query.value.count(';') > 1
         if is_multistatement:

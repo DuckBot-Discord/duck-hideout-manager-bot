@@ -122,16 +122,11 @@ class PitsManagement(HideoutCog):
 
     @pit.command(name='ban')
     @pit_owner_only()
+    @app_commands.describe(
+        member='The member to ban from this pit.', duration='How long should this member stay banned? (e.g. 1h, 1d, 1h2m30s)'
+    )
     async def pit_ban(self, ctx: HideoutContext, member: discord.Member, duration: Optional[ShortTime]):
-        """Ban a member from the pit.
-
-        Parameters
-        ----------
-        member: discord.Member
-            The member to ban from this pit
-        duration: str
-            How long should this member stay banned? (e.g. 1h, 1d, 1h2m30s)
-        """
+        """Ban a member from the pit."""
 
         if member.id == ctx.author.id:
             raise commands.BadArgument('You cannot ban yourself.')
@@ -164,14 +159,9 @@ class PitsManagement(HideoutCog):
 
     @pit.command(name='unban')
     @pit_owner_only()
+    @app_commands.describe(member='The member to unban from this pit.')
     async def pit_unban(self, ctx: HideoutContext, *, member: discord.Member):
-        """Unban a member from the pit.
-
-        Parameters
-        ----------
-        member: discord.Member
-            The member to unban from the pit.
-        """
+        """Unban a member from the pit."""
 
         if member.id == ctx.author.id:
             raise commands.BadArgument('You cannot ban yourself.')
@@ -199,13 +189,7 @@ class PitsManagement(HideoutCog):
     @commands.is_owner()
     @pit.command(name='setowner', aliases=['set-owner'], with_app_command=False)
     async def pit_set_owner(self, ctx: HideoutContext, *, member: discord.Member):
-        """Set the owner of a pit.
-
-        Parameters
-        ----------
-        member: discord.Member
-            The new pit owner.
-        """
+        """Set the owner of a pit."""
 
         try:
             await ctx.bot.pool.execute(
@@ -223,15 +207,7 @@ class PitsManagement(HideoutCog):
     @counselor_only()
     @pit.command(name='create', with_app_command=False)
     async def pit_create(self, ctx: HideoutContext, owner: discord.Member, *, name: str):
-        """Create a pit.
-
-        Parameters
-        ----------
-        owner: discord.Member
-            The owner of the pit to create.
-        name: str
-            The name of the pit to create.
-        """
+        """Create a pit."""
 
         pit_id: int = await ctx.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_owner = $1''', owner.id)
         if pit_id is not None and ctx.guild.get_channel(pit_id):

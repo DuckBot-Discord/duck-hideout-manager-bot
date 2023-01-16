@@ -172,7 +172,7 @@ class UnknownUser(discord.Object):
         url = "https://cdn.discordapp.com/embed/avatars/0.png"
 
     def __init__(self, id: int):
-        super().__init__(id=id)
+        super().__init__(id=id, type=discord.User)
 
     def __str__(self):
         return "@Unknown User#0000"
@@ -248,9 +248,6 @@ class TagsFromFetchedPageSource(menus.ListPageSource):
 
 
 class Tags(HideoutCog):
-    """Tags: A way to store information for quick access. Allows you to create tags
-    that can be used anywhere in the server with the 'tag' command."""
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._tags_in_progress = defaultdict(set)
@@ -484,13 +481,7 @@ class Tags(HideoutCog):
 
     @commands.group(name='tag', invoke_without_command=True)
     async def tag(self, ctx: HideoutContext, *, name: TagName):
-        """Base tags command. Also shows a tag.
-
-        Parameters
-        ----------
-        name: str
-            The tag to show
-        """
+        """Base tags command. Also shows a tag."""
         tag = await self.get_tag(name, ctx.guild.id)
         if tag.embed and ctx.channel.permissions_for(ctx.me).embed_links:  # type: ignore
             await ctx.channel.send(tag.content, embed=tag.embed)
@@ -500,15 +491,7 @@ class Tags(HideoutCog):
 
     @tag.command(name='create', aliases=['new', 'add'])
     async def tag_create(self, ctx: HideoutContext, tag: TagName(lower=False), *, content: commands.clean_content):  # type: ignore
-        """Creates a tag
-
-        Parameters
-        ----------
-        tag: str
-            The tag to create
-        content: str
-            The content of the tag
-        """
+        """Creates a tag."""
         if len(str(content)) > 2000:
             raise commands.BadArgument("Tag content is too long! Max 2000 characters.")
         tag_ = await self.make_tag(ctx.guild, ctx.author, tag, content)
@@ -548,14 +531,7 @@ class Tags(HideoutCog):
 
     @tag.command(name='claim')
     async def tag_claim(self, ctx: HideoutContext, name: TagName):
-        """Claims a tag from a user that isn't
-        in this server anymore.
-
-        Parameters
-        ----------
-        name: str
-            The name of the tag to claim
-        """
+        """Claims a tag from a user that isn't in this server anymore."""
         tag = await self.get_tag(name, ctx.guild.id)
         user = await self.bot.get_or_fetch_member(guild=ctx.guild, user=tag.owner_id)
         if user:
@@ -567,15 +543,7 @@ class Tags(HideoutCog):
 
     @tag.command(name='edit')
     async def tag_edit(self, ctx: HideoutContext, tag: TagName, *, content: commands.clean_content):
-        """Edits a tag
-
-        Parameters
-        ----------
-        tag: str
-            The tag to edit
-        content: str
-            The new content of the tag
-        """
+        """Edits a tag."""
         is_mod = await self.bot.is_owner(ctx.author)
         is_mod = is_mod or ctx.author.guild_permissions.manage_messages
         async with self.bot.safe_connection() as conn:
@@ -591,15 +559,7 @@ class Tags(HideoutCog):
     async def tag_append(self, ctx: HideoutContext, tag: TagName, *, content: commands.clean_content):
         """Appends content to a tag.
 
-        This will add a new line before the content being appended.
-
-        Parameters
-        ----------
-        tag: str
-            The tag to append to
-        content: str
-            The content to append
-        """
+        This will add a new line before the content being appended."""
         is_mod = await self.bot.is_owner(ctx.author)
         is_mod = is_mod or ctx.author.guild_permissions.manage_messages
         async with self.bot.safe_connection() as conn:
@@ -623,13 +583,7 @@ class Tags(HideoutCog):
 
     @tag.command(name='delete')
     async def tag_delete(self, ctx: HideoutContext, *, tag: TagName):
-        """Deletes one of your tags.
-
-        Parameters
-        ----------
-        tag: str
-            The name of the tag to delete
-        """
+        """Deletes one of your tags"""
         async with self.bot.safe_connection() as conn:
             query = """
                 WITH deleted AS (
@@ -662,13 +616,7 @@ class Tags(HideoutCog):
 
     @tag.command(name='delete-id')
     async def tag_delete_id(self, ctx: HideoutContext, *, tag_id: int):
-        """Deletes a tag by ID.
-
-        Parameters
-        ----------
-        tag_id: int
-            the ID of the tag.
-        """
+        """Deletes a tag by ID."""
         async with self.bot.safe_connection() as conn:
             query = """
                 WITH deleted AS (
@@ -701,13 +649,7 @@ class Tags(HideoutCog):
 
     @tag.command(name='purge')
     async def tag_purge(self, ctx: HideoutContext, member: typing.Union[discord.Member, discord.User]):
-        """Purges all tags from a user.
-
-        Parameters
-        ----------
-        member: discord.Member
-            The user whose tags will be purged.
-        """
+        """Purges all tags from a user"""
         is_owner = is_mod = await self.bot.is_owner(ctx.author)
         is_mod = is_mod or ctx.author.guild_permissions.manage_messages
 
@@ -766,9 +708,9 @@ class Tags(HideoutCog):
         Parameters
         ----------
         alias: str
-            The name of the alias
+            The name of the new alias.
         points_to: str
-            The name of the tag to point to
+            The name of the tag to point to.
         """
         async with self.bot.safe_connection() as conn:
             try:
@@ -786,13 +728,7 @@ class Tags(HideoutCog):
 
     @tag.command(name='info', aliases=['owner'])
     async def tag_info(self, ctx: HideoutContext, *, tag: TagName):
-        """Gets information about a tag
-
-        Parameters
-        ----------
-        tag: str
-            The name of the tag to get information about
-        """
+        """Gets information about a tag"""
         query = """
             WITH original_tag AS (
                 SELECT * FROM tags
@@ -832,13 +768,7 @@ class Tags(HideoutCog):
 
     @tag.command(name='list')
     async def tag_list(self, ctx: HideoutContext, *, member: Optional[discord.Member] = None):
-        """Lists all tags owned by a member.
-
-        Parameters
-        ----------
-        member: discord.Member
-            The member to list tags for. Defaults to the author of the command.
-        """
+        """Lists all tags owned by a member."""
         query = """
             SELECT name, id FROM tags
             WHERE CASE WHEN ( $1::BIGINT = 0 ) 
@@ -858,13 +788,7 @@ class Tags(HideoutCog):
 
     @tag.command(name='search')
     async def tag_search(self, ctx: HideoutContext, *, query: str):
-        """Searches for tags.
-
-        Parameters
-        ----------
-        query: str
-            The query to search for.
-        """
+        """Searches for tags."""
         db_query = """
             SELECT name, id FROM tags
             WHERE CASE WHEN ( $1::BIGINT = 0 ) THEN ( guild_id IS NULL ) ELSE ( guild_id = $1 ) END
@@ -882,13 +806,7 @@ class Tags(HideoutCog):
 
     @tag.command(name='raw')
     async def tag_raw(self, ctx: HideoutContext, *, tag: TagName):
-        """Sends a raw tag.
-
-        Parameters
-        ----------
-        tag: TagName
-            The tag.
-        """
+        """Sends a raw tag."""
         tagobj = await self.get_tag(tag, ctx.guild.id)
         await ctx.send(**self.maybe_file(tagobj.raw))
 
@@ -1040,15 +958,7 @@ class Tags(HideoutCog):
 
     @tag.command(name='stats')
     async def tag_stats(self, ctx: HideoutContext, member: Optional[discord.Member] = None):
-        """Gets the tag stats of a member or this server.
-
-        Parameters
-        ----------
-        member: discord.Member
-            The member to get the stats for.
-            If not specified, the stats of
-            the server will be shown.
-        """
+        """Gets the tag stats of a member or this server."""
         if member is None:
             embed = discord.Embed()
             embed.set_author(name=f"{ctx.guild.name} Tag Stats", icon_url=ctx.guild.icon.url if ctx.guild.icon else None)
@@ -1061,16 +971,9 @@ class Tags(HideoutCog):
         """Removes an embed from a tag.
 
         To add an embed, use the ``embed`` command.
-
         Example:
          ``-embed <flags> --save <tag name>`` where flags are the embed flags.
-         See ``-embed --help`` for more information about the flags.
-
-        Parameters
-        ----------
-        tag: TagName
-            The name of the tag to remove the embed from.
-        """
+         See ``-embed --help`` for more information about the flags"""
         query = """
             WITH updated AS (
                 UPDATE tags SET embed = NULL
@@ -1153,7 +1056,3 @@ class Tags(HideoutCog):
         if tags:
             return [app_commands.Choice(name=f"{tag['name']}"[0:100], value=tag['name']) for tag in tags]
         return [app_commands.Choice(name='No tags found matching your query...', value='list')]
-
-
-async def setup(bot):
-    await bot.add_cog(Tags(bot))

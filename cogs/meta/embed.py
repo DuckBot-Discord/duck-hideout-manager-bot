@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 
 from utils import HideoutContext, HideoutCog
-from cogs.tags import TagName
+from cogs.meta.tags import TagName
 
 try:
     from utils.ignored import HORRIBLE_HELP_EMBED

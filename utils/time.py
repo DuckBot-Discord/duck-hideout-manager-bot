@@ -289,10 +289,11 @@ def human_join(seq: Sequence[str], delim=', ', final='or', spaces: bool = True) 
     if size == 1:
         return seq[0]
 
-    if size == 2:
-        return f'{seq[0]} {final} {seq[1]}'
-
     final = f' {final} ' if spaces else final
+
+    if size == 2:
+        return f'{seq[0]}{final}{seq[1]}'
+
     return delim.join(seq[:-1]) + f'{final}{seq[-1]}'
 
 
