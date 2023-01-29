@@ -6,7 +6,8 @@ from discord.ext import commands
 from discord import TextChannel, VoiceChannel, Thread
 
 from utils import HideoutCog, HideoutContext
-from ._checks import hideout_only, DUCK_HIDEOUT, BOTS_ROLE, BOT_DEVS_ROLE, QUEUE_CHANNEL, GENERAL_CHANNEL
+from ._checks import hideout_only
+from utils.constants import DUCK_HIDEOUT, BOTS_ROLE, BOT_DEVS_ROLE, QUEUE_CHANNEL, GENERAL_CHANNEL
 
 log = logging.getLogger(__name__)
 

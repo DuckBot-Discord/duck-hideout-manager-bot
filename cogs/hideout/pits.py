@@ -9,8 +9,9 @@ import asyncpg
 from discord import app_commands
 from discord.ext import commands
 
-from ._checks import pit_owner_only, counselor_only, COUNSELORS_ROLE, PIT_CATEGORY, ARCHIVE_CATEGORY
+from ._checks import pit_owner_only, counselor_only
 from utils import HideoutCog, HideoutContext, ShortTime, Timer, ActionNotExecutable
+from utils.constants import COUNSELORS_ROLE, PIT_CATEGORY, ARCHIVE_CATEGORY
 
 log = getLogger('HM.pit')
 

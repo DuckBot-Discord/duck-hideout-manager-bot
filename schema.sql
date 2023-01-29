@@ -72,3 +72,15 @@ CREATE TABLE commands (
     timestamp TIMESTAMP WITH TIME ZONE
         NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE message_info (
+    author_id BIGINT,
+    message_id BIGINT,
+    channel_id BIGINT,
+    embed_count INT,
+    attachment_count INT,
+    created_at TIMESTAMP WITH TIME ZONE,
+    edited_at TIMESTAMP WITH TIME ZONE,
+    deleted BOOLEAN DEFAULT FALSE,
+    PRIMARY KEY (message_id, channel_id)
+);
