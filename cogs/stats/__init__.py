@@ -10,7 +10,9 @@ class StatsTracker(HideoutCog):
     async def logs_add_message(self, message: discord.Message):
         if not message.guild or message.guild.id != self.bot.constants.DUCK_HIDEOUT:
             return
-        query = "INSERT INTO message_info (author_id, message_id, channel_id, created_at, embed_count, attachment_count) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING"
+        if message.webhook_id:
+            return
+        query = "INSERT INTO message_info (author_id, message_id, channel_id, created_at, embed_count, attachment_count, is_bot) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT DO NOTHING"
         await self.bot.pool.execute(
             query,
             message.author.id,
@@ -19,6 +21,7 @@ class StatsTracker(HideoutCog):
             message.created_at,
             len(message.embeds),
             len(message.attachments),
+            message.author.bot,
         )
 
     @HideoutCog.listener('on_raw_message_edit')
