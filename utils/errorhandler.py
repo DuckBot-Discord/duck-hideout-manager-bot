@@ -162,7 +162,9 @@ class HideoutExceptionManager:
         if embeds:
             await webhook.send(embeds=embeds, **kwargs)
 
-    async def add_error(self, *, error: Exception, ctx: Optional[HideoutContext] = None) -> None:
+    async def add_error(
+        self, *, error: Exception, ctx: Optional[HideoutContext | discord.Interaction[HideoutManager]] = None
+    ) -> None:
         """|coro|
 
         Add an error to the error manager. This will handle all cooldowns and internal cache management
@@ -177,14 +179,14 @@ class HideoutExceptionManager:
         """
         log.info('Adding error "%s" to log.', str(error))
 
-        packet: HideoutTraceback = {'time': (ctx and ctx.message.created_at) or discord.utils.utcnow(), 'exception': error}
+        packet: HideoutTraceback = {'time': (ctx and ctx.created_at) or discord.utils.utcnow(), 'exception': error}
 
         if ctx is not None:
             addons: _HideoutTracebackOptional = {
                 'command': ctx.command,
-                'author': ctx.author.id,
+                'author': ctx.user.id,
                 'guild': (ctx.guild and ctx.guild.id) or None,
-                'channel': ctx.channel.id,
+                'channel': ctx.channel_id or 0,
             }
             packet.update(addons)  # type: ignore
 

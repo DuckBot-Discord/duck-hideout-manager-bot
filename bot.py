@@ -135,10 +135,10 @@ class DbContextManager(Generic[DBT]):
         return await self.__aexit__(None, None, None)
 
     async def __aenter__(self) -> Connection:
-        self._conn = conn = await self._pool.acquire(timeout=self.timeout)
+        self._conn = conn = await self._pool.acquire(timeout=self.timeout)  # type: ignore
         self._tr = conn.transaction()
         await self._tr.start()
-        return conn
+        return conn  # type: ignore
 
     async def __aexit__(self, exc_type, exc, tb):
         if exc and self._tr:
@@ -148,7 +148,7 @@ class DbContextManager(Generic[DBT]):
             await self._tr.commit()
 
         if self._conn:
-            await self._pool.release(self._conn)
+            await self._pool.release(self._conn)  # type: ignore
 
 
 class HideoutHelper(TimerManager):

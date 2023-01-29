@@ -90,10 +90,10 @@ class HumanTime:
     def __init__(self, argument: str, *, now: Optional[datetime.datetime] = None) -> None:
         now = now or datetime.datetime.utcnow()
         dt, status = self.calendar.parseDT(argument, sourceTime=now)
-        if not status.hasDateOrTime:
+        if not status.hasDateOrTime:  # type: ignore
             raise commands.BadArgument('invalid time provided, try e.g. "tomorrow" or "3 days"')
 
-        if not status.hasTime:
+        if not status.hasTime:  # type: ignore
             # replace it with the current time
             dt = dt.replace(hour=now.hour, minute=now.minute, second=now.second, microsecond=now.microsecond)
 
@@ -111,7 +111,7 @@ class Time(HumanTime):
     def __init__(self, argument: str, *, now: Optional[datetime.datetime] = None) -> None:
         try:
             o = ShortTime(argument, now=now)
-        except Exception as e:
+        except Exception:
             super().__init__(argument)
         else:
             self.dt = o.dt
@@ -147,7 +147,7 @@ class UserFriendlyTime(commands.Converter):
         default: Optional[str] = None,
     ) -> None:
         if isinstance(converter, type) and issubclass(converter, commands.Converter):
-            converter = converter()  # type: ignore
+            converter = converter()
 
         if converter is not None and not isinstance(converter, commands.Converter):
             raise TypeError('commands.Converter subclass necessary.')
@@ -221,7 +221,7 @@ class UserFriendlyTime(commands.Converter):
             # foo date time
 
             # first the first two cases:
-            dt, status, begin, end, dt_string = elements[0]
+            dt, status, begin, end, _ = elements[0]
 
             if not status.hasDateOrTime:
                 raise commands.BadArgument('Invalid time provided, try e.g. "tomorrow" or "3 days".')
@@ -272,7 +272,7 @@ class plural:
 
     def __format__(self, format_spec: str) -> str:
         v = self.value
-        singular, sep, plural = format_spec.partition('|')
+        singular, _, plural = format_spec.partition('|')
         plural = plural or f'{singular}s'
 
         if abs(v) != 1:

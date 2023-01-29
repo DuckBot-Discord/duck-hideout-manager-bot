@@ -22,7 +22,7 @@ from jishaku.features.root_command import RootCommand
 from jishaku.math import natural_size
 from jishaku.features.management import ManagementFeature
 from jishaku.modules import ExtensionConverter
-from jishaku.codeblocks import codeblock_converter
+from jishaku.codeblocks import codeblock_converter, Codeblock
 from jishaku.exception_handling import ReplResponseReactor
 from jishaku.features.baseclass import Feature
 from jishaku.flags import Flags
@@ -235,6 +235,9 @@ class HideoutManagerJishaku(
         elif isinstance(result, PaginatorInterface):
             return await result.send_to(ctx)
 
+        elif isinstance(result, discord.Embed):
+            return await ctx.send(embed=result)
+
         if not isinstance(result, str):
             result = repr(result)
 
@@ -276,7 +279,7 @@ class HideoutManagerJishaku(
 
     @discord.utils.copy_doc(PythonFeature.jsk_python)
     @Feature.Command(parent="jsk", name="py", aliases=["python"])
-    async def jsk_python(self, ctx: HideoutContext, *, argument: Annotated[str, codeblock_converter]) -> None:
+    async def jsk_python(self, ctx: HideoutContext, *, argument: Annotated[Codeblock, codeblock_converter]) -> None:
         """|coro|
 
         The subclassed jsk python command to implement some more functionality and features.
@@ -304,19 +307,19 @@ class HideoutManagerJishaku(
             _g=ctx.guild,
         )
 
-        scope = self.scope
+        scope = self.scope  # type: ignore
         printed = io.StringIO()
 
         try:
             async with ReplResponseReactor(ctx.message):
-                with self.submit(ctx):
+                with self.submit(ctx):  # type: ignore
                     with contextlib.redirect_stdout(printed):
                         executor = AsyncCodeExecutor(argument.content, scope, arg_dict=arg_dict)
                         start = time.perf_counter()
 
                         # Absolutely a garbage lib that I have to fix jesus christ.
                         # I have to rewrite this lib holy jesus its so bad.
-                        async for send, result in AsyncSender(executor):
+                        async for send, result in AsyncSender(executor):  # type: ignore
                             self.last_result = result
 
                             value = printed.getvalue()

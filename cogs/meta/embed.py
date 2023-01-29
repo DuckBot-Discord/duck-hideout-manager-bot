@@ -5,6 +5,7 @@ from discord.ext import commands
 
 from utils import HideoutContext, HideoutCog
 from cogs.meta.tags import TagName
+from .views.embed import EmbedEditor
 
 try:
     from utils.ignored import HORRIBLE_HELP_EMBED
@@ -67,16 +68,29 @@ class EmbedFlags(commands.FlagConverter, prefix='--', delimiter='', case_insensi
     save: TagName = None  # type: ignore
 
 
+class JsonFlag(commands.FlagConverter, prefix='--', delimiter='', case_insensitive=True):
+    json: str
+
+
 class EmbedMaker(HideoutCog):
     @commands.command()
-    async def embed(self, ctx: HideoutContext, *, flags: typing.Union[typing.Literal['--help'], EmbedFlags]):
-        """Sends an embed, using flags or adds it to a tag.
+    async def embed(
+        self,
+        ctx: HideoutContext,
+        *,
+        flags: typing.Union[typing.Literal['--help'], EmbedFlags, None],
+    ):
+        """Sends an embed using flags. An interactive embed maker is also available if you don't pass any flags.
 
         Parameters
         ----------
         flags: EmbedFlags
             The flags to use. Please see ``embed --help`` for flag info.
         """
+        if flags is None:
+            view = EmbedEditor(ctx.author, self)  # type: ignore
+            view.message = await ctx.send(embed=view.help_embed(), view=view)
+            return
 
         if flags == '--help':
             return await ctx.send(embed=HORRIBLE_HELP_EMBED)

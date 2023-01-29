@@ -71,6 +71,22 @@ class HideoutContext(commands.Context, Generic[BotT]):
         super().__init__(*args, **kwargs)
         self.is_error_handled = False
 
+    @property
+    def user(self):
+        return self.author
+
+    @property
+    def client(self):
+        return self.bot
+
+    @property
+    def created_at(self):
+        return self.message.created_at
+
+    @property
+    def channel_id(self):
+        return self.channel.id
+
     @discord.utils.cached_property
     def color(self) -> discord.Color:
         """:class:`~discord.Color`: Returns HideoutManager's color, or the author's color. Falls back to blurple"""

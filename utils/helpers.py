@@ -5,7 +5,7 @@ import logging
 import re
 import time as time_lib
 from datetime import datetime
-from typing import TypeVar, Callable, Awaitable, Union, Any, Optional, Tuple
+from typing import TypeVar, Callable, Awaitable, Union, Any, Optional, Tuple, TYPE_CHECKING
 
 import discord
 from discord.ext import commands
@@ -17,6 +17,9 @@ except ImportError:
     from typing_extensions import ParamSpec
 
 from .errors import *
+
+if TYPE_CHECKING:
+    from bot import HideoutManager
 
 
 T = TypeVar('T')
@@ -36,6 +39,7 @@ __all__: Tuple[str, ...] = (
     'add_logging',
     'format_date',
     'DeleteButton',
+    'View',
 )
 
 
@@ -164,6 +168,36 @@ class DeleteButtonCallback(discord.ui.Button['DeleteButton']):
                 self.view.stop()
 
 
+class View(discord.ui.View):
+    def __init__(self, *, timeout: Optional[float] = 180, bot: Optional[HideoutManager] = None):
+        super().__init__(timeout=timeout)
+        self.bot: Optional[HideoutManager] = bot
+        if bot:
+            bot.views.add(self)
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[Any]) -> None:
+        bot: DuckBot = interaction.client  # type: ignore
+        await bot.exceptions.add_error(error=error)
+        if interaction.response.is_done():
+            await interaction.followup.send(f"Sorry! something went wrong....", ephemeral=True)
+        else:
+            await interaction.response.send_message(f"Sorry! something went wrong....", ephemeral=True)
+
+    def stop(self) -> None:
+        if self.bot:
+            self.bot.views.discard(self)
+        return super().stop()
+
+    async def on_timeout(self) -> None:
+        if self.bot:
+            self.bot.views.discard(self)
+        return await super().on_timeout()
+
+    def __del__(self) -> None:
+        if self.bot:
+            self.bot.views.discard(self)
+
+
 class DeleteButton(discord.ui.View):
     """
     A button that deletes the message.
@@ -183,7 +217,7 @@ class DeleteButton(discord.ui.View):
     """
 
     def __init__(self, *args, **kwargs):
-        self.bot: Optional[commands.Bot] = None
+        self.bot: Optional[HideoutManager] = None
         self._message = kwargs.pop('message', None)
         self.author = kwargs.pop('author')
         self.delete_on_timeout = kwargs.pop('delete_on_timeout', True)
@@ -214,19 +248,14 @@ class DeleteButton(discord.ui.View):
                     await self.message.edit(view=None)
             except discord.HTTPException:
                 pass
-        try:
-            self.bot.views.remove(self)  # type: ignore
-        except (AttributeError, ValueError):
-            pass
+        if self.bot:
+            self.bot.views.discard(self)
 
     def stop(self) -> None:
         """Stops the view."""
-        try:
-            self.bot.views.remove(self)  # type: ignore
-        except (AttributeError, ValueError):
-            pass
-        finally:
-            super().stop()
+        if self.bot:
+            self.bot.views.discard(self)
+        super().stop()
 
     @property
     def message(self) -> Optional[discord.Message]:
@@ -257,10 +286,7 @@ class DeleteButton(discord.ui.View):
         message = await destination.send(*args, **kwargs, view=view)
         view.message = message
 
-        if isinstance(view.bot, commands.Bot):
-            try:
-                view.bot.views.add(view)  # type: ignore
-            except (AttributeError, ValueError):
-                pass
+        if view.bot:
+            view.bot.views.add(view)
 
         return view

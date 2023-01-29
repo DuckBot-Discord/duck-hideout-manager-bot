@@ -2,10 +2,12 @@ from typing import Tuple
 
 __all__: Tuple[str, ...] = (
     'GITHUB',
+    'EDIT_PENCIL',
     'DONE',
 )
 
 GITHUB = '<:github:895395664383598633>'
+EDIT_PENCIL = '<:nickname:895407885339738123>'
 DONE = [
     '<:done:912190157942308884>',
     '<:done:912190217102970941>',

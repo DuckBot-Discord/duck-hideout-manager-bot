@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import logging
 import typing
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 
 import discord
 from discord.ext import menus
 from discord.ui import Modal, TextInput
 
-
 from .context import HideoutContext
+
+if TYPE_CHECKING:
+    from bot import HideoutManager
 
 __all__: Tuple[str, ...] = ("ViewMenuPages",)
 
@@ -40,7 +42,7 @@ class ViewMenuPages(discord.ui.View):
         self,
         source: menus.PageSource,
         *,
-        ctx: HideoutContext,
+        ctx: HideoutContext | discord.Interaction[HideoutManager],
         check_embeds: bool = True,
         compact: bool = False,
     ):
@@ -48,7 +50,7 @@ class ViewMenuPages(discord.ui.View):
         self.current_modal: typing.Optional[SkipToModal] = None
         self.source: menus.PageSource = source
         self.check_embeds: bool = check_embeds
-        self.ctx: HideoutContext = ctx
+        self.ctx: HideoutContext | discord.Interaction[HideoutManager] = ctx
         self.message: Optional[discord.Message] = None
         self.current_page: int = 0
         self.compact: bool = compact
@@ -137,13 +139,13 @@ class ViewMenuPages(discord.ui.View):
             pass
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user and interaction.user.id in (self.ctx.bot.owner_id, self.ctx.author.id):
+        if interaction.user and interaction.user.id in (self.ctx.client.owner_id, self.ctx.user.id):
             return True
         await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
         return False
 
     async def on_timeout(self) -> None:
-        self.ctx.bot.views.discard(self)
+        self.ctx.client.views.discard(self)
         if self.message:
             try:
                 await self.message.edit(view=None)
@@ -151,27 +153,38 @@ class ViewMenuPages(discord.ui.View):
                 pass
 
     def stop(self) -> None:
-        self.ctx.bot.views.discard(self)
+        self.ctx.client.views.discard(self)
         super().stop()
 
-    async def on_error(self, error: Exception, item: discord.ui.Item, interaction: discord.Interaction) -> None:
+    async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item, /) -> None:
         if interaction.response.is_done():
             await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
         else:
             await interaction.response.send_message('An unknown error occurred, sorry', ephemeral=True)
-        await self.ctx.bot.exceptions.add_error(error=error, ctx=self.ctx)
+        await self.ctx.client.exceptions.add_error(error=error, ctx=self.ctx)
 
-    async def start(self) -> None:
-        if self.check_embeds and not self.ctx.channel.permissions_for(self.ctx.me).embed_links:  # type: ignore
-            await self.ctx.send('Bot does not have embed links permission in this channel.')
+    async def start(self, edit_interaction: bool = False) -> None:
+        if self.check_embeds and not self.ctx.channel.permissions_for(self.ctx.guild.me).embed_links:  # type: ignore
+            if isinstance(self.ctx, HideoutContext):
+                await self.ctx.send('Bot does not have embed links permission in this channel.')
+            else:
+                if self.ctx.response.is_done():
+                    await self.ctx.followup.send('Bot does not have embed links permission in this channel.')
             return
 
         await self.source._prepare_once()
         page = await self.source.get_page(0)
         kwargs = await self._get_kwargs_from_page(page)
         self._update_labels(0)
-        self.message = await self.ctx.send(**kwargs, view=self)
-        self.ctx.bot.views.add(self)
+        if isinstance(self.ctx, HideoutContext):
+            self.message = await self.ctx.send(**kwargs, view=self)
+        else:
+            if edit_interaction:
+                await self.ctx.response.edit_message(**kwargs, view=self)
+            else:
+                await self.ctx.response.send_message(**kwargs, view=self)
+            self.message = await self.ctx.original_response()
+        self.ctx.client.views.add(self)
 
     @discord.ui.button(label='≪', style=discord.ButtonStyle.grey)
     async def go_to_first_page(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -225,5 +238,5 @@ class ViewMenuPages(discord.ui.View):
     async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button):
         """stops the pagination session."""
         await interaction.response.defer()
-        await interaction.delete_original_message()
+        await interaction.delete_original_response()
         self.stop()

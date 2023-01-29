@@ -225,23 +225,28 @@ class TagName(commands.clean_content):
 
 
 class TagsFromFetchedPageSource(menus.ListPageSource):
+    display_owner = True
+
     def __init__(
         self,
         tags: typing.List[asyncpg.Record],
         *,
         per_page: int = 10,
         member: discord.Member | discord.User | None = None,
-        ctx: HideoutContext,
+        colour: discord.Colour,
     ):
         super().__init__(tags, per_page=per_page)
         self.member = member
-        self.ctx = ctx
+        self.colour = colour
+
+    def format_records(self, records: enumerate[asyncpg.Record]):
+        return '\n'.join(f"{idx}. {tag['name']} (ID: {tag['id']})" for idx, tag in records)
 
     async def format_page(self, menu: menus.MenuPages, entries: typing.List[asyncpg.Record]):
         source = enumerate(entries, start=menu.current_page * self.per_page + 1)
-        formatted = '\n'.join(f"{idx}. {tag['name']} (ID: {tag['id']})" for idx, tag in source)
-        embed = discord.Embed(title=f"Tags List", description=formatted, colour=self.ctx.bot.colour)
-        if self.member:
+        formatted = self.format_records(source)
+        embed = discord.Embed(title=f"Tags List", description=discord.utils.escape_markdown(formatted), colour=self.colour)
+        if self.member and self.display_owner:
             embed.set_author(name=str(self.member), icon_url=self.member.display_avatar.url)
         embed.set_footer(text=f"Page {menu.current_page + 1}/{self.get_max_pages()} ({len(self.entries)} entries)")
         return embed
@@ -308,7 +313,7 @@ class Tags(HideoutCog):
 
     async def get_tag(
         self,
-        tag: Union[str, commands.clean_content],
+        tag: Union[str, commands.clean_content, int],
         guild_id: Optional[int],
         *,
         connection: Optional[Union[asyncpg.Connection, asyncpg.Pool]] = None,
@@ -333,32 +338,49 @@ class Tags(HideoutCog):
             The tag.
         """
         connection = connection or self.bot.pool
-        query = """
-            SELECT id, name, content, embed, owner_id, guild_id FROM tags 
-            WHERE (LOWER(name) = LOWER($1::TEXT) and (guild_id = $2) and (content is not null)) 
-            OR (id = (
-                SELECT points_to FROM tags 
-                    WHERE LOWER(name) = LOWER($1::TEXT) 
-                    AND guild_id = $2 
-                    AND points_to IS NOT NULL
-                ))
-            LIMIT 1 -- just in case
-        """
-
-        fetched_tag = await connection.fetchrow(query, tag, guild_id)
-        if fetched_tag is None:
+        if isinstance(tag, int):
             query = """
-                SELECT name FROM tags
-                WHERE (guild_id = $1 OR guild_id IS NULL) 
-                AND LOWER(name) % LOWER($2::TEXT)
-                ORDER BY similarity(name, $2) DESC
-                LIMIT 3
+                SELECT id, name, content, embed, owner_id, guild_id FROM tags 
+                WHERE (id = $1) and (content is not null)
+                OR (id = (
+                    SELECT points_to FROM tags 
+                        WHERE id = $1
+                        AND points_to IS NOT NULL
+                    ))
+                LIMIT 1 -- just in case
             """
-            similar = await connection.fetch(query, guild_id, tag)
-            if not similar:
-                raise commands.BadArgument(f"Tag not found.")
-            joined = '\n'.join(r['name'] for r in similar)
-            raise commands.BadArgument(f"Tag not found. Did you mean...\n{joined}")
+            args = (tag,)
+        else:
+            query = """
+                SELECT id, name, content, embed, owner_id, guild_id FROM tags 
+                WHERE (LOWER(name) = LOWER($1::TEXT) and (guild_id = $2) and (content is not null)) 
+                OR (id = (
+                    SELECT points_to FROM tags 
+                        WHERE LOWER(name) = LOWER($1::TEXT) 
+                        AND guild_id = $2 
+                        AND points_to IS NOT NULL
+                    ))
+                LIMIT 1 -- just in case
+            """
+            args = (tag, guild_id)
+
+        fetched_tag = await connection.fetchrow(query, *args)
+        if fetched_tag is None:
+            if isinstance(tag, int):
+                raise commands.BadArgument('Tag with that ID not found.')
+            else:
+                query = """
+                    SELECT name FROM tags
+                    WHERE (guild_id = $1 OR guild_id IS NULL) 
+                    AND LOWER(name) % LOWER($2::TEXT)
+                    ORDER BY similarity(name, $2) DESC
+                    LIMIT 3
+                """
+                similar = await connection.fetch(query, guild_id, tag)
+                if not similar:
+                    raise commands.BadArgument(f"Tag not found.")
+                joined = '\n'.join(r['name'] for r in similar)
+                raise commands.BadArgument(f"Tag not found. Did you mean...\n{joined}")
 
         return Tag(fetched_tag)
 
@@ -379,6 +401,7 @@ class Tags(HideoutCog):
         owner: Union[discord.User, discord.Member],
         tag: Union[str, commands.clean_content],
         content: Union[str, commands.clean_content],
+        embed: Optional[discord.Embed] = None,
     ) -> Tag:
         """Creates a tag.
 
@@ -403,13 +426,14 @@ class Tags(HideoutCog):
                 async with self.bot.safe_connection() as conn:
                     stuff = await conn.fetchrow(
                         """
-                        INSERT INTO tags (name, content, guild_id, owner_id) VALUES ($1, $2, $3, $4)
+                        INSERT INTO tags (name, content, guild_id, owner_id, embed) VALUES ($1, $2, $3, $4, $5)
                         RETURNING id, name, content, embed, owner_id, guild_id
                     """,
                         tag,
                         content,
                         guild.id if guild else None,
                         owner.id,
+                        embed and embed.to_dict() or None,
                     )
                     return Tag(stuff)  # type: ignore
             except asyncpg.UniqueViolationError:
@@ -722,6 +746,9 @@ class Tags(HideoutCog):
             except asyncpg.UniqueViolationError:
                 return await ctx.send(f"Tag {alias!r} already exists!")
             except Exception as e:
+                import logging
+
+                logging.error('COCK', exc_info=e)
                 await self.bot.exceptions.add_error(error=e, ctx=ctx)
                 return await ctx.send(f"Could not create alias!")
             await ctx.send(f"Alias {alias!r} that points to {points_to!r} created!")
@@ -783,7 +810,7 @@ class Tags(HideoutCog):
         if not tags:
             return await ctx.send("This server has no tags!" if not member else f"{member} owns no tags!")
 
-        paginator = ViewMenuPages(source=TagsFromFetchedPageSource(tags, member=member, ctx=ctx), ctx=ctx)
+        paginator = ViewMenuPages(source=TagsFromFetchedPageSource(tags, member=member, colour=ctx.bot.colour), ctx=ctx)
         await paginator.start()
 
     @tag.command(name='search')
@@ -801,7 +828,7 @@ class Tags(HideoutCog):
         if not tags:
             return await ctx.send("No tags found with that query...")
 
-        paginator = ViewMenuPages(source=TagsFromFetchedPageSource(tags, member=None, ctx=ctx), ctx=ctx)
+        paginator = ViewMenuPages(source=TagsFromFetchedPageSource(tags, member=None, colour=ctx.bot.colour), ctx=ctx)
         await paginator.start()
 
     @tag.command(name='raw')

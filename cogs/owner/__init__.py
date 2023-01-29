@@ -1,4 +1,4 @@
-from utils import HideoutContext, HandleHTTPException, cb
+from utils import HideoutContext, cb
 from discord.ext.commands import NotOwner, command, Paginator, ExtensionFailed
 from traceback import format_exception
 

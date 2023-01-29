@@ -7,6 +7,7 @@ from typing import (
 )
 
 if TYPE_CHECKING:
+    from discord import app_commands
     from discord.ext import commands
     import datetime
 
@@ -15,7 +16,7 @@ class _HideoutTracebackOptional(TypedDict, total=False):
     author: int
     guild: Optional[int]
     channel: int
-    command: Optional[commands.Command]
+    command: Optional[commands.Command | app_commands.Command | app_commands.ContextMenu]
 
 
 class HideoutTraceback(_HideoutTracebackOptional):

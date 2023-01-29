@@ -176,7 +176,7 @@ class TimerManager:
         """
 
         if isinstance(error, commands.BadArgument):
-            return await ctx.send(error)
+            return await ctx.send(str(error))
         if isinstance(error, commands.TooManyArguments):
             return await ctx.send(
                 f'You called the {(ctx.command and ctx.command.name) or ""} command with too many arguments.'
@@ -346,7 +346,7 @@ class TimerManager:
             self._task.cancel()
             self._task = self.bot.loop.create_task(self.dispatch_timers())
 
-        timer = Timer(record=row)
+        timer = Timer(record=row)  # type: ignore
         return timer
 
     async def get_timer(self, id: int) -> Timer:
