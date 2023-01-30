@@ -274,25 +274,25 @@ class ProfileCard:
         # Add user name
         text_pos = (self.AVATAR_BORDER_SIZE + self.OVERALL_PADDING + self.LEFT_TEXT_PADDING_L, self.OVERALL_PADDING)
         if self.author.display_name == self.author.name:
-            font = ImageFont.truetype('assets/fonts/Oswald-Semibold.ttf', 60)
+            font = ImageFont.truetype('assets/fonts/Oswald-SemiBold.ttf', 60)
             for i in range(60, 0, -1):
                 _, _, textx, texty = self.draw.textbbox((0, 0), str(self.author), font=font)
                 self.username_width = textx
                 self.username_height = texty
                 if textx < self.WIDTH - text_pos[0] - self.AUTHOR_NAME_PADDING_RIGHT:
                     break
-                font = ImageFont.truetype('assets/fonts/Oswald-Semibold.ttf', i)
+                font = ImageFont.truetype('assets/fonts/Oswald-SemiBold.ttf', i)
 
             self.draw.text(text_pos, str(self.author), font=font)
         else:
-            font = ImageFont.truetype('assets/fonts/Oswald-Semibold.ttf', 60)
+            font = ImageFont.truetype('assets/fonts/Oswald-SemiBold.ttf', 60)
             textx = 0
             texty = 60
             for i in range(60, 25, -1):
                 _, _, textx, texty = self.draw.textbbox((0, 0), str(self.author.display_name), font=font)
                 if textx <= self.WIDTH - text_pos[0] - self.AUTHOR_NAME_PADDING_RIGHT:
                     break
-                font = ImageFont.truetype('assets/fonts/Oswald-Semibold.ttf', i)
+                font = ImageFont.truetype('assets/fonts/Oswald-SemiBold.ttf', i)
 
             self.username_width = textx
             self.username_height = texty
@@ -304,12 +304,12 @@ class ProfileCard:
                 self.AVATAR_BORDER_SIZE + self.OVERALL_PADDING + self.LEFT_TEXT_PADDING_L,
                 self.OVERALL_PADDING + texty,
             )
-            font = ImageFont.truetype('assets/fonts/Oswald-Semibold.ttf', 60)
+            font = ImageFont.truetype('assets/fonts/Oswald-SemiBold.ttf', 60)
             for i in range(60, 25, -1):
                 _, _, textx, texty = self.draw.textbbox((0, 0), str(self.author), font=font)
                 if textx <= base_textx:
                     break
-                font = ImageFont.truetype('assets/fonts/Oswald-Semibold.ttf', i)
+                font = ImageFont.truetype('assets/fonts/Oswald-SemiBold.ttf', i)
             self.secondary_height = textx
             self.secondary_width = texty
             self.draw.text(text_pos, str(self.author), fill=self.SECONDARY_COLOR, font=font)
@@ -319,18 +319,18 @@ class ProfileCard:
         bottom_text = f"OUT OF {self.data.max} USERS"
 
         # Top text (tt)
-        ttfont = ImageFont.truetype('assets/fonts/Oswald-Semibold.ttf', 60)
+        ttfont = ImageFont.truetype('assets/fonts/Oswald-SemiBold.ttf', 60)
         _, _, ttx, tty = self.draw.textbbox((0, 0), top_text, font=ttfont)
 
         # Bottom Text (bt) needs font calculation
-        btfont = ImageFont.truetype('assets/fonts/Oswald-Semibold.ttf', 60)
+        btfont = ImageFont.truetype('assets/fonts/Oswald-SemiBold.ttf', 60)
         btx = 0
         bty = 0
         for i in range(59, 25, -1):
             _, _, btx, bty = self.draw.textbbox((0, 0), bottom_text, font=btfont)
             if btx <= ttx:
                 break
-            btfont = ImageFont.truetype('assets/fonts/Oswald-Semibold.ttf', i)
+            btfont = ImageFont.truetype('assets/fonts/Oswald-SemiBold.ttf', i)
 
         padl = self.AVATAR_BORDER_SIZE + self.OVERALL_PADDING + self.LEFT_TEXT_PADDING_L
         baseh = self.AVATAR_BORDER_SIZE + self.OVERALL_PADDING
