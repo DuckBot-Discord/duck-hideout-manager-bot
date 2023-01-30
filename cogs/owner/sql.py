@@ -14,6 +14,7 @@ from utils import HideoutCog, HideoutContext, UntilFlag
 
 def cleanup_code(content: str):
     """Automatically removes code blocks from the code."""
+    content = content.strip()
     # remove ```py\n```
     if content.startswith('```') and content.endswith('```'):
         return '\n'.join(content.split('\n')[1:-1])
