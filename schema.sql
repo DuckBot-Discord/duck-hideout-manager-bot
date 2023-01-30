@@ -18,6 +18,15 @@ CREATE TABLE IF NOT EXISTS blocks (
     PRIMARY KEY (guild_id, channel_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS addbot (
+    owner_id bigint NOT NULL,
+    bot_id bigint NOT NULL UNIQUE,
+    added boolean DEFAULT false NOT NULL,
+    pending boolean DEFAULT true NOT NULL,
+    reason text,
+    PRIMARY KEY (owner_id, bot_id)
+);
+
 -- Thanks chai :)
 DO $$
 BEGIN
@@ -73,7 +82,7 @@ CREATE TABLE commands (
         NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE message_info (
+CREATE TABLE IF NOT EXISTS message_info (
     author_id BIGINT,
     message_id BIGINT,
     channel_id BIGINT,
@@ -83,4 +92,10 @@ CREATE TABLE message_info (
     edited_at TIMESTAMP WITH TIME ZONE,
     deleted BOOLEAN DEFAULT FALSE,
     PRIMARY KEY (message_id, channel_id)
+);
+
+CREATE TABLE IF NOT EXISTS status_history(
+    user_id BIGINT, 
+    status TEXT, 
+    changed_at TIMESTAMP WITH TIME ZONE
 );

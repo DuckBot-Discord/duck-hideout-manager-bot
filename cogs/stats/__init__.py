@@ -1,12 +1,13 @@
 import discord
-from utils import HideoutCog
-from bot import HideoutManager
+from discord.ext import commands
+
+from .profile import ProfileCardCog
 
 
-class StatsTracker(HideoutCog):
-    """SoonTM"""
+class Stats(ProfileCardCog):
+    """Tracks User Statistics"""
 
-    @HideoutCog.listener('on_message')
+    @commands.Cog.listener('on_message')
     async def logs_add_message(self, message: discord.Message):
         if not message.guild or message.guild.id != self.bot.constants.DUCK_HIDEOUT:
             return
@@ -24,7 +25,7 @@ class StatsTracker(HideoutCog):
             message.author.bot,
         )
 
-    @HideoutCog.listener('on_raw_message_edit')
+    @commands.Cog.listener('on_raw_message_edit')
     async def log_update_message(self, payload: discord.RawMessageUpdateEvent):
         if payload.guild_id != self.bot.constants.DUCK_HIDEOUT:
             return
@@ -47,7 +48,7 @@ class StatsTracker(HideoutCog):
                 payload.channel_id,
             )
 
-    @HideoutCog.listener('on_raw_message_delete')
+    @commands.Cog.listener('on_raw_message_delete')
     async def log_delete_message(self, payload: discord.RawMessageDeleteEvent):
         query = "UPDATE message_info SET deleted = TRUE WHERE message_id = $1 AND channel_id = $2"
         await self.bot.pool.execute(
@@ -56,12 +57,12 @@ class StatsTracker(HideoutCog):
             payload.channel_id,
         )
 
-    @HideoutCog.listener('on_raw_bulk_message_delete')
+    @commands.Cog.listener('on_raw_bulk_message_delete')
     async def log_bulk_delete_message(self, payload: discord.RawBulkMessageDeleteEvent):
         query = "UPDATE message_info SET deleted = TRUE WHERE message_id = $1 AND channel_id = $2"
         await self.bot.pool.executemany(query, [(mid, payload.channel_id) for mid in payload.message_ids])
 
-    @HideoutCog.listener('on_presence_update')
+    @commands.Cog.listener('on_presence_update')
     async def track_status_changes(self, before: discord.Member, after: discord.Member):
         if before.guild.id != self.bot.constants.DUCK_HIDEOUT:
             return
@@ -71,5 +72,5 @@ class StatsTracker(HideoutCog):
         await self.bot.pool.execute(query, after.id, str(after.status), discord.utils.utcnow())
 
 
-async def setup(bot: HideoutManager):
-    await bot.add_cog(StatsTracker(bot))
+async def setup(bot):
+    await bot.add_cog(Stats(bot))

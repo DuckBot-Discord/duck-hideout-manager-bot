@@ -12,10 +12,12 @@ __all__: Tuple[str, ...] = (
     'PIT_CATEGORY',
     'ARCHIVE_CATEGORY',
     'GENERAL_CHANNEL',
+    'LOADING',
 )
 
 GITHUB = '<:github:895395664383598633>'
 EDIT_PENCIL = '<:nickname:895407885339738123>'
+LOADING = '<a:Loading:1066084550352064673>'
 DONE = [
     '<:done:912190157942308884>',
     '<:done:912190217102970941>',

@@ -125,3 +125,4 @@ dmypy.json
 /utils/ignored/
 .vscode
 \#*
+assets/images/profile/shadows/*.png
