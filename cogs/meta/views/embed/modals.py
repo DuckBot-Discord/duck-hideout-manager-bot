@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import re
-from typing import Optional, Union, Type, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, Type, Union
 
 import discord
+from discord import ButtonStyle, Emoji, PartialEmoji
 from discord.ext import commands
-from discord import ButtonStyle, PartialEmoji, Emoji
-
 
 if TYPE_CHECKING:
-    from . import EmbedEditor
     from bot import HideoutManager
+
+    from . import EmbedEditor
 
 
 URL_REGEX = re.compile('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')

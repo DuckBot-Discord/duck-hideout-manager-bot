@@ -6,15 +6,15 @@ import inspect
 import io
 import typing
 from collections import defaultdict
-from typing import Optional, Union, Type, List, TypeVar, Callable
+from typing import Callable, List, Optional, Type, TypeVar, Union
 
 import asyncpg
 import discord
 from discord import app_commands
 from discord.ext import commands, menus
 
-from utils import HideoutCog, HideoutContext, ViewMenuPages
 from cogs.hideout._checks import COUNSELORS_ROLE
+from utils import HideoutCog, HideoutContext, ViewMenuPages
 
 T = TypeVar('T')
 CO_T = TypeVar("CO_T", bound='Union[Type[commands.Converter], commands.Converter]')

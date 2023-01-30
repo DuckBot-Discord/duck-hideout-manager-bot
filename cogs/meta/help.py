@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-import re
 import difflib
-from typing import Annotated, Iterable, Any, Callable, Optional, List, TYPE_CHECKING
+import re
+from typing import TYPE_CHECKING, Annotated, Any, Callable, Iterable, List, Optional
 
 import discord
 from discord import app_commands
-from discord.ext import commands
 from discord.app_commands import Choice
+from discord.ext import commands
 
-from utils import HideoutCog, HideoutContext, human_join, cb
+from utils import HideoutCog, HideoutContext, cb, human_join
 
 if TYPE_CHECKING:
-    from cogs.meta.tags import Tag
     from cogs.meta import Information
+    from cogs.meta.tags import Tag
 
 
 class Help(HideoutCog):

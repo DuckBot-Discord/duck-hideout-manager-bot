@@ -7,8 +7,9 @@ from discord.ext import commands
 from utils import errors
 
 if TYPE_CHECKING:
-    from .context import HideoutContext
     from bot import HideoutManager
+
+    from .context import HideoutContext
 
 __all__: Tuple[str, ...] = ()
 

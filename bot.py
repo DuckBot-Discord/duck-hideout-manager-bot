@@ -3,24 +3,23 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import logging
-
 import random
 import re
 import sys
 from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
+    Any,
+    DefaultDict,
     Generator,
+    Generic,
     Optional,
     Sequence,
     Set,
-    TypeVar,
-    Type,
-    Generic,
     Tuple,
-    Any,
+    Type,
+    TypeVar,
     Union,
-    DefaultDict,
     overload,
 )
 
@@ -29,15 +28,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utils import (
-    constants,
-    HideoutContext,
-    HideoutCog,
-    HideoutExceptionManager,
-    col,
-    human_timedelta,
-    TimerManager,
-)
+from utils import HideoutCog, HideoutContext, HideoutExceptionManager, TimerManager, col, constants, human_timedelta
 from utils.errors import *
 
 try:
@@ -46,10 +37,11 @@ except ImportError:
     from typing_extensions import ParamSpec
 
 if TYPE_CHECKING:
-    from asyncpg import Pool, Connection
-    from asyncpg.transaction import Transaction
-    from aiohttp import ClientSession
     import datetime
+
+    from aiohttp import ClientSession
+    from asyncpg import Connection, Pool
+    from asyncpg.transaction import Transaction
 
 DBT = TypeVar('DBT', bound='HideoutManager')
 DCT = TypeVar('DCT', bound='HideoutContext')

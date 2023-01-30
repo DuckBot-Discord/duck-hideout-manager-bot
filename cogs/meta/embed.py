@@ -1,10 +1,12 @@
 import re
 import typing
+
 import discord
 from discord.ext import commands
 
-from utils import HideoutContext, HideoutCog
 from cogs.meta.tags import TagName
+from utils import HideoutCog, HideoutContext
+
 from .views.embed import EmbedEditor
 
 try:

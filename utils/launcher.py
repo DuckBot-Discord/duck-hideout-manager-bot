@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
+
 import aiohttp
-import asyncio
+from dotenv import load_dotenv
 
 from bot import HideoutManager
-from dotenv import load_dotenv
 from utils.helpers import col
 
 load_dotenv('utils/.env')

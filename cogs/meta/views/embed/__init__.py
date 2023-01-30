@@ -1,28 +1,30 @@
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from copy import deepcopy
+from typing import TYPE_CHECKING, Optional
 
 import asyncpg
 import discord
-from copy import deepcopy
-from discord.ext import commands
 from discord import ButtonStyle
+from discord.ext import commands
 
 import utils
+
 from ...tags import TagsFromFetchedPageSource
 from .modals import (
-    EditWithModalButton,
-    EditEmbedModal,
-    EditAuthorModal,
-    EditFooterModal,
     AddFieldModal,
-    EditFieldModal,
     ChooseATagName,
+    EditAuthorModal,
+    EditEmbedModal,
+    EditFieldModal,
+    EditFooterModal,
+    EditWithModalButton,
 )
 
 if TYPE_CHECKING:
-    from ... import Information
     from bot import HideoutManager
+
+    from ... import Information
 
     BotInteraction = discord.Interaction[HideoutManager]
 

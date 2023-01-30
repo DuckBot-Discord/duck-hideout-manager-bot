@@ -1,6 +1,7 @@
 from bot import HideoutManager
-from .pits import PitsManagement
+
 from .addbot import Addbot
+from .pits import PitsManagement
 
 
 class DuckHideout(Addbot, PitsManagement, name='Duck Hideout Stuff'):

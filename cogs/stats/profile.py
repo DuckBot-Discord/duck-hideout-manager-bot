@@ -1,15 +1,18 @@
-import discord
-import itertools
-from typing import NamedTuple
-from datetime import datetime as dt, timedelta as td
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import io
+import itertools
+from datetime import datetime as dt
+from datetime import timedelta as td
+from typing import NamedTuple
+
 import aggdraw
 import asyncpg
+import discord
 from colorthief import ColorThief
-from jishaku.functools import executor_function
 from discord.ext import commands
-from utils import HideoutContext, HideoutCog
+from jishaku.functools import executor_function
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
+
+from utils import HideoutCog, HideoutContext
 
 
 class ImageThief(ColorThief):

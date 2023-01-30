@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-from typing import (
-    TYPE_CHECKING,
-    TypedDict,
-    Optional,
-)
+from typing import TYPE_CHECKING, Optional, TypedDict
 
 if TYPE_CHECKING:
+    import datetime
+
     from discord import app_commands
     from discord.ext import commands
-    import datetime
 
 
 class _HideoutTracebackOptional(TypedDict, total=False):

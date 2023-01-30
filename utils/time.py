@@ -19,14 +19,13 @@ DEALINGS IN THE SOFTWARE.
 """
 from __future__ import annotations
 
-import re
 import datetime
-
-import discord.utils
-from dateutil.relativedelta import relativedelta
-import parsedatetime as pdt
+import re
 from typing import TYPE_CHECKING, Any, Callable, Optional, Sequence, Tuple, Type, TypeVar, Union
 
+import discord.utils
+import parsedatetime as pdt
+from dateutil.relativedelta import relativedelta
 from discord.ext import commands
 
 if TYPE_CHECKING:

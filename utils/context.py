@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, Optional, Sequence, Tuple, Union, overload, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Optional, Sequence, Tuple, TypeVar, Union, overload
 
 import discord
 from discord.ext import commands
 
 if TYPE_CHECKING:
+    from discord import AllowedMentions, Embed, File, Message, MessageReference, PartialMessage
     from discord.message import Message
-    from bot import HideoutManager
-    from discord import Message, Embed, File, AllowedMentions, MessageReference, PartialMessage
     from discord.ui import View
+
+    from bot import HideoutManager
 
 
 __all__: Tuple[str, ...] = ('HideoutContext', 'ConfirmationView')

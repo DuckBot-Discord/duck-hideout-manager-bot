@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import logging
 import typing
-from typing import (
-    Tuple,
-)
+from typing import Tuple
 
 import discord
-from discord.ext.commands import CommandError, CheckFailure
+from discord.ext.commands import CheckFailure, CommandError
 
 log = logging.getLogger('Hideoutbot.utils.errors')
 

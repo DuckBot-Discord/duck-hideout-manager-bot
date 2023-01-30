@@ -6,7 +6,7 @@ import os
 import traceback
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from types import TracebackType
-from typing import Tuple, Optional, Dict, List, Generator, Any, TYPE_CHECKING, Type
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type
 
 import discord
 

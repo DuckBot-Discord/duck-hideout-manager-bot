@@ -1,18 +1,12 @@
 from __future__ import annotations
 
-from typing import (
-    Type,
-    Tuple,
-    TypeVar,
-    Generic,
-)
+from typing import Generic, Tuple, Type, TypeVar
 
 import discord
 from discord.ext import commands
 from discord.ext.commands import FlagConverter
 
 from .context import HideoutContext
-
 
 BET = TypeVar('BET', bound='discord.guild.BanEntry')
 FCT = TypeVar('FCT', bound='FlagConverter')

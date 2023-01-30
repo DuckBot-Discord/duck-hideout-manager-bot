@@ -1,19 +1,11 @@
 from __future__ import annotations
 
-import datetime
 import asyncio
-import asyncpg
+import datetime
 import logging
-from typing import (
-    List,
-    Optional,
-    TYPE_CHECKING,
-    Tuple,
-    Union,
-    Dict,
-    Any,
-)
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
+import asyncpg
 import discord
 from discord.ext import commands
 
@@ -22,8 +14,9 @@ from .context import HideoutContext
 from .errors import TimerNotFound
 
 if TYPE_CHECKING:
+    from asyncpg import Connection, Record
+
     from bot import HideoutManager
-    from asyncpg import Record, Connection
 
 log = logging.getLogger('HideoutManager.utils.timer')
 

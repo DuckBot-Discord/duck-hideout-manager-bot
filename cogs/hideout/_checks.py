@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 from utils import HideoutContext, SilentCommandError
-from utils.constants import DUCK_HIDEOUT, PIT_CATEGORY, COUNSELORS_ROLE
+from utils.constants import COUNSELORS_ROLE, DUCK_HIDEOUT, PIT_CATEGORY
 
 
 def pit_owner_only():

@@ -2,37 +2,31 @@ from __future__ import annotations
 
 import contextlib
 import io
+import itertools
 import sys
 import time
-import discord
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Optional,
-    TypeVar,
-    Annotated,
-)
-import itertools
 import traceback
+from typing import TYPE_CHECKING, Annotated, Any, Optional, TypeVar
 
-from jishaku.modules import package_version
-from jishaku.cog import STANDARD_FEATURES, OPTIONAL_FEATURES
-from jishaku.features.python import PythonFeature
-from jishaku.features.root_command import RootCommand
-from jishaku.math import natural_size
-from jishaku.features.management import ManagementFeature
-from jishaku.modules import ExtensionConverter
-from jishaku.codeblocks import codeblock_converter, Codeblock
+import discord
+from jishaku.codeblocks import Codeblock, codeblock_converter
+from jishaku.cog import OPTIONAL_FEATURES, STANDARD_FEATURES
 from jishaku.exception_handling import ReplResponseReactor
 from jishaku.features.baseclass import Feature
+from jishaku.features.management import ManagementFeature
+from jishaku.features.python import PythonFeature
+from jishaku.features.root_command import RootCommand
 from jishaku.flags import Flags
 from jishaku.functools import AsyncSender
+from jishaku.math import natural_size
+from jishaku.modules import ExtensionConverter, package_version
+from jishaku.paginators import PaginatorInterface, WrappedPaginator, use_file_check
 from jishaku.repl import AsyncCodeExecutor
 from jishaku.repl.repl_builtins import get_var_dict_from_ctx
-from jishaku.paginators import use_file_check, PaginatorInterface, WrappedPaginator
 
 from utils.context import HideoutContext
-from .. import add_logging, HideoutCog
+
+from .. import HideoutCog, add_logging
 
 try:
     import psutil

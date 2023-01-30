@@ -1,6 +1,8 @@
-from utils import HideoutContext, cb
-from discord.ext.commands import NotOwner, command, Paginator, ExtensionFailed
 from traceback import format_exception
+
+from discord.ext.commands import ExtensionFailed, NotOwner, Paginator, command
+
+from utils import HideoutContext, cb
 
 from .sql import SQLCommands
 

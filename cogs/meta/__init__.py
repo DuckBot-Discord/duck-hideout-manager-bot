@@ -1,8 +1,9 @@
 from bot import HideoutManager
+
+from .botinfo import BotInformation
 from .embed import EmbedMaker
 from .help import Help
 from .tags import Tags
-from .botinfo import BotInformation
 
 
 class Information(EmbedMaker, Help, Tags, BotInformation):

@@ -5,11 +5,10 @@ import logging
 import re
 import time as time_lib
 from datetime import datetime
-from typing import TypeVar, Callable, Awaitable, Union, Any, Optional, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional, Tuple, TypeVar, Union
 
 import discord
 from discord.ext import commands
-
 
 try:
     from typing import ParamSpec

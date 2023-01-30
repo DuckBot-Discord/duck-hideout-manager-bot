@@ -1,13 +1,14 @@
 from __future__ import annotations
-import io
 
+import io
 import time
-from tabulate import tabulate
 from typing import List
 
-from import_expression import eval
 from discord import File
-from discord.ext.commands import FlagConverter, Flag, Converter, command
+from discord.ext.commands import Converter, Flag, FlagConverter, command
+from import_expression import eval
+from tabulate import tabulate
+
 from utils import HideoutCog, HideoutContext, UntilFlag
 
 

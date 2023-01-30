@@ -2,12 +2,13 @@ import logging
 from typing import Union
 
 import discord
+from discord import TextChannel, Thread, VoiceChannel
 from discord.ext import commands
-from discord import TextChannel, VoiceChannel, Thread
 
 from utils import HideoutCog, HideoutContext
+from utils.constants import BOT_DEVS_ROLE, BOTS_ROLE, DUCK_HIDEOUT, GENERAL_CHANNEL, QUEUE_CHANNEL
+
 from ._checks import hideout_only
-from utils.constants import DUCK_HIDEOUT, BOTS_ROLE, BOT_DEVS_ROLE, QUEUE_CHANNEL, GENERAL_CHANNEL
 
 log = logging.getLogger(__name__)
 
