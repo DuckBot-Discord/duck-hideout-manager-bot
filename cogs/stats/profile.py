@@ -376,6 +376,7 @@ class ProfileCard:
 class ProfileCardCog(HideoutCog):
     @commands.hybrid_command()
     async def profile(self, ctx: HideoutContext, user: discord.Member | discord.User = commands.Author):
+        """Shows your or someone else's profile."""
         async with ctx.typing():
             card = ProfileCard(user)
             await card.async_init(ctx.bot.pool)
