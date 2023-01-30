@@ -83,7 +83,7 @@ class ProfileCard:
         # Total messages and rank
         message_q = """
         WITH retained AS (
-            SELECT author_id, COUNT(*) AS message_count FROM message_info WHERE deleted = FALSE GROUP BY author_id ORDER BY message_count DESC
+            SELECT author_id, COUNT(*) AS message_count FROM message_info WHERE deleted = FALSE AND is_bot = $2 GROUP BY author_id ORDER BY message_count DESC
         ),
         ranked AS (
             SELECT author_id, message_count, row_number() over () AS rank FROM retained
@@ -95,7 +95,7 @@ class ProfileCard:
             (SELECT COUNT(*) FROM message_info WHERE deleted = TRUE AND author_id = $1) AS edit_count,
             (SELECT COUNT(*) FROM ranked)
         """
-        message_f = await pool.fetchrow(message_q, self.author.id)
+        message_f = await pool.fetchrow(message_q, self.author.id, self.author.bot)
         if message_f:
             count, rank, edit_count, deleted, max = message_f
         else:
@@ -143,7 +143,7 @@ class ProfileCard:
         self.paste_avatar()
         self.draw_avatar_border()
         self.draw_user_name()
-        self.draw_user_rank()
+        self.draw_secondary_text()
         corners = self.add_corners(
             self.canvas, self.STATUSBAR_HEIGHT - self.STATUSBAR_HEIGHT // 8, top_radius=self.OVERALL_PADDING
         )
@@ -314,9 +314,9 @@ class ProfileCard:
             self.secondary_width = texty
             self.draw.text(text_pos, str(self.author), fill=self.SECONDARY_COLOR, font=font)
 
-    def draw_user_rank(self):
+    def draw_secondary_text(self):
         top_text = f"RANK #{self.data.rank}"
-        bottom_text = f"OUT OF {self.data.max} USERS"
+        bottom_text = f"OUT OF {self.data.max} {'BOTS' if self.author.bot else 'USERS'}"
 
         # Top text (tt)
         ttfont = ImageFont.truetype('assets/fonts/Oswald-SemiBold.ttf', 60)
@@ -339,7 +339,6 @@ class ProfileCard:
         self.draw.text((padl, baseh - bty), bottom_text, font=btfont, fill=self.SECONDARY_COLOR)
 
         # Left side text stack
-
         height = baseh
         to_rm = bty
         width = self.WIDTH - self.BOTTOM_CORNER_FONT_PADDING
@@ -371,6 +370,18 @@ class ProfileCard:
             _, _, msx, _ = self.draw.textbbox((0, 0), text, font=btfont)
             height -= to_rm
             self.draw.text((width - msx, height), text, font=btfont, fill=self.SECONDARY_COLOR)
+
+        # Status text
+        text = f"LAST 24 HOURS OF STATUS:"
+        font = ImageFont.truetype('assets/fonts/Oswald-SemiBold.ttf', 22)
+        _, _, _, msy = self.draw.textbbox((0, 0), text, font=font)
+        self.draw.text((3, self.HEIGHT - self.STATUSBAR_HEIGHT - msy - 2), text, font=font, fill=self.SECONDARY_COLOR)
+
+        text = f"NOW"
+        _, _, msx, msy = self.draw.textbbox((0, 0), text, font=font)
+        self.draw.text(
+            (self.WIDTH - msx - 3, self.HEIGHT - self.STATUSBAR_HEIGHT - msy - 2), text, font=font, fill=self.SECONDARY_COLOR
+        )
 
 
 class ProfileCardCog(HideoutCog):
