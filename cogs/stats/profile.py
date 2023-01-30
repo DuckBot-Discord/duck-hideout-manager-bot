@@ -374,11 +374,10 @@ class ProfileCard:
 
 
 class ProfileCardCog(HideoutCog):
-    @commands.command()
-    async def image(self, ctx: HideoutContext, user: discord.Member | discord.User = commands.Author):
+    @commands.hybrid_command()
+    async def profile(self, ctx: HideoutContext, user: discord.Member | discord.User = commands.Author):
         async with ctx.typing():
             card = ProfileCard(user)
-            message = await ctx.send(f'{ctx.bot.constants.LOADING} generating profile')
             await card.async_init(ctx.bot.pool)
             buffer = await card.full_render()
-            await message.edit(attachments=[discord.File(buffer, filename='card.png')], content=None)
+            await ctx.send(file=discord.File(buffer, filename='card.png'))
