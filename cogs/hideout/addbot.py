@@ -1,3 +1,4 @@
+import os
 import logging
 from typing import Union
 
@@ -17,18 +18,22 @@ GuildMessageable = Union[TextChannel, VoiceChannel, Thread]
 
 
 class Addbot(HideoutCog):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.no_auto: bool = os.getenv('NO_AUTO_FEATURES') is not None
+
     @commands.command()
     @hideout_only()
-    async def addbot(self, ctx: HideoutContext, bot: discord.User, *, reason: commands.clean_content):
+    async def addbot(self, ctx: HideoutContext, bot_id: discord.User, *, reason: commands.clean_content):
         """Adds a bot to the bot queue."""
 
-        if not bot.bot:
+        if not bot_id.bot:
             raise commands.BadArgument('That does not seem to be a bot...')
 
-        if bot in ctx.guild.members:
+        if bot_id in ctx.guild.members:
             raise commands.BadArgument('That bot is already in this server...')
 
-        if await self.bot.pool.fetchval('SELECT owner_id FROM addbot WHERE bot_id = $1 AND pending = TRUE', bot.id):
+        if await self.bot.pool.fetchval('SELECT owner_id FROM addbot WHERE bot_id = $1 AND pending = TRUE', bot_id.id):
             raise commands.BadArgument('That bot is already in the queue...')
 
         confirm = await ctx.confirm(
@@ -41,16 +46,16 @@ class Addbot(HideoutCog):
                 'INSERT INTO addbot (owner_id, bot_id, reason) VALUES ($1, $2, $3) '
                 'ON CONFLICT (owner_id, bot_id) DO UPDATE SET pending = TRUE, added = FALSE, reason = $3',
                 ctx.author.id,
-                bot.id,
+                bot_id.id,
                 reason,
             )
             bot_queue: discord.TextChannel = ctx.guild.get_channel(QUEUE_CHANNEL)  # type: ignore
 
-            url = discord.utils.oauth_url(bot.id, scopes=['bot'], guild=ctx.guild)
+            url = discord.utils.oauth_url(bot_id.id, scopes=['bot'], guild=ctx.guild)
 
             embed = discord.Embed(description=reason)
-            embed.set_author(icon_url=bot.display_avatar.url, name=str(bot), url=url)
-            embed.add_field(name='invite:', value=f'[invite {discord.utils.remove_markdown(str(bot))}]({url})')
+            embed.set_author(icon_url=bot_id.display_avatar.url, name=str(bot_id), url=url)
+            embed.add_field(name='invite:', value=f'[invite {discord.utils.remove_markdown(str(bot_id))}]({url})')
             embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
             await bot_queue.send(embed=embed)
             await ctx.reply('✅ | Done, you will be @pinged when the bot is added!')
@@ -60,6 +65,9 @@ class Addbot(HideoutCog):
 
     @commands.Cog.listener('on_member_join')
     async def dhm_bot_queue_handler(self, member: discord.Member):
+        if self.no_auto:
+            return
+
         queue_channel: discord.TextChannel = member.guild.get_channel(QUEUE_CHANNEL)  # type: ignore
         if not member.bot or member.guild.id != DUCK_HIDEOUT:
             return
@@ -99,6 +107,9 @@ class Addbot(HideoutCog):
 
     @commands.Cog.listener('on_member_remove')
     async def on_member_remove(self, member: discord.Member):
+        if self.no_auto:
+            return
+
         if member.guild.id != DUCK_HIDEOUT:
             return
 
@@ -135,6 +146,8 @@ class Addbot(HideoutCog):
 
     @commands.Cog.listener('on_ready')
     async def on_ready(self):
+        if self.no_auto:
+            return
         guild = self.bot.get_guild(DUCK_HIDEOUT)
         if not guild:
             return logging.error('Could not find Duck Hideout!', exc_info=False)
