@@ -199,7 +199,6 @@ class EditFieldSelect(utils.View):
         index = int(select.values[0])
         self.parent.timeout = 600
         await interaction.response.send_modal(EditFieldModal(self.parent, index))
-        self.stop()
 
     @discord.ui.button(label='Go back')
     async def cancel(self, interaction: BotInteraction, button: discord.ui.Button):

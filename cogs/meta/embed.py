@@ -7,7 +7,7 @@ from discord.ext import commands
 from cogs.meta.tags import TagName
 from utils import HideoutCog, HideoutContext
 
-from .views.embed import EmbedEditor
+from .views.embed import EmbedEditor, Embed
 
 try:
     from utils.ignored import HORRIBLE_HELP_EMBED
@@ -91,7 +91,11 @@ class EmbedMaker(HideoutCog):
         """
         if flags is None:
             view = EmbedEditor(ctx.author, self)  # type: ignore
-            view.message = await ctx.send(embed=view.help_embed(), view=view)
+
+            if ctx.reference and ctx.reference.embeds:
+                view.embed = Embed.from_dict(ctx.reference.embeds[0].to_dict())
+                await view.update_buttons()
+            view.message = await ctx.send(embed=view.current_embed, view=view)
             return
 
         if flags == '--help':
