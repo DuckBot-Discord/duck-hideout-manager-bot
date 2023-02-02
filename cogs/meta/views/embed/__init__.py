@@ -125,7 +125,10 @@ class TagSelectorMenu(utils.ViewMenuPages):
         self.ctx.client.views.discard(self)
         if self.message:
             try:
-                await self.message.edit(view=self.parent)
+                if not self.parent.is_finished():
+                    await self.message.edit(view=self.parent)
+                else:
+                    await self.message.edit(view=None)
             except discord.NotFound:
                 pass
 
