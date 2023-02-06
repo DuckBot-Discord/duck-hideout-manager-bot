@@ -34,7 +34,7 @@ class Moderation(HideoutCog):
             fmt = ""
 
         try:
-            await member.send(f"You have been banned from Duck Hideout{fmt}.")
+            await member.send(f"You have been banned from Duck Hideout{fmt}.\nAppeal this action by emailing `support@duck-bot.com`")
         except discord.HTTPException:
             pass
 
