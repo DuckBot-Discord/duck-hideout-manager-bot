@@ -377,7 +377,7 @@ class PitsManagement(HideoutCog):
 
                 except discord.Forbidden:
                     log.debug(
-                        f"Did not unblock user {member} in channel {channel} due to missing permissions.", exc_info=False
+                        f"Did not re-block user {member} in channel {channel} due to missing permissions.", exc_info=False
                     )
                     continue
 
