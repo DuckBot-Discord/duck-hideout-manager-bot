@@ -233,7 +233,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
             result = await self.load_extension(extension)
             failed = failed or not result
 
-        self.tree.copy_global_to(guild=discord.Object(id=774561547930304536))
+        self.tree.copy_global_to(guild=discord.Object(id=constants.DUCK_HIDEOUT))
 
         super(HideoutHelper, self).__init__(bot=self)
 
