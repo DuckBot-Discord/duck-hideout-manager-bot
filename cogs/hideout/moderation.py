@@ -27,7 +27,6 @@ class Moderation(HideoutCog):
             else:
                 fmt = ""
             time = reason.flags._for
-            print(time)
             if time:
                 #await self.bot.create_timer(time.dt, 'tempban', ctx.guild.id, member.id, precise=False)
                 fmt += f"until {discord.utils.format_dt(time.dt, 'R')}"
