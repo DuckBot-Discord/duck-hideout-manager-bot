@@ -5,7 +5,7 @@ from utils import HideoutCog, HideoutContext, UntilFlag, ShortTime, Timer
 from ._checks import hideout_only, counselor_only
 
 class BanFlags(commands.FlagConverter, prefix='--', delimiter=' '):
-    _for: Optional[ShortTime] = commands.Flag(name='for', default=None) # type: ignore
+    until: Optional[ShortTime]
 
 class Moderation(HideoutCog):
     @hideout_only()
