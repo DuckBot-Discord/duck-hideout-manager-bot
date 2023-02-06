@@ -27,12 +27,12 @@ CREATE TABLE IF NOT EXISTS addbot (
     PRIMARY KEY (owner_id, bot_id)
 );
 
--- Thanks chai :)
+-- Thanks chai :) and Laggy
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'blacklist_type') THEN
         CREATE TYPE blacklist_type AS ENUM ('guild', 'channel', 'user');
-    END IF;
+    EXCEPTION
+        WHEN duplicate_object THEN null;
 END$$;
 
 
@@ -98,4 +98,17 @@ CREATE TABLE IF NOT EXISTS status_history(
     user_id BIGINT, 
     status TEXT, 
     changed_at TIMESTAMP WITH TIME ZONE
+);
+
+DO $$
+BEGIN
+        CREATE TYPE archive_mode AS ENUM ('leave', 'inactive', 'manual');
+    EXCEPTION
+        WHEN duplicate_object THEN null;
+END$$;
+
+CREATE TABLE IF NOT EXISTS pits (
+    pit_id BIGINT UNIQUE,
+    pit_owner BIGINT UNIQUE,
+    archive_mode archive_mode
 );
