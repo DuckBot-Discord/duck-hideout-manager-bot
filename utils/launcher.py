@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import os
+import logging
 
 import aiohttp
 from dotenv import load_dotenv
+import discord
 
 from bot import HideoutManager
-from utils.helpers import col
 
 load_dotenv('utils/.env')
 # (jsk flags are now in the .env)
@@ -26,18 +26,12 @@ URI = _get_or_fail('POSTGRES')
 ERROR_WH = _get_or_fail('ERROR_WEBHOOK_URL')
 PREFIX = _get_or_fail('PREFIX')
 
-logging.basicConfig(
-    level=logging.INFO,
-    format=f'{col()}[{col(7)}%(asctime)s{col()} | {col(4)}%(name)s{col()}:{col(3)}%(levelname)s{col()}] %(message)s{col()}',
-)
-
-log = logging.getLogger('HideoutManager.launcher')
-
 
 async def run_bot(verbose: bool = False) -> None:
     async with aiohttp.ClientSession() as session, HideoutManager.temporary_pool(uri=URI) as pool, HideoutManager(
         session=session, pool=pool, error_wh=ERROR_WH, prefix=PREFIX
     ) as bot:
+        discord.utils.setup_logging(level=logging.DEBUG)
         await bot.start(TOKEN, reconnect=True, verbose=verbose)
 
 
