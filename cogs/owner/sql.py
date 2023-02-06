@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import io
 import time
-from typing import List
+from typing import List, Annotated
 
 from discord import File
 from discord.ext.commands import Converter, Flag, FlagConverter, command
@@ -47,9 +47,8 @@ class SqlCommandFlags(FlagConverter, prefix="--", delimiter=" ", case_insensitiv
 
 class SQLCommands(HideoutCog):
     @command()
-    async def sql(self, ctx: HideoutContext, *, query: UntilFlag[SqlCommandFlags]):
+    async def sql(self, ctx: HideoutContext, *, query: UntilFlag[Annotated[str, cleanup_code], SqlCommandFlags]):
         """Executes an SQL query."""
-        query.value = cleanup_code(query.value)
         is_multistatement = query.value.count(';') > 1
         if is_multistatement:
             # fetch does not support multiple statements
