@@ -35,9 +35,7 @@ class Moderation(HideoutCog):
 
         try:
             await member.send(f"You have been banned from Duck Hideout{fmt}.")
-        except discord.HTTPException:
-            pass
-        except discord.Forbidden:
+        except (discord.HTTPException, discord.Forbidden):
             pass
 
         await ctx.send(f"Banned {member} {fmt}")
