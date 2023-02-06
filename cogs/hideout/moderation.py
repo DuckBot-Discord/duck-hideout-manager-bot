@@ -1,8 +1,7 @@
 import discord
 from discord.ext import commands
-from typing import Optional, Annotated
-from utils import HideoutCog, HideoutContext, UntilFlags, ShortTime, Timer
-from constants import DUCK_HIDEOUT
+from typing import Annotated
+from utils import HideoutCog, HideoutContext, UntilFlag, ShortTime, Timer
 from ._checks import hideout_only, counselor_only
 
 class BanFlags(commands.FlagConverter):
@@ -19,13 +18,15 @@ class Moderation(HideoutCog):
         if ctx.author.top_role <= member.top_role:
             return await ctx.send("You can't ban someone who has a role higher or equal to yours!")
         
-        if ctx.me.top_role <= member.top_role:
+        if ctx.guild.me.top_role <= member.top_role:
             return await ctx.send("I can't ban this member!")
 
-        time = reason.flags.time.value
+        time = reason.flags.time
         if time:
-            self.bot.create_timer(time.dt, 'tempban', ctx.guild.id, member.id, precise=False)
+            await self.bot.create_timer(time.dt, 'tempban', ctx.guild.id, member.id, precise=False)
             fmt = f"until {discord.utils.format_dt(time.dt, 'R')}"
+        else:
+            fmt = ""
 
         await member.send(f"You have been banned from Duck Hideout. Reason: {reason.value} {f'Banned until: {fmt}' if fmt else ''}")
         await ctx.send(f"Banned {member} for **{reason}** {fmt}")
