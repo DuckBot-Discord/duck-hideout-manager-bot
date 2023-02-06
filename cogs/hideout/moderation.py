@@ -37,7 +37,7 @@ class Moderation(HideoutCog):
             await member.send(f"You have been banned from Duck Hideout{fmt}.\nAppeal this action by emailing `support@duck-bot.com`")
         except discord.HTTPException:
             pass
-    await member.ban(reason=f"banned by {ctx.author}{fmt}."[:500])
+        await member.ban(reason=f"banned by {ctx.author}{fmt}."[:500])
         await ctx.send(f"Banned {member} {fmt}")
     
     @commands.Cog.listener("on_tempban_time_complete")
