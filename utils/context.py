@@ -184,6 +184,17 @@ class HideoutContext(commands.Context, Generic[BotT]):
             view.stop()
             return None
 
+    @discord.utils.cached_property
+    def reference(self) -> discord.Message | None:
+        if not self.message:
+            return None
+        if not self.message.reference:
+            return None
+        resolved = self.message.reference.resolved
+        if not isinstance(resolved, discord.Message):
+            return None
+        return resolved
+
 
 async def setup(bot: HideoutManager) -> None:
     """Sets up the HideoutContext class.
