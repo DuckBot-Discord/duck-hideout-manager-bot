@@ -34,7 +34,13 @@ class Moderation(HideoutCog):
         else:
             fmt = ""
 
-        await member.send(f"You have been banned from Duck Hideout{fmt}.")
+        try:
+            await member.send(f"You have been banned from Duck Hideout{fmt}.")
+        except discord.HTTPException:
+            pass
+        except discord.Forbidden:
+            pass
+
         await ctx.send(f"Banned {member} {fmt}")
     
     @commands.Cog.listener("on_tempban_time_complete")
