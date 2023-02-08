@@ -8,6 +8,7 @@ import aggdraw
 import asyncpg
 import discord
 from colorthief import ColorThief
+from discord import app_commands
 from discord.ext import commands
 from jishaku.functools import executor_function
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -104,14 +105,12 @@ class ProfileCard:
         # Bots added
         bots_q = """SELECT
             (SELECT COUNT(*) FROM addbot WHERE owner_id = $1 AND added = TRUE) AS added,
-            (SELECT COUNT(*) FROM addbot WHERE owner_id = $1) as requested; 
-        """
+            (SELECT COUNT(*) FROM addbot WHERE owner_id = $1) as requested;"""
         bots_f = await pool.fetchrow(bots_q, self.author.id)
         if bots_f:
             added, requested = bots_f
         else:
             added = requested = 0
-
         self._data = DatabaseData(
             times=status_f,
             message_count=count or 0,
@@ -138,7 +137,6 @@ class ProfileCard:
     @executor_function
     def full_render(self) -> io.BytesIO:
         buffer = io.BytesIO()
-
         self.paste_status_bar()
         self.paste_avatar()
         self.draw_avatar_border()
@@ -170,7 +168,6 @@ class ProfileCard:
         """generate round corner for image"""  # Src: StackOverflow
         if top_radius is None:
             top_radius = radius
-
         mask = Image.new('L', image.size)  # filled with black by default
         draw = aggdraw.Draw(mask)
         brush = aggdraw.Brush('white')
@@ -386,6 +383,7 @@ class ProfileCard:
 
 class ProfileCardCog(HideoutCog):
     @commands.hybrid_command()
+    @app_commands.describe(user='The user whose profile you wish to get.')
     async def profile(self, ctx: HideoutContext, user: discord.Member | discord.User = commands.Author):
         """Shows your or someone else's profile."""
         async with ctx.typing():
