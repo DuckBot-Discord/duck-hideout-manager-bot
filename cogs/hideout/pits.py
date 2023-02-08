@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import asyncio
 from logging import getLogger
 from typing import Optional
@@ -18,6 +19,10 @@ log = getLogger('HM.pit')
 
 
 class PitsManagement(HideoutCog):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.no_auto: bool = os.getenv('NO_AUTO_FEATURES') is not None
+
     async def toggle_block(
         self,
         channel: discord.TextChannel,
@@ -297,6 +302,7 @@ class PitsManagement(HideoutCog):
             await pit.edit(
                 overwrites=new_overwrites, category=archive, reason=f"Pit archived by {ctx.author} ({ctx.author.id})"
             )
+            await ctx.bot.pool.execute("UPDATE pits SET archive_mode = 'manual' WHERE pit_id = $1", pit.id)
         except discord.Forbidden:
             raise commands.BadArgument('I do not have permission to edit channels.')
 
@@ -325,15 +331,13 @@ class PitsManagement(HideoutCog):
             if pits_category is None:
                 raise commands.BadArgument('Could not find pit category')
 
-            _bot_ids = await self.bot.pool.fetch('SELECT bot_id FROM addbot WHERE owner_id = $1 AND added = TRUE', owner.id)
-            users = [
-                _ent for _ent in map(lambda ent: owner.guild.get_member(ent['bot_id']), _bot_ids) if _ent is not None
-            ] + [owner]
-            overs = discord.PermissionOverwrite(
-                manage_messages=True, manage_channels=True, manage_threads=True, view_channel=True
-            )
+            overs = {
+                **pit.overwrites,
+                ctx.guild.default_role: discord.PermissionOverwrite(),
+            }
 
-            await pit.edit(category=pits_category, overwrites={user: overs for user in users})
+            await pit.edit(category=pits_category, overwrites=overs)
+            await ctx.bot.pool.execute("UPDATE pits SET archive_mode = NULL WHERE pit_id = $1", pit.id)
         except discord.Forbidden:
             raise commands.BadArgument('I do not have permission to edit channels.')
 
@@ -421,4 +425,72 @@ class PitsManagement(HideoutCog):
             # Finally, we remove the user from the list of blocked users, regardless of any errors.
             await self.bot.pool.execute(
                 'DELETE FROM blocks WHERE guild_id = $1 AND channel_id = $2 AND user_id = $3', guild_id, channel_id, user_id
+            )
+
+    @commands.Cog.listener('on_member_remove')
+    async def pit_auto_archive(self, member: discord.Member):
+        """Automatically archives pits that are not used."""
+
+        pit_id: int = await self.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_owner = $1''', member.id)
+        if pit_id is None:
+            return log.error('Could not find pit id')
+
+        try:
+            pit: discord.TextChannel = ctx.guild.get_channel(pit_id)  # type: ignore
+            if pit is None:
+                return log.error('Could not find pit')
+
+            archive: Optional[discord.CategoryChannel] = ctx.guild.get_channel(ARCHIVE_CATEGORY)  # type: ignore
+            if archive is None:
+                return log.error('Could not find archive category')
+
+            counselors = member.guild.get_role(COUNSELORS_ROLE)
+            if counselors is None:
+                return log.error('Could not find counselors role')
+
+            new_overwrites = {
+                **pit.overwrites,
+                member.guild.default_role: discord.PermissionOverwrite(view_channel=False),
+                counselors: discord.PermissionOverwrite(view_channel=True),
+            }
+
+            await pit.edit(overwrites=new_overwrites, category=archive, reason=f"Pit archived by automatically: member left")
+            await self.bot.pool.execute("UPDATE pits SET archive_mode = 'leave' WHERE pit_id = $1", pit.id)
+        except discord.Forbidden:
+            return log.error('I do not have permission to edit channels.')
+
+        else:
+            await pit.send('Pit archived automatically: member left')
+
+    @commands.Cog.listener('on_member_remove')
+    async def pit_auto_unarchive(self, member: discord.Member):
+        """Automatically archives pits that are not used."""
+
+        record = await self.bot.pool.fetchval('''SELECT * FROM pits WHERE pit_owner = $1''', member.id)
+
+        if not record or record['archive_mode'] != 'leave':
+            return
+
+        try:
+            pit: discord.TextChannel = ctx.guild.get_channel(record["pit_id"])  # type: ignore
+            if pit is None:
+                raise commands.BadArgument('Could not find pit from id')
+
+            pits_category: Optional[discord.CategoryChannel] = ctx.guild.get_channel(PIT_CATEGORY)  # type: ignore
+            if pits_category is None:
+                raise commands.BadArgument('Could not find pit category')
+
+            overs = {
+                **pit.overwrites,
+                member.guild.default_role: discord.PermissionOverwrite(),
+            }
+
+            await pit.edit(category=pits_category, overwrites=overs)
+            await self.bot.pool.execute("UPDATE pits SET archive_mode = NULL WHERE pit_id = $1", pit.id)
+        except discord.Forbidden:
+            return log.error('I do not have permission to edit channels.')
+        else:
+            await pit.send(
+                f'Pit unarchived automatically: {member.mention} rejoined',
+                allowed_mentions=discord.AllowedMentions(users=True),
             )
