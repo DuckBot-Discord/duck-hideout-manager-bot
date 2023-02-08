@@ -466,7 +466,7 @@ class PitsManagement(HideoutCog):
     async def pit_auto_unarchive(self, member: discord.Member):
         """Automatically archives pits that are not used."""
 
-        record = await self.bot.pool.fetchval('''SELECT * FROM pits WHERE pit_owner = $1''', member.id)
+        record = await self.bot.pool.fetchrow('''SELECT * FROM pits WHERE pit_owner = $1''', member.id)
 
         if not record or record['archive_mode'] != 'leave':
             return
