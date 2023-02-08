@@ -436,11 +436,11 @@ class PitsManagement(HideoutCog):
             return log.error('Could not find pit id')
 
         try:
-            pit: discord.TextChannel = ctx.guild.get_channel(pit_id)  # type: ignore
+            pit: discord.TextChannel = member.guild.get_channel(pit_id)  # type: ignore
             if pit is None:
                 return log.error('Could not find pit')
 
-            archive: Optional[discord.CategoryChannel] = ctx.guild.get_channel(ARCHIVE_CATEGORY)  # type: ignore
+            archive: Optional[discord.CategoryChannel] = member.guild.get_channel(ARCHIVE_CATEGORY)  # type: ignore
             if archive is None:
                 return log.error('Could not find archive category')
 
@@ -472,11 +472,11 @@ class PitsManagement(HideoutCog):
             return
 
         try:
-            pit: discord.TextChannel = ctx.guild.get_channel(record["pit_id"])  # type: ignore
+            pit: discord.TextChannel = member.guild.get_channel(record["pit_id"])  # type: ignore
             if pit is None:
                 raise commands.BadArgument('Could not find pit from id')
 
-            pits_category: Optional[discord.CategoryChannel] = ctx.guild.get_channel(PIT_CATEGORY)  # type: ignore
+            pits_category: Optional[discord.CategoryChannel] = member.guild.get_channel(PIT_CATEGORY)  # type: ignore
             if pits_category is None:
                 raise commands.BadArgument('Could not find pit category')
 
