@@ -34,10 +34,14 @@ class SkipToModal(Modal, title='Skip to page...'):
         self.value = self.page.value
 
 
-# Modified version of the RoboPages from R. Danny, source/credits:
-# https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/utils/paginator.py
-# noinspection PyProtectedMember
 class ViewMenuPages(discord.ui.View):
+    # This Source Code Form is subject to the terms of the Mozilla Public
+    # License, v. 2.0. If a copy of the MPL was not distributed with this
+    # file, You can obtain one at http://mozilla.org/MPL/2.0/.
+    #
+    # Modified version of the RoboPages class, from R. Danny, source/credits:
+    # https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/utils/paginator.py
+
     def __init__(
         self,
         source: menus.PageSource,
