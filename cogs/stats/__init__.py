@@ -2,10 +2,9 @@ import discord
 from discord.ext import commands
 
 from .profile import ProfileCardCog
-from .calendar import CalendarStatusCog
 
 
-class Stats(ProfileCardCog, CalendarStatusCog):
+class Stats(ProfileCardCog):
     """Tracks User Statistics"""
 
     @commands.Cog.listener('on_message')
