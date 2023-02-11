@@ -1,3 +1,6 @@
+# TODO: make stub files for `aggdraw`, `PIL` and `colorthief` to be strict-compatible.
+# pyright: reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportMissingTypeStubs=false
+
 import io
 import itertools
 from datetime import datetime as dt
@@ -22,7 +25,7 @@ class ImageThief(ColorThief):
 
 
 class DatabaseData(NamedTuple):
-    times: list[tuple[dt, str]]
+    times: list[tuple[dt, str]] | list[asyncpg.Record]
     rank: int
     max: int
     message_count: int
@@ -74,7 +77,7 @@ class ProfileCard:
         self.canvas = Image.new('RGB', (self.WIDTH, self.HEIGHT), self.BG_COLOR.to_rgb())
         self.draw = ImageDraw.Draw(self.canvas)
 
-    async def async_init(self, pool: asyncpg.Pool):
+    async def async_init(self, pool: asyncpg.Pool[asyncpg.Record]):
         # status info
         status_q = 'SELECT changed_at, status FROM status_history WHERE user_id = $1 ORDER BY changed_at DESC'
         status_f = await pool.fetch(status_q, self.author.id)

@@ -32,9 +32,11 @@ if TYPE_CHECKING:
     from .context import HideoutContext
 
 # Monkey patch mins and secs into the units
-units = pdt.pdtLocales['en_US'].units
+# pyright: reportUnknownMemberType=false, reportGeneralTypeIssues=false
+units: dict[str, list[str]] = pdt.pdtLocales['en_US'].units
 units['minutes'].append('mins')
 units['seconds'].append('secs')
+# pyright: reportUnknownMemberType=strict, reportGeneralTypeIssues=strict
 
 STT = TypeVar('STT', bound='ShortTime')
 HTT = TypeVar('HTT', bound='HumanTime')
@@ -89,10 +91,10 @@ class HumanTime:
     def __init__(self, argument: str, *, now: Optional[datetime.datetime] = None) -> None:
         now = now or datetime.datetime.utcnow()
         dt, status = self.calendar.parseDT(argument, sourceTime=now)
-        if not status.hasDateOrTime:  # type: ignore
+        if not status.hasDateOrTime:
             raise commands.BadArgument('invalid time provided, try e.g. "tomorrow" or "3 days"')
 
-        if not status.hasTime:  # type: ignore
+        if not status.hasTime:
             # replace it with the current time
             dt = dt.replace(hour=now.hour, minute=now.minute, second=now.second, microsecond=now.microsecond)
 
@@ -127,7 +129,7 @@ class FutureTime(Time):
             raise commands.BadArgument('this time is in the past')
 
 
-class UserFriendlyTime(commands.Converter):
+class UserFriendlyTime(commands.Converter[str]):
     """That way quotes aren't absolutely necessary."""
 
     __slots__: Tuple[str, ...] = (
@@ -140,7 +142,7 @@ class UserFriendlyTime(commands.Converter):
     def __init__(
         self,
         converter: Optional[
-            Union[Callable[[HideoutContext, str], Any], Type[commands.Converter], commands.Converter]
+            Union[Callable[[HideoutContext, str], Any], Type[commands.Converter[str]], commands.Converter[str]]
         ] = None,
         *,
         default: Optional[str] = None,
@@ -151,9 +153,7 @@ class UserFriendlyTime(commands.Converter):
         if converter is not None and not isinstance(converter, commands.Converter):
             raise TypeError('commands.Converter subclass necessary.')
 
-        self.converter = (
-            converter
-        )  # type: Optional[Union[Callable[[HideoutContext, str], Any], Type[commands.Converter], commands.Converter]] # Fuck you im commenting it
+        self.converter = converter
         self.default: Optional[str] = default
 
     async def check_constraints(
@@ -168,7 +168,7 @@ class UserFriendlyTime(commands.Converter):
             remaining = self.default
 
         if self.converter is not None:
-            self.arg = await self.converter.convert(ctx, remaining)  # type: ignore
+            self.arg = await self.converter.convert(ctx, remaining)
         else:
             self.arg = remaining
 
@@ -181,7 +181,9 @@ class UserFriendlyTime(commands.Converter):
         obj.default = self.default
         return obj
 
-    async def convert(self, ctx: HideoutContext, argument: str) -> UserFriendlyTime:
+    async def convert(
+        self, ctx: HideoutContext, argument: str
+    ) -> UserFriendlyTime:  # pyright: reportIncompatibleMethodOverride=false
         # Create a copy of ourselves to prevent race conditions from two
         # events modifying the same instance of a converter
         result = self.copy()
@@ -280,7 +282,7 @@ class plural:
         return f'{v} {singular}'
 
 
-def human_join(seq: Sequence[str], delim=', ', final='or', spaces: bool = True) -> str:
+def human_join(seq: Sequence[str], delim: str = ', ', final: str = 'or', spaces: bool = True) -> str:
     size = len(seq)
     if size == 0:
         return ''
@@ -300,7 +302,7 @@ def human_timedelta(
     dt: datetime.datetime,
     *,
     source: Optional[datetime.datetime] = None,
-    accuracy: int = 3,
+    accuracy: int | None = 3,
     brief: bool = False,
     suffix: Union[bool, str] = True,
 ) -> str:
@@ -336,7 +338,7 @@ def human_timedelta(
         ('second', 's'),
     ]
 
-    output = []
+    output: list[str] = []
     for attr, brief_attr in attrs:
         elem = getattr(delta, attr + 's')
         if not elem:

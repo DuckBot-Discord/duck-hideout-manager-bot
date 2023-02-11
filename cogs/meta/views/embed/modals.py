@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Optional, Type, Union
+from typing import TYPE_CHECKING, Optional, Type, Union, Self
 
 import discord
 from discord import ButtonStyle, Emoji, PartialEmoji
@@ -36,7 +36,7 @@ class BaseModal(discord.ui.Modal):
         self.update_defaults(parent_view.embed)
         super().__init__()
 
-    def update_embed(self):
+    def update_embed(self) -> None:
         raise NotImplementedError
 
     def update_defaults(self, embed: discord.Embed):
@@ -78,18 +78,20 @@ class EditWithModalButton(discord.ui.Button['EmbedEditor']):
 
 
 class EditEmbedModal(BaseModal, title='Editing the embed:'):
-    _title = discord.ui.TextInput(
+    _title = discord.ui.TextInput[Self](
         label='Embed Title', placeholder='Leave any field empty to remove it', max_length=256, required=False
     )
-    description = discord.ui.TextInput(
+    description = discord.ui.TextInput[Self](
         label='Embed Description',
         placeholder='Any text, up to 4,000 characters.\n\nEmbeds can have a shared total of 6,000 characters!',
         style=discord.TextStyle.long,
         required=False,
     )
-    image = discord.ui.TextInput(label='Embed Image URL', placeholder='Must be HTTP(S) format.', required=False)
-    thumbnail = discord.ui.TextInput(label='Thumbnail Image URL', placeholder='Must be HTTP(S) format.', required=False)
-    color = discord.ui.TextInput(
+    image = discord.ui.TextInput[Self](label='Embed Image URL', placeholder='Must be HTTP(S) format.', required=False)
+    thumbnail = discord.ui.TextInput[Self](
+        label='Thumbnail Image URL', placeholder='Must be HTTP(S) format.', required=False
+    )
+    color = discord.ui.TextInput[Self](
         label='Embed Color', placeholder='Hex [#FFFFFF] or RGB [rgb(num, num, num)] only', required=False
     )
 
@@ -104,7 +106,7 @@ class EditEmbedModal(BaseModal, title='Editing the embed:'):
     def update_embed(self):
         self.parent_view.embed.title = self._title.value.strip() or None
         self.parent_view.embed.description = self.description.value.strip() or None
-        failed = []
+        failed: list[str] = []
         if self.color.value:
             try:
                 color = discord.Color.from_str(self.color.value)
@@ -134,11 +136,11 @@ class EditEmbedModal(BaseModal, title='Editing the embed:'):
 
 
 class EditAuthorModal(BaseModal, title='Editing the embed author:'):
-    name = discord.ui.TextInput(
+    name = discord.ui.TextInput[Self](
         label='Author name', max_length=256, placeholder='Leave any field empty to remove it', required=False
     )
-    url = discord.ui.TextInput(label="Author URL", placeholder='Must be HTTP(S) format.', required=False)
-    image = discord.ui.TextInput(label='Author Icon URL', placeholder='Must be HTTP(S) format.', required=False)
+    url = discord.ui.TextInput[Self](label="Author URL", placeholder='Must be HTTP(S) format.', required=False)
+    image = discord.ui.TextInput[Self](label='Author Icon URL', placeholder='Must be HTTP(S) format.', required=False)
 
     def update_defaults(self, embed: discord.Embed):
         self.name.default = embed.author.name
@@ -150,7 +152,7 @@ class EditAuthorModal(BaseModal, title='Editing the embed author:'):
         if not author:
             self.parent_view.embed.remove_author()
 
-        failed = []
+        failed: list[str] = []
 
         image_url = None
         sti = self.image.value.strip()
@@ -190,10 +192,10 @@ class EditAuthorModal(BaseModal, title='Editing the embed author:'):
 
 
 class EditFooterModal(BaseModal, title='Editing the embed author:'):
-    text = discord.ui.TextInput(
+    text = discord.ui.TextInput[Self](
         label='Footer text', max_length=256, placeholder='Leave any field empty to remove it', required=False
     )
-    image = discord.ui.TextInput(label='Footer icon URL', placeholder='Must be HTTP(S) format.', required=False)
+    image = discord.ui.TextInput[Self](label='Footer icon URL', placeholder='Must be HTTP(S) format.', required=False)
 
     def update_defaults(self, embed: discord.Embed):
         self.text.default = embed.footer.text
@@ -204,7 +206,7 @@ class EditFooterModal(BaseModal, title='Editing the embed author:'):
         if not text:
             self.parent_view.embed.remove_author()
 
-        failed = []
+        failed: list[str] = []
 
         image_url = None
         sti = self.image.value.strip()
@@ -229,12 +231,12 @@ class EditFooterModal(BaseModal, title='Editing the embed author:'):
 
 
 class AddFieldModal(BaseModal, title='Add a field'):
-    name = discord.ui.TextInput(label='Field Name', max_length=256)
-    value = discord.ui.TextInput(label='Field Value', max_length=1024, style=discord.TextStyle.paragraph)
-    inline = discord.ui.TextInput(
+    name = discord.ui.TextInput[Self](label='Field Name', max_length=256)
+    value = discord.ui.TextInput[Self](label='Field Value', max_length=1024, style=discord.TextStyle.paragraph)
+    inline = discord.ui.TextInput[Self](
         label='Is inline?', placeholder='[ "Yes" | "No" ] (Default: Yes)', max_length=4, required=False
     )
-    index = discord.ui.TextInput(
+    index = discord.ui.TextInput[Self](
         label='Index (where to place this field)',
         placeholder='Number between 1 and 25. Default: 25 (last)',
         max_length=2,
@@ -242,7 +244,7 @@ class AddFieldModal(BaseModal, title='Add a field'):
     )
 
     def update_embed(self):
-        failed = []
+        failed: list[str] = []
 
         name = self.name.value.strip()
         if not name:
@@ -275,12 +277,12 @@ class AddFieldModal(BaseModal, title='Add a field'):
 
 
 class EditFieldModal(BaseModal):
-    name = discord.ui.TextInput(label='Field Name', max_length=256)
-    value = discord.ui.TextInput(label='Field Value', max_length=1024, style=discord.TextStyle.paragraph)
-    inline = discord.ui.TextInput(
+    name = discord.ui.TextInput[Self](label='Field Name', max_length=256)
+    value = discord.ui.TextInput[Self](label='Field Value', max_length=1024, style=discord.TextStyle.paragraph)
+    inline = discord.ui.TextInput[Self](
         label='Is inline?', placeholder='[ "Yes" | "No" ] (Default: Yes)', max_length=4, required=False
     )
-    new_index = discord.ui.TextInput(
+    new_index = discord.ui.TextInput[Self](
         label='Index (where to place this field)',
         placeholder='Number between 1 and 25. Default: 25 (last)',
         max_length=2,
@@ -328,8 +330,8 @@ class EditFieldModal(BaseModal):
 
 
 class ChooseATagName(discord.ui.Modal):
-    name = discord.ui.TextInput(label='Tag Name', max_length=200, placeholder='Must not be an existing tag.')
-    content = discord.ui.TextInput(
+    name = discord.ui.TextInput[Self](label='Tag Name', max_length=200, placeholder='Must not be an existing tag.')
+    content = discord.ui.TextInput[Self](
         label='Content', max_length=2000, required=False, placeholder='Optionally, you can also add content.'
     )
 
@@ -337,7 +339,9 @@ class ChooseATagName(discord.ui.Modal):
         super().__init__(title=title)
         self.parent = parent
 
-    async def on_submit(self, interaction: discord.Interaction[HideoutManager]):
+    async def on_submit(
+        self, interaction: discord.Interaction[HideoutManager]
+    ):  # pyright: reportIncompatibleMethodOverride=false
         try:
             tag = await self.parent.cog.make_tag(
                 interaction.guild, interaction.user, self.name.value, self.content.value, embed=self.parent.embed

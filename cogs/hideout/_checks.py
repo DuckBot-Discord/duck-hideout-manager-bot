@@ -1,12 +1,12 @@
 import discord
 from discord.ext import commands
 
-from utils import HideoutContext, SilentCommandError
+from utils import HideoutContext, HideoutGuildContext, SilentCommandError
 from utils.constants import COUNSELORS_ROLE, DUCK_HIDEOUT, PIT_CATEGORY
 
 
 def pit_owner_only():
-    async def predicate(ctx: HideoutContext):
+    async def predicate(ctx: HideoutGuildContext):
         if await ctx.bot.is_owner(ctx.author):
             return True
 
@@ -26,7 +26,7 @@ def pit_owner_only():
 
 
 def hideout_only():
-    def predicate(ctx: HideoutContext):
+    def predicate(ctx: HideoutGuildContext):
         if ctx.guild and ctx.guild.id == DUCK_HIDEOUT:
             return True
         raise SilentCommandError
@@ -36,7 +36,7 @@ def hideout_only():
 
 def counselor_only():
     def predicate(ctx: HideoutContext):
-        if not isinstance(ctx.author, discord.Member):
+        if not isinstance(ctx.author, discord.Member) or not ctx.guild:
             return False
         if ctx.guild.get_role(COUNSELORS_ROLE) in ctx.author.roles:
             return True

@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from typing import Generic, Tuple, Type, TypeVar
+import re
+from typing import Any, Generic, Tuple, Type, TypeVar
 
 import discord
 from discord.ext import commands
-from discord.ext.commands import FlagConverter, Converter
 
 from .context import HideoutContext
 
 BET = TypeVar('BET', bound='discord.guild.BanEntry')
-FCT = TypeVar('FCT', bound='FlagConverter')
-CT = TypeVar('CT', bound='Converter')
+FCT = TypeVar('FCT', bound='commands.FlagConverter')
+CT = TypeVar('CT', bound='commands.Converter[Any]')
 T = TypeVar('T')
 
 __all__: Tuple[str, ...] = ('UntilFlag',)
@@ -27,7 +27,7 @@ class UntilFlag(Generic[T, FCT]):
 
         from discord.ext import commands
 
-        class SendFlags(commands.FlagConverter, prefix='--', delimiter=' '):
+        class SendFlags(commands.commands.FlagConverter, prefix='--', delimiter=' '):
             channel: Optional[discord.TextChannel] = None
             reply: Optional[discord.Message] = None
 
@@ -41,23 +41,24 @@ class UntilFlag(Generic[T, FCT]):
     ----------
     value: :class:`str`
         The value of the converter.
-    flags: :class:`FlagConverter`
+    flags: :class:`commands.FlagConverter`
         The resolved flags.
     """
 
     def __init__(self, value: T, converter: Type[T], flags: FCT) -> None:
+        # fmt: off
         self.value = value
         self.flags = flags
 
         if hasattr(converter, '__metadata__'):
             # Annotated[X, Y] can access Y via __metadata__
-            converter = converter.__metadata__[0]  # type: ignore
+            converter = converter.__metadata__[0]
 
         self._converter = converter
-        self._regex = self.flags.__commands_flag_regex__  # type: ignore
-        self._start = self.flags.__commands_flag_prefix__  # type: ignore
+        self._regex: re.Pattern[str] = self.flags.__commands_flag_regex__  # pyright: reportUnknownMemberType=false, reportGeneralTypeIssues=false
+        self._start: str = (self.flags.__commands_flag_prefix__)  # pyright: reportUnknownMemberType=false, reportGeneralTypeIssues=false
 
-    def __class_getitem__(cls, item: Tuple[Type[T], Type[FlagConverter]]) -> UntilFlag:
+    def __class_getitem__(cls, item: Tuple[Type[T], Type[commands.FlagConverter]]) -> UntilFlag[T, FCT]:
         converter, flags = item
         return cls(value='...', flags=flags(), converter=converter)
 
@@ -88,7 +89,7 @@ class UntilFlag(Generic[T, FCT]):
             raise commands.BadArgument(f'No body has been specified before the flags.')
         return True
 
-    async def convert(self, ctx: HideoutContext, argument: str) -> UntilFlag:
+    async def convert(self, ctx: HideoutContext, argument: str) -> UntilFlag[T, FCT]:
         """|coro|
 
         The main convert method of the converter. This will take the given flag converter and
@@ -107,7 +108,7 @@ class UntilFlag(Generic[T, FCT]):
             The converted argument.
         """
         value = self._regex.split(argument, maxsplit=1)[0]
-        converted_value = await commands.run_converters(ctx, self._converter, value, ctx.current_parameter)  # type: ignore
+        converted_value: T = await commands.run_converters(ctx, self._converter, value, ctx.current_parameter)
         commands.core
         print(f"converted is ", converted_value)
         if not await discord.utils.maybe_coroutine(self.validate_value, argument):

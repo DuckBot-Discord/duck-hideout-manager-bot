@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, TypedDict
+from typing import TYPE_CHECKING, Optional, TypedDict, Any
 
 if TYPE_CHECKING:
     import datetime
@@ -9,13 +9,13 @@ if TYPE_CHECKING:
     from discord.ext import commands
 
 
-class _HideoutTracebackOptional(TypedDict, total=False):
+class HideoutTracebackOptional(TypedDict, total=False):
     author: int
     guild: Optional[int]
     channel: int
-    command: Optional[commands.Command | app_commands.Command | app_commands.ContextMenu]
+    command: Optional[commands.Command[Any, ..., Any] | app_commands.Command[Any, ..., Any] | app_commands.ContextMenu]
 
 
-class HideoutTraceback(_HideoutTracebackOptional):
+class HideoutTraceback(HideoutTracebackOptional):
     time: datetime.datetime
     exception: Exception

@@ -6,13 +6,13 @@ import os
 import traceback
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, Type, Self
 
 import discord
 
 from utils.context import HideoutContext
 from utils.errors import HideoutManagerException, SilentCommandError, log
-from utils.types.exception import HideoutTraceback, _HideoutTracebackOptional
+from utils.types.exception import HideoutTraceback, HideoutTracebackOptional
 
 if TYPE_CHECKING:
     from bot import HideoutManager
@@ -97,8 +97,9 @@ class HideoutExceptionManager:
 
         # This is a bit of a hack,  but I do it here so guild_id
         # can be optional, and I wont get type errors.
+        # No chai it gets mad...
         guild_id = packet.get('guild')
-        guild = self.bot._connection._get_guild(guild_id)
+        guild = self.bot.get_guild(guild_id or 0)
         if guild:
             fmt['guild'] = f'{guild.name} ({guild.id})'
         else:
@@ -182,7 +183,7 @@ class HideoutExceptionManager:
         packet: HideoutTraceback = {'time': (ctx and ctx.created_at) or discord.utils.utcnow(), 'exception': error}
 
         if ctx is not None:
-            addons: _HideoutTracebackOptional = {
+            addons: HideoutTracebackOptional = {
                 'command': ctx.command,
                 'author': ctx.user.id,
                 'guild': (ctx.guild and ctx.guild.id) or None,
@@ -222,7 +223,7 @@ class HideoutExceptionManager:
                     return await self.release_error(traceback_string, packet)
 
 
-class HandleHTTPException(AbstractAsyncContextManager, AbstractContextManager):
+class HandleHTTPException(AbstractAsyncContextManager[Self], AbstractContextManager[Self]):
     """
     A context manager that handles HTTP exceptions for them to be
     delivered to a destination channel without needing to create

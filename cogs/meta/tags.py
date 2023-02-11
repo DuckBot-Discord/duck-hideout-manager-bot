@@ -6,7 +6,7 @@ import inspect
 import io
 import typing
 from collections import defaultdict
-from typing import Callable, List, Optional, Type, TypeVar, Union
+from typing import Callable, List, Optional, Type, TypeVar, Union, Any, TypeAlias, TYPE_CHECKING
 
 import asyncpg
 import discord
@@ -14,14 +14,15 @@ from discord import app_commands
 from discord.ext import commands, menus
 
 from cogs.hideout._checks import COUNSELORS_ROLE
-from utils import HideoutCog, HideoutContext, ViewMenuPages
+from utils import HideoutCog, HideoutGuildContext, ViewMenuPages
 
 T = TypeVar('T')
-CO_T = TypeVar("CO_T", bound='Union[Type[commands.Converter], commands.Converter]')
+CO_T = TypeVar("CO_T", bound="Union[Type[commands.Converter[Any]], commands.Converter[Any]]")
 AWARD_EMOJI = [chr(i) for i in range(129351, 129351 + 3)] + ['\N{SPORTS MEDAL}'] * 2
+Database: TypeAlias = Union[asyncpg.Connection[asyncpg.Record], asyncpg.Pool[asyncpg.Record]]
 
 
-def copy_doc(original: Callable) -> Callable[[T], T]:
+def copy_doc(original: Callable[[T], T]) -> Callable[[T], T]:
     def decorator(overridden: T) -> T:
         overridden.__doc__ = original.__doc__
         return overridden
@@ -49,7 +50,7 @@ class Tag:
 
     __slots__ = ("name", "content", "embed", "id", "owner_id", "guild_id", "_cs_raw")
 
-    def __init__(self, payload: dict):
+    def __init__(self, payload: asyncpg.Record):
         self.id: int = payload["id"]
         self.name: str = payload["name"]
         self.content: str = payload["content"]
@@ -70,7 +71,7 @@ class Tag:
 
     async def edit(
         self,
-        connection: typing.Union[asyncpg.Connection, asyncpg.Pool],
+        connection: Database,
         content: Union[str, commands.clean_content],
         embed: Optional[discord.Embed] = discord.utils.MISSING,
     ) -> None:
@@ -83,7 +84,7 @@ class Tag:
         embed: Optional[discord.Embed]
             The new embed of the tag.
             If None, the embed will be removed.
-        connection: Union[asyncpg.Connection, asyncpg.Pool]
+        connection: Union[asyncpg.Connection[asyncpg.Record], asyncpg.Pool[asyncpg.Record]]
             The connection to use.
         """
         if embed is not discord.utils.MISSING:
@@ -105,37 +106,37 @@ class Tag:
         await connection.execute(query, *args)
         update()
 
-    async def transfer(self, connection: typing.Union[asyncpg.Connection, asyncpg.Pool], user: discord.Member):
+    async def transfer(self, connection: Database, user: discord.Member):
         """Transfers the tag to another user.
 
         Parameters
         ----------
         user: discord.User
             The user to transfer the tag to.
-        connection: Union[asyncpg.Connection, asyncpg.Pool]
+        connection: Union[asyncpg.Connection[asyncpg.Record], asyncpg.Pool[asyncpg.Record]]
             The connection to use.
         """
         query = "UPDATE tags SET owner_id = $1 WHERE id = $2"
         await connection.execute(query, user.id, self.id)
         self.owner_id = user.id
 
-    async def delete(self, connection: typing.Union[asyncpg.Connection, asyncpg.Pool]):
+    async def delete(self, connection: Database):
         """Deletes the tag.
 
         Parameters
         ----------
-        connection: Union[asyncpg.Connection, asyncpg.Pool]
+        connection: Union[asyncpg.Connection[asyncpg.Record], asyncpg.Pool[asyncpg.Record]]
             The connection to use.
         """
         query = "DELETE FROM tags WHERE id = $1"
         await connection.execute(query, self.id)
 
-    async def use(self, connection: typing.Union[asyncpg.Connection, asyncpg.Pool]):
+    async def use(self, connection: Database):
         """Adds one to the tag's usage count.
 
         Parameters
         ----------
-        connection: Union[asyncpg.Connection, asyncpg.Pool]
+        connection: Union[asyncpg.Connection[asyncpg.Record], asyncpg.Pool[asyncpg.Record]]
             The connection to use.
         """
         query = "UPDATE tags SET uses = uses + 1 WHERE id = $1"
@@ -143,7 +144,7 @@ class Tag:
 
     async def add_alias(
         self,
-        connection: typing.Union[asyncpg.Connection, asyncpg.Pool],
+        connection: Database,
         alias: typing.Union[str, TagName],
         user: discord.User | discord.Member,
     ):
@@ -155,7 +156,7 @@ class Tag:
             The alias to add.
         user: discord.User
             The user who added the alias.
-        connection: Union[asyncpg.Connection, asyncpg.Pool]
+        connection: Union[asyncpg.Connection[asyncpg.Record], asyncpg.Pool[asyncpg.Record]]
             The connection to use.
         """
         query = (
@@ -165,9 +166,7 @@ class Tag:
         await connection.execute(query, alias, user.id, self.id)
 
 
-# noinspection PyShadowingBuiltins
 class UnknownUser(discord.Object):
-    # noinspection PyPep8Naming
     class display_avatar:
         url = "https://cdn.discordapp.com/embed/avatars/0.png"
 
@@ -183,17 +182,19 @@ class UnknownUser(discord.Object):
 
 
 class TagName(commands.clean_content):
-    def __init__(self, *, lower=True):
+    def __init__(self, *, lower: bool = True):
         self.lower = lower
         super().__init__()
 
     def __class_getitem__(cls, attr: bool):
-        if not isinstance(attr, bool):
+        if not isinstance(attr, bool):  # pyright: reportUnnecessaryIsInstance=false
             raise TypeError("Expected bool, not {}".format(type(attr).__name__))
         return TagName(lower=attr)
 
     # Taken from R.Danny's code because I'm lazy
-    async def actual_conversion(self, ctx: HideoutContext, converted: str, error: Type[discord.DiscordException]):
+    async def actual_conversion(
+        self, ctx: commands.Context[commands.Bot], converted: str, error: Type[discord.DiscordException]
+    ):
         """The actual conversion function after clean content has done its job."""
         lower = converted.lower().strip()
 
@@ -207,10 +208,14 @@ class TagName(commands.clean_content):
 
         # get tag command.
         root: commands.Group = ctx.bot.get_command('tag')  # type: ignore # known type
-        if first_word in root.all_commands:
+        if first_word in root.all_commands:  # pyright: reportUnknownMemberType=false
             raise error('This tag name starts with a reserved word.')
 
-        if lower.startswith('topic:') and not ctx.author.get_role(COUNSELORS_ROLE):
+        is_counselor = False
+        if isinstance(ctx.author, discord.Member) and ctx.author.get_role(COUNSELORS_ROLE):
+            is_counselor = True
+
+        if lower.startswith('topic:') and not is_counselor:
             raise error('Tag name starts with a reserved key (`topic:` - moderator only)')
 
         if lower.startswith('category:') and not await ctx.bot.is_owner(ctx.author):
@@ -219,13 +224,18 @@ class TagName(commands.clean_content):
         return converted if not self.lower else lower
 
     # msg commands
-    async def convert(self, ctx, argument):
+    async def convert(self, ctx: commands.Context[Any], argument: str):
         converted = await super().convert(ctx, argument)
-        return await self.actual_conversion(ctx, converted, commands.BadArgument)  # type: ignore
+        return await self.actual_conversion(ctx, converted, commands.BadArgument)
 
 
 class TagsFromFetchedPageSource(menus.ListPageSource):
     display_owner = True
+
+    if TYPE_CHECKING:
+        current_page: int
+        per_page: int
+        entries: list[asyncpg.Record]
 
     def __init__(
         self,
@@ -242,8 +252,10 @@ class TagsFromFetchedPageSource(menus.ListPageSource):
     def format_records(self, records: enumerate[asyncpg.Record]):
         return '\n'.join(f"{idx}. {tag['name']} (ID: {tag['id']})" for idx, tag in records)
 
-    async def format_page(self, menu: menus.MenuPages, entries: typing.List[asyncpg.Record]):
-        source = enumerate(entries, start=menu.current_page * self.per_page + 1)
+    async def format_page(
+        self, menu: menus.MenuPages, entries: typing.List[asyncpg.Record]
+    ):  # pyright: reportIncompatibleMethodOverride=false
+        source = enumerate(entries, start=(self.current_page * self.per_page) + 1)
         formatted = self.format_records(source)
         embed = discord.Embed(title=f"Tags List", description=discord.utils.escape_markdown(formatted), colour=self.colour)
         if self.member and self.display_owner:
@@ -253,12 +265,12 @@ class TagsFromFetchedPageSource(menus.ListPageSource):
 
 
 class Tags(HideoutCog):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self._tags_in_progress = defaultdict(set)
 
     @staticmethod
-    def maybe_file(text: str, *, filename='tag') -> dict:
+    def maybe_file(text: str, *, filename: str = 'tag') -> dict[str, Any]:
         """Checks if text is greater than 2000 characters
 
         Parameters
@@ -279,7 +291,7 @@ class Tags(HideoutCog):
         return {"content": text}
 
     @staticmethod
-    def maybe_codeblock(content: str | None = None, file: discord.File | None = None, *, filename='tag') -> dict:
+    def maybe_codeblock(content: str | None = None, file: discord.File | None = None) -> dict[str, Any]:
         """Maybe puts `text` in a code block.
 
         **Example**
@@ -316,7 +328,7 @@ class Tags(HideoutCog):
         tag: Union[str, commands.clean_content, int],
         guild_id: Optional[int],
         *,
-        connection: Optional[Union[asyncpg.Connection, asyncpg.Pool]] = None,
+        connection: Optional[Union[asyncpg.Connection[asyncpg.Record], asyncpg.Pool[asyncpg.Record]]] = None,
     ) -> Tag:
         """Gets a tag
 
@@ -328,7 +340,7 @@ class Tags(HideoutCog):
             The guild id to get the tag from. If
             None, the tag will be retrieved from
             the global tags.
-        connection: Optional[Union[asyncpg.Connection, asyncpg.Pool]]
+        connection: Optional[Union[asyncpg.Connection[asyncpg.Record], asyncpg.Pool[asyncpg.Record]]]
             The connection to use. If None,
             the bot's pool will be used.
 
@@ -385,7 +397,7 @@ class Tags(HideoutCog):
         return Tag(fetched_tag)
 
     @contextlib.contextmanager
-    def reserve_tag(self, name, guild_id):
+    def reserve_tag(self, name: str | commands.clean_content, guild_id: int | None):
         """Simple context manager to reserve a tag."""
         if name in self._tags_in_progress[guild_id]:
             raise commands.BadArgument("Sorry, this tag is already being created!")
@@ -453,7 +465,7 @@ class Tags(HideoutCog):
         *,
         timeout: int = 60,
         converter: CO_T | Type[CO_T] | None = None,
-        ctx: HideoutContext | None = None,
+        ctx: HideoutGuildContext | None = None,
     ) -> Union[str, CO_T]:
         """Waits for a message to be sent in a channel.
 
@@ -480,7 +492,7 @@ class Tags(HideoutCog):
             if converter is not None:
                 try:
                     if inspect.isclass(converter) and issubclass(converter, commands.Converter):
-                        if inspect.ismethod(converter.convert):
+                        if inspect.ismethod(converter.convert):  # pyright: reportUnknownArgumentType=false
                             content = await converter.convert(ctx, message.content)
                         else:
                             content = await converter().convert(ctx, message.content)  # type: ignore
@@ -499,12 +511,12 @@ class Tags(HideoutCog):
                 raise commands.BadArgument('No content was provided... Somehow...')
             if isinstance(content, str) and len(content) > 2000:
                 raise commands.BadArgument('Content is too long! 2000 characters max.')
-            return content
+            return content  # type: ignore
         except asyncio.TimeoutError:
             raise commands.BadArgument(f'Timed out waiting for message from {str(author)}...')
 
     @commands.group(name='tag', invoke_without_command=True)
-    async def tag(self, ctx: HideoutContext, *, name: TagName):
+    async def tag(self, ctx: HideoutGuildContext, *, name: TagName):
         """Base tags command. Also shows a tag."""
         tag = await self.get_tag(name, ctx.guild.id)
         if tag.embed and ctx.channel.permissions_for(ctx.me).embed_links:  # type: ignore
@@ -514,7 +526,7 @@ class Tags(HideoutCog):
         await tag.use(self.bot.pool)
 
     @tag.command(name='create', aliases=['new', 'add'])
-    async def tag_create(self, ctx: HideoutContext, tag: TagName(lower=False), *, content: commands.clean_content):  # type: ignore
+    async def tag_create(self, ctx: HideoutGuildContext, tag: TagName(lower=False), *, content: commands.clean_content):  # type: ignore
         """Creates a tag."""
         if len(str(content)) > 2000:
             raise commands.BadArgument("Tag content is too long! Max 2000 characters.")
@@ -523,7 +535,7 @@ class Tags(HideoutCog):
 
     @tag.command(name='make', ignore_extra=False)
     @commands.max_concurrency(1, commands.BucketType.member)
-    async def tag_make(self, ctx: HideoutContext):
+    async def tag_make(self, ctx: HideoutGuildContext):
         """Interactive prompt to make a tag."""
         await ctx.send('Hello, what name would you like to give this tag?')
         try:
@@ -554,7 +566,7 @@ class Tags(HideoutCog):
         await ctx.send(f'Tag {name!r} successfully created!')
 
     @tag.command(name='claim')
-    async def tag_claim(self, ctx: HideoutContext, name: TagName):
+    async def tag_claim(self, ctx: HideoutGuildContext, name: TagName):
         """Claims a tag from a user that isn't in this server anymore."""
         tag = await self.get_tag(name, ctx.guild.id)
         user = await self.bot.get_or_fetch_member(guild=ctx.guild, user=tag.owner_id)
@@ -566,7 +578,7 @@ class Tags(HideoutCog):
         await ctx.send(f'Tag {name!r} successfully claimed!')
 
     @tag.command(name='edit')
-    async def tag_edit(self, ctx: HideoutContext, tag: TagName, *, content: commands.clean_content):
+    async def tag_edit(self, ctx: HideoutGuildContext, tag: TagName, *, content: commands.clean_content):
         """Edits a tag."""
         is_mod = await self.bot.is_owner(ctx.author)
         is_mod = is_mod or ctx.author.guild_permissions.manage_messages
@@ -580,7 +592,7 @@ class Tags(HideoutCog):
         await ctx.send(f'Successfully edited tag!')
 
     @tag.command(name='append')
-    async def tag_append(self, ctx: HideoutContext, tag: TagName, *, content: commands.clean_content):
+    async def tag_append(self, ctx: HideoutGuildContext, tag: TagName, *, content: commands.clean_content):
         """Appends content to a tag.
 
         This will add a new line before the content being appended."""
@@ -606,7 +618,7 @@ class Tags(HideoutCog):
                 await ctx.send(f"Could not edit tag. Are you sure it exists{'' if is_mod else ' and you own it'}?")
 
     @tag.command(name='delete')
-    async def tag_delete(self, ctx: HideoutContext, *, tag: TagName):
+    async def tag_delete(self, ctx: HideoutGuildContext, *, tag: TagName):
         """Deletes one of your tags"""
         async with self.bot.safe_connection() as conn:
             query = """
@@ -639,7 +651,7 @@ class Tags(HideoutCog):
                 await ctx.send(f"Tag {tag_p['name']!r} and corresponding aliases deleted!")
 
     @tag.command(name='delete-id')
-    async def tag_delete_id(self, ctx: HideoutContext, *, tag_id: int):
+    async def tag_delete_id(self, ctx: HideoutGuildContext, *, tag_id: int):
         """Deletes a tag by ID."""
         async with self.bot.safe_connection() as conn:
             query = """
@@ -672,7 +684,7 @@ class Tags(HideoutCog):
                 await ctx.send(f"Tag {tag_p['name']!r} and corresponding aliases deleted!")
 
     @tag.command(name='purge')
-    async def tag_purge(self, ctx: HideoutContext, member: typing.Union[discord.Member, discord.User]):
+    async def tag_purge(self, ctx: HideoutGuildContext, member: typing.Union[discord.Member, discord.User]):
         """Purges all tags from a user"""
         is_owner = is_mod = await self.bot.is_owner(ctx.author)
         is_mod = is_mod or ctx.author.guild_permissions.manage_messages
@@ -726,7 +738,7 @@ class Tags(HideoutCog):
             await ctx.send(f"Deleted all of {member}'s tags ({tag_p} tags deleted)!")
 
     @tag.command(name='alias')
-    async def tag_alias(self, ctx: HideoutContext, alias: TagName, *, points_to: TagName):
+    async def tag_alias(self, ctx: HideoutGuildContext, alias: TagName, *, points_to: TagName):
         """Creates an alias for a tag.
 
         Parameters
@@ -754,7 +766,7 @@ class Tags(HideoutCog):
             await ctx.send(f"Alias {alias!r} that points to {points_to!r} created!")
 
     @tag.command(name='info', aliases=['owner'])
-    async def tag_info(self, ctx: HideoutContext, *, tag: TagName):
+    async def tag_info(self, ctx: HideoutGuildContext, *, tag: TagName):
         """Gets information about a tag"""
         query = """
             WITH original_tag AS (
@@ -794,7 +806,7 @@ class Tags(HideoutCog):
         await ctx.send(embed=embed)
 
     @tag.command(name='list')
-    async def tag_list(self, ctx: HideoutContext, *, member: Optional[discord.Member] = None):
+    async def tag_list(self, ctx: HideoutGuildContext, *, member: Optional[discord.Member] = None):
         """Lists all tags owned by a member."""
         query = """
             SELECT name, id FROM tags
@@ -814,7 +826,7 @@ class Tags(HideoutCog):
         await paginator.start()
 
     @tag.command(name='search')
-    async def tag_search(self, ctx: HideoutContext, *, query: str):
+    async def tag_search(self, ctx: HideoutGuildContext, *, query: str):
         """Searches for tags."""
         db_query = """
             SELECT name, id FROM tags
@@ -832,17 +844,17 @@ class Tags(HideoutCog):
         await paginator.start()
 
     @tag.command(name='raw')
-    async def tag_raw(self, ctx: HideoutContext, *, tag: TagName):
+    async def tag_raw(self, ctx: HideoutGuildContext, *, tag: TagName):
         """Sends a raw tag."""
         tagobj = await self.get_tag(tag, ctx.guild.id)
         await ctx.send(**self.maybe_file(tagobj.raw))
 
-    async def get_guild_or_global_stats(self, ctx: HideoutContext, guild: discord.Guild | None, embed):
+    async def get_guild_or_global_stats(self, ctx: HideoutGuildContext, guild: discord.Guild | None, embed: discord.Embed):
         """Gets the tag stats of a guild.
 
         Parameters
         ----------
-        ctx: HideoutContext
+        ctx: HideoutGuildContext
             The context of the command.
         guild: discord.Guild
             The guild to get the tag stats of.
@@ -916,12 +928,14 @@ class Tags(HideoutCog):
 
         await ctx.send(embed=embed)
 
-    async def user_tag_stats(self, ctx: HideoutContext, member: discord.Member | discord.User, guild: discord.Guild | None):
+    async def user_tag_stats(
+        self, ctx: HideoutGuildContext, member: discord.Member | discord.User, guild: discord.Guild | None
+    ):
         """Gets the tag stats of a member.
 
         Parameters
         ----------
-        ctx: HideoutContext
+        ctx: HideoutGuildContext
             The context to get the number of tags in.
         member: discord.Member
             The member to get the stats for.
@@ -984,7 +998,7 @@ class Tags(HideoutCog):
         await ctx.send(embed=embed)
 
     @tag.command(name='stats')
-    async def tag_stats(self, ctx: HideoutContext, member: Optional[discord.Member] = None):
+    async def tag_stats(self, ctx: HideoutGuildContext, member: Optional[discord.Member] = None):
         """Gets the tag stats of a member or this server."""
         if member is None:
             embed = discord.Embed()
@@ -994,7 +1008,7 @@ class Tags(HideoutCog):
             await self.user_tag_stats(ctx, member, ctx.guild)
 
     @tag.command(name='remove-embed')
-    async def tag_remove_embed(self, ctx: HideoutContext, *, tag: TagName):
+    async def tag_remove_embed(self, ctx: HideoutGuildContext, *, tag: TagName):
         """Removes an embed from a tag.
 
         To add an embed, use the ``embed`` command.

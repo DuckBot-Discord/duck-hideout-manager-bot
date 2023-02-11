@@ -73,5 +73,5 @@ class Stats(ProfileCardCog, CalendarStatusCog):
         await self.bot.pool.execute(query, after.id, str(after.status), discord.utils.utcnow())
 
 
-async def setup(bot):
+async def setup(bot: commands.Bot):
     await bot.add_cog(Stats(bot))

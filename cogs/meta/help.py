@@ -34,13 +34,13 @@ class Help(HideoutCog):
         sort: bool = True,
         verify_checks: Optional[bool] = None,
         show_hidden: Optional[bool] = None,
-        key: Optional[Callable[[commands.Command[Any, ..., Any]], Any]] = None,
+        key: Callable[[commands.Command[Any, ..., Any]], Any] | None = None,
     ) -> List[commands.Command[Any, ..., Any]]:
         if sort and key is None:
             key = lambda c: c.name
 
         show_hidden = self.show_hidden if show_hidden is None else show_hidden
-        verify_checks = self.verify_checks if show_hidden is None else show_hidden
+        verify_checks = self.verify_checks if verify_checks is None else show_hidden
 
         iterator = command_list if show_hidden else filter(lambda c: not c.hidden, command_list)
         if verify_checks is False:
@@ -48,7 +48,7 @@ class Help(HideoutCog):
             # run it straight through normally without using await.
             return sorted(iterator, key=key) if sort else list(iterator)  # type: ignore # the key shouldn't be None
 
-        if verify_checks is None and not ctx.guild:
+        if verify_checks and not ctx.guild:
             # if verify_checks is None and we're in a DM, don't verify
             return sorted(iterator, key=key) if sort else list(iterator)  # type: ignore
 
@@ -59,18 +59,18 @@ class Help(HideoutCog):
             except commands.CommandError:
                 return False
 
-        ret = []
+        ret: list[commands.Command[Any, ..., Any]] = []
         for cmd in iterator:
             valid = await predicate(cmd)
             if valid:
                 ret.append(cmd)
 
         if sort:
-            ret.sort(key=key)
+            ret.sort(key=key)  # type: ignore # the key shouldn't be None
         return ret
 
     def commands_to_str(self, command_list: Iterable[commands.Command[Any, ..., Any]]) -> list[str]:
-        ret = []
+        ret: list[str] = []
         for command in command_list:
             if isinstance(command, commands.Group) and command.commands:
                 ret.append(f"__{command.qualified_name}__")
@@ -93,13 +93,14 @@ class Help(HideoutCog):
             SELECT array_agg(substr(name, 7)) FROM tags 
             WHERE LOWER(name) LIKE 'topic:%' AND (guild_id = $1)
         """
-        topics: list[str] = await self.bot.pool.fetchval(query, ctx.guild.id)
-        joined = f"__{human_join(topics, delim='__, __', final='__ or __', spaces=False)}__"
-        embed.add_field(
-            name='\N{GLOWING STAR} Topics',
-            value=f"Handwritten guides by our moderation team.\n{joined}",
-            inline=False,
-        )
+        if ctx.guild:
+            topics: list[str] = await self.bot.pool.fetchval(query, ctx.guild.id)
+            joined = f"__{human_join(topics, delim='__, __', final='__ or __', spaces=False)}__"
+            embed.add_field(
+                name='\N{GLOWING STAR} Topics',
+                value=f"Handwritten guides by our moderation team.\n{joined}",
+                inline=False,
+            )
         embed.add_field(
             name='\N{FILE FOLDER} Categories',
             value=(
@@ -132,7 +133,7 @@ class Help(HideoutCog):
             embed.color = self.bot.color
         await ctx.send(topic.content, embed=embed)
 
-    async def format_command(self, ctx: HideoutContext, command: commands.Command, x: bool = False) -> str:
+    async def format_command(self, ctx: HideoutContext, command: commands.Command[Any, ..., Any], x: bool = False) -> str:
         prefix = ''
         if isinstance(command, (commands.HybridCommand, commands.HybridGroup)):
             if command.with_app_command and not getattr(command, 'commands', None):
@@ -147,7 +148,7 @@ class Help(HideoutCog):
             lock = '' if can_run else '\N{HEAVY MULTIPLICATION X}'
 
         parent: Optional[commands.Group[Any, ..., Any]] = command.parent  # type: ignore # the parent will be a Group
-        entries = []
+        entries: list[str] = []
         while parent is not None:
             if not parent.signature or parent.invoke_without_command:
                 entries.append(parent.name)
@@ -159,7 +160,7 @@ class Help(HideoutCog):
         alias = command.name if not parent_sig else parent_sig + ' ' + command.name
         return f'{lock}{prefix}{alias} {command.signature}'
 
-    async def send_command_help(self, ctx: HideoutContext, command: commands.Command | commands.HybridCommand):
+    async def send_command_help(self, ctx: HideoutContext, command: commands.Command[Any, ..., Any]):
         formatted = await self.format_command(ctx, command)
         embed = discord.Embed(title=formatted, description=command.help)
 
@@ -184,7 +185,7 @@ class Help(HideoutCog):
         await ctx.send(embed=embed)
 
     async def command_tree(
-        self, ctx: HideoutContext, command: commands.Group | commands.Command, level: int = 0
+        self, ctx: HideoutContext, command: commands.Group[Any, ..., Any] | commands.Command[Any, ..., Any], level: int = 0
     ) -> list[str]:
         lines = [' ' * level * self.indent + await self.format_command(ctx, command, x=True)]
         if isinstance(command, commands.Group):
@@ -192,7 +193,7 @@ class Help(HideoutCog):
                 lines.extend(await self.command_tree(ctx, command, level=level + 1))
         return lines
 
-    async def send_group_help(self, ctx: HideoutContext, group: commands.Group | commands.HybridGroup):
+    async def send_group_help(self, ctx: HideoutContext, group: commands.Group[Any, ..., Any]):
         if not group.commands:
             return await self.send_command_help(ctx, group)
 
@@ -231,7 +232,7 @@ class Help(HideoutCog):
     async def send_cog_help(self, ctx: HideoutContext, cog: HideoutCog):
         embed = discord.Embed(title=cog.qualified_name, description=cog.description)
 
-        lines = []
+        lines: list[str] = []
         for command in cog.get_commands():
             lines.extend(await self.command_tree(ctx, command))
 
@@ -263,7 +264,7 @@ class Help(HideoutCog):
             if not command:
                 raise commands.BadArgument(f'Command not found: {name[:1000]!r}')
         if command:
-            if isinstance(command, (commands.Group, commands.HybridGroup)):
+            if isinstance(command, commands.Group):
                 return await self.send_group_help(ctx, command)
             else:
                 return await self.send_command_help(ctx, command)
@@ -285,32 +286,34 @@ class Help(HideoutCog):
             SELECT array_agg(name) FROM tags 
             WHERE LOWER(name) LIKE 'topic:%' AND (guild_id = $1)
         """
-        topics: list[str] = await self.bot.pool.fetchval(query, ctx.guild.id)
-        topic_map = {topic.removeprefix('topic:').strip().lower(): topic for topic in topics}
-        topic_name = topic_map.get(entry.lower(), None)
         topic = None
-        if topic_name:
-            try:
-                topic = await self.tags.get_tag(topic_name, ctx.guild.id)
-            except commands.BadArgument:
-                pass
-        elif entry.startswith('topic:'):
-            stripped = entry.removeprefix('topic:').strip().lower()
-            topic_name = topic_map.get(stripped, None)
-            if not topic_name:
-                raise commands.BadArgument(f'Topic not found: {stripped[0:1000]!r}')
-            else:
+        if ctx.guild:
+            topics: list[str] = await self.bot.pool.fetchval(query, ctx.guild.id)
+            topic_map = {topic.removeprefix('topic:').strip().lower(): topic for topic in topics}
+            topic_name = topic_map.get(entry.lower(), None)
+            topic = None
+            if topic_name:
                 try:
                     topic = await self.tags.get_tag(topic_name, ctx.guild.id)
                 except commands.BadArgument:
+                    pass
+            elif entry.startswith('topic:'):
+                stripped = entry.removeprefix('topic:').strip().lower()
+                topic_name = topic_map.get(stripped, None)
+                if not topic_name:
                     raise commands.BadArgument(f'Topic not found: {stripped[0:1000]!r}')
+                else:
+                    try:
+                        topic = await self.tags.get_tag(topic_name, ctx.guild.id)
+                    except commands.BadArgument:
+                        raise commands.BadArgument(f'Topic not found: {stripped[0:1000]!r}')
         if topic:
             return await self.send_topic_help(ctx, topic)
 
         # Alas, nothing matched <uh oh!>. Inform the user about that.
         raise commands.BadArgument(f'{entry[:1000]!r} is not a valid command, category or topic.')
 
-    async def topic_choices(self, interaction: discord.Interaction, current: str) -> list[Choice]:
+    async def topic_choices(self, interaction: discord.Interaction, current: str) -> list[Choice[str]]:
         query = """
             WITH selected AS (
                 SELECT name FROM tags 
@@ -326,7 +329,7 @@ class Help(HideoutCog):
         topic_choices = [app_commands.Choice(name=topic, value=topic) for topic in topics]
         return topic_choices
 
-    async def category_choices(self, interaction: discord.Interaction, current: str) -> list[Choice]:
+    async def category_choices(self, interaction: discord.Interaction, current: str) -> list[Choice[str]]:
         category_choices = [
             app_commands.Choice(name=f'category: {name}', value=f'category: {name}')
             for name in sorted(
@@ -337,7 +340,7 @@ class Help(HideoutCog):
         ]
         return category_choices
 
-    async def command_choices(self, interaction: discord.Interaction, current: str) -> list[Choice]:
+    async def command_choices(self, interaction: discord.Interaction, current: str) -> list[Choice[str]]:
         command_choices = [
             app_commands.Choice(name=f'command: {cmd.name}', value=f'command: {cmd.name}')
             for cmd in sorted(
@@ -351,7 +354,7 @@ class Help(HideoutCog):
         return command_choices
 
     @help.autocomplete('entry')
-    async def entry_autocomplete(self, interaction: discord.Interaction, current: str) -> list[Choice]:
+    async def entry_autocomplete(self, interaction: discord.Interaction, current: str) -> list[Choice[str]]:
 
         if current.startswith('topic:'):
             return await self.topic_choices(interaction, current)

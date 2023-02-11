@@ -6,6 +6,7 @@ import logging
 import random
 import re
 import sys
+from types import TracebackType
 from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
@@ -85,13 +86,14 @@ class DbTempContextManager(Generic[DBT]):
     def __init__(self, bot: Type[DBT], uri: str) -> None:
         self.bot: Type[DBT] = bot
         self.uri: str = uri
-        self._pool: Optional[asyncpg.Pool] = None
+        self._pool: Optional[asyncpg.Pool[asyncpg.Record]] = None
 
-    async def __aenter__(self) -> asyncpg.Pool:
-        self._pool = pool = await self.bot.setup_pool(uri=self.uri)
+    async def __aenter__(self) -> asyncpg.Pool[asyncpg.Record]:
+        pool = await self.bot.setup_pool(uri=self.uri)
+        self._pool = pool
         return pool
 
-    async def __aexit__(self, *args) -> None:
+    async def __aexit__(self, *args: Any) -> None:
         if self._pool:
             await self._pool.close()
 
@@ -117,23 +119,23 @@ class DbContextManager(Generic[DBT]):
     def __init__(self, bot: DBT, *, timeout: float = 10.0) -> None:
         self.bot: DBT = bot
         self.timeout: float = timeout
-        self._pool: asyncpg.Pool = bot.pool
-        self._conn: Optional[Connection] = None
+        self._pool: asyncpg.Pool[asyncpg.Record] = bot.pool
+        self._conn: Optional[Connection[asyncpg.Record]] = None
         self._tr: Optional[Transaction] = None
 
-    async def acquire(self) -> Connection:
+    async def acquire(self) -> Connection[asyncpg.Record]:
         return await self.__aenter__()
 
     async def release(self) -> None:
         return await self.__aexit__(None, None, None)
 
-    async def __aenter__(self) -> Connection:
+    async def __aenter__(self) -> Connection[asyncpg.Record]:
         self._conn = conn = await self._pool.acquire(timeout=self.timeout)  # type: ignore
         self._tr = conn.transaction()
         await self._tr.start()
         return conn  # type: ignore
 
-    async def __aexit__(self, exc_type, exc, tb):
+    async def __aexit__(self, exc_type: Type[Exception] | None, exc: Exception | None, tb: TracebackType | None):
         if exc and self._tr:
             await self._tr.rollback()
 
@@ -193,10 +195,10 @@ class HideoutHelper(TimerManager):
 
 class HideoutManager(commands.AutoShardedBot, HideoutHelper):
     if TYPE_CHECKING:
-        user: discord.ClientUser
-        cogs: dict[str, HideoutCog]
+        user: discord.ClientUser  # type: ignore
+        cogs: dict[str, HideoutCog]  # type: ignore
 
-    def __init__(self, *, session: ClientSession, pool: Pool, error_wh: str, prefix: str) -> None:
+    def __init__(self, *, session: ClientSession, pool: Pool[asyncpg.Record], error_wh: str, prefix: str) -> None:
         intents = discord.Intents.all()
         intents.typing = False
 
@@ -211,9 +213,9 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
             max_messages=4000,
             help_command=None,
         )
-        self.pool: Pool = pool
+        self.pool: Pool[asyncpg.Record] = pool
         self.session: ClientSession = session
-        self._context_cls: Type[commands.Context] = commands.Context
+        self.context_class: Type[commands.Context[HideoutManager]] = commands.Context
         self.error_webhook_url: Optional[str] = error_wh
         self._start_time: Optional[datetime.datetime] = None
         self.allowed_locales: Set[str] = {'en_us', 'es_es', 'it'}
@@ -250,7 +252,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         return DbTempContextManager(cls, uri)
 
     @classmethod
-    async def setup_pool(cls: Type[DBT], *, uri: str, **kwargs) -> asyncpg.Pool:
+    async def setup_pool(cls: Type[DBT], *, uri: str, **kwargs: Any) -> asyncpg.Pool[asyncpg.Record]:
         """:meth: `asyncpg.create_pool` with some extra functionality.
 
         Parameters
@@ -261,17 +263,15 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
             Extra keyword arguments to pass to :meth:`asyncpg.create_pool`.
         """  # copy_doc for create_pool maybe?
 
-        def _encode_jsonb(value):
-            # noinspection PyProtectedMember
-            return discord.utils._to_json(value)
+        def _encode_jsonb(value: Any):
+            return discord.utils._to_json(value)  # pyright: reportPrivateUsage=false
 
-        def _decode_jsonb(value):
-            # noinspection PyProtectedMember
-            return discord.utils._from_json(value)
+        def _decode_jsonb(value: Any):
+            return discord.utils._from_json(value)  # pyright: reportPrivateUsage=false
 
         old_init = kwargs.pop('init', None)
 
-        async def init(con):
+        async def init(con: Connection[asyncpg.Record]):
             await con.set_type_codec(
                 'jsonb', schema='pg_catalog', encoder=_encode_jsonb, decoder=_decode_jsonb, format='text'
             )
@@ -293,7 +293,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         return result
 
     @discord.utils.cached_property
-    def mention_regex(self) -> re.Pattern:
+    def mention_regex(self) -> re.Pattern[str]:
         """:class:`re.Pattern`: A regex pattern that matches the bot's mention.
 
         Raises
@@ -359,7 +359,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         """:class:`~discord.PartialEmoji`: The emoji used to denote a command has finished processing."""
         return discord.PartialEmoji.from_str(random.choice(self.constants.DONE))
 
-    def safe_connection(self, *, timeout: float = 10.0) -> DbContextManager:
+    def safe_connection(self, *, timeout: float = 10.0) -> DbContextManager[HideoutManager]:
         """A context manager that will acquire a connection from the bot's pool.
 
         This will neatly manage the connection and release it back to the pool when the context is exited.
@@ -373,7 +373,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
 
     async def get_context(
         self, message: discord.Message, *, cls: Type[DCT] = None
-    ) -> Union[HideoutContext, commands.Context]:
+    ) -> Union[HideoutContext, commands.Context[HideoutManager]]:
         """|coro|
 
         Used to get the invocation context from the message.
@@ -385,7 +385,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         cls: Type[:class:`HideoutContext`]
             The class to use for the context.
         """
-        new_cls = cls or self._context_cls
+        new_cls = cls or self.context_class
         return await super().get_context(message, cls=new_cls)
 
     async def on_connect(self):
@@ -406,7 +406,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         if not self._start_time:
             self._start_time = discord.utils.utcnow()
 
-    async def on_message(self, message: discord.Message) -> Optional[discord.Message]:
+    async def on_message(self, message: discord.Message) -> None:
         """|coro|
 
         Called every time a message is received by the bot. Used to check if the message
@@ -418,9 +418,9 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
             The message that was created for replying to the user.
         """
         if self.mention_regex.fullmatch(message.content):
-            return await message.reply(f"My prefix is `-`!")
-
-        await self.process_commands(message)
+            await message.reply(f"My prefix is `-`!")
+        else:
+            await self.process_commands(message)
 
     async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
         """|coro|
@@ -471,12 +471,6 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
             return interaction.client.dispatch('app_command_error', interaction, command, error)
 
         raise error from None
-
-    # This is overridden, so we don't get so many annoying type errors when passing
-    # a Member into is_owner  ## Nah chai it's your shitty type checker smh!
-    @discord.utils.copy_doc(commands.Bot.is_owner)
-    async def is_owner(self, user: Union[discord.User, discord.Member]) -> bool:
-        return await super().is_owner(user)
 
     async def start(self, token: str, *, reconnect: bool = True, verbose: bool = True) -> None:
         """|coro|
@@ -560,7 +554,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         except discord.HTTPException:
             return None
 
-    async def get_or_fetch_user(self, user_id: int) -> Optional[discord.User]:
+    async def get_or_fetch_user(self, user_id: int) -> discord.User:
         """|coro|
 
         Used to get a member from a guild. If the member was not found, the function
@@ -573,13 +567,11 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
 
         Returns
         -------
-        Optional[:class:`~discord.User`]
+        :class:`~discord.User`
             The member that was requested.
         """
-        try:
-            return self.get_user(user_id) or await self.fetch_user(user_id)
-        except discord.HTTPException:
-            return None
+        return self.get_user(user_id) or await self.fetch_user(user_id)
+        # theoretically this should never fail.
 
     async def on_command(self, ctx: HideoutContext):
         """|coro|

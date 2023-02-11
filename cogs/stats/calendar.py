@@ -2,11 +2,11 @@ import datetime
 import io
 import itertools
 import zoneinfo
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import cachetools
 import discord
-from asyncpg import Pool
+from asyncpg import Pool, Record
 from discord import app_commands
 from discord.ext import commands
 from jishaku.functools import executor_function
@@ -35,7 +35,7 @@ class CalendarStatus:
         None: discord.Colour.from_str('#1b1d21'),
     }
 
-    async def async_init(self, member: discord.abc.User, pool: Pool):
+    async def async_init(self, member: discord.abc.User, pool: Pool[Record]):
         self.member = member
         query = """
             WITH ret AS (
@@ -134,15 +134,15 @@ class CalendarStatus:
 
         font = ImageFont.truetype('./assets/fonts/Oswald-SemiBold.ttf', 16)
         draw = ImageDraw.Draw(canvas)
-        draw.text((0, 0), times[0][1].strftime('%a %d %b'), font=font)
+        draw.text((0, 0), times[0][1].strftime('%a %d %b'), font=font)  # pyright: reportUnknownMemberType=false
 
         return canvas
 
 
 class CalendarStatusCog(HideoutCog):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.processed: cachetools.LRUCache[str, list[app_commands.Choice]] = cachetools.LRUCache(maxsize=200)
+        self.processed: cachetools.LRUCache[str, list[app_commands.Choice[str]]] = cachetools.LRUCache(maxsize=200)
 
     @commands.hybrid_command(name='calendar-status', aliases=('calendarstatus', 'cs'))
     @app_commands.describe(user='The user whose calendar you wish to get.')
@@ -177,7 +177,7 @@ class CalendarStatusCog(HideoutCog):
         await ctx.send(f'Updated your timezone to {tz}', ephemeral=True)
 
     @set_timezone.autocomplete('timezone_name')
-    async def settz_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice]:
+    async def settz_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         try:
             return self.processed[current]
         except KeyError:
@@ -187,7 +187,7 @@ class CalendarStatusCog(HideoutCog):
             return processed
 
     @commands.command()
-    async def time(self, ctx: commands.Context, user: discord.Member | discord.User = commands.Author):
+    async def time(self, ctx: HideoutContext, user: discord.Member | discord.User = commands.Author):
         """Shows a user's time, or yours."""
         query = "SELECT timezone FROM user_settings WHERE user_id = $1"
         tz_name = await self.bot.pool.fetchval(query, user.id)

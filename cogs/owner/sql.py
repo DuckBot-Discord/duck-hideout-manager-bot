@@ -2,14 +2,17 @@ from __future__ import annotations
 
 import io
 import time
-from typing import List, Annotated
+from typing import List, Annotated, TYPE_CHECKING
 
 from discord import File
-from discord.ext.commands import Converter, Flag, FlagConverter, command
-from import_expression import eval
+from discord.ext import commands
+
 from tabulate import tabulate
 
 from utils import HideoutCog, HideoutContext, UntilFlag
+
+if not TYPE_CHECKING:
+    from import_expression import eval
 
 
 def cleanup_code(content: str):
@@ -24,10 +27,10 @@ def cleanup_code(content: str):
 
 
 class plural:
-    def __init__(self, value):
+    def __init__(self, value: int):
         self.value = value
 
-    def __format__(self, format_spec):
+    def __format__(self, format_spec: str):
         v = self.value
         singular, _, plural = format_spec.partition('|')
         plural = plural or f'{singular}s'
@@ -36,17 +39,17 @@ class plural:
         return f'{v} {singular}'
 
 
-class EvaluatedArg(Converter):
-    async def convert(self, ctx: HideoutContext, argument: str) -> str:
+class EvaluatedArg(commands.Converter[str]):
+    async def convert(self, ctx: HideoutContext, argument: str) -> str:  # pyright: reportIncompatibleMethodOverride=false
         return eval(cleanup_code(argument), {'bot': ctx.bot, 'ctx': ctx})
 
 
-class SqlCommandFlags(FlagConverter, prefix="--", delimiter=" ", case_insensitive=True):
-    args: List[str] = Flag(name='argument', aliases=['a', 'arg'], annotation=List[EvaluatedArg], default=[])  # type: ignore
+class SqlCommandFlags(commands.FlagConverter, prefix="--", delimiter=" ", case_insensitive=True):
+    args: List[str] = commands.flag(name='argument', aliases=['a', 'arg'], default=[])
 
 
 class SQLCommands(HideoutCog):
-    @command()
+    @commands.command()
     async def sql(self, ctx: HideoutContext, *, query: UntilFlag[Annotated[str, cleanup_code], SqlCommandFlags]):
         """Executes an SQL query."""
         is_multistatement = query.value.count(';') > 1

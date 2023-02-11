@@ -12,12 +12,12 @@ from .views.embed import EmbedEditor, Embed
 try:
     from utils.ignored import HORRIBLE_HELP_EMBED
 except ImportError:
-    HORRIBLE_HELP_EMBED = discord.Embed(title='No information available...')
+    HORRIBLE_HELP_EMBED = discord.Embed(title='No information available...')  # type: ignore
 
 __all__ = ('EmbedMaker', 'EmbedFlags')
 
 
-def strip_codeblock(content):
+def strip_codeblock(content: str) -> str:
     """Automatically removes code blocks from the code."""
     # remove ```py\n```
     if content.startswith('```') and content.endswith('```'):
@@ -42,32 +42,32 @@ class FieldFlags(commands.FlagConverter, prefix='--', delimiter='', case_insensi
 
 class FooterFlags(commands.FlagConverter, prefix='--', delimiter='', case_insensitive=True):
     text: str
-    icon: verify_link = None  # type: ignore
+    icon: typing.Annotated[str, verify_link] | None = None
 
 
 class AuthorFlags(commands.FlagConverter, prefix='--', delimiter='', case_insensitive=True):
     name: str
-    icon: verify_link = None  # type: ignore
-    url: verify_link = None  # type: ignore
+    icon: typing.Annotated[str, verify_link] | None = None
+    url: typing.Annotated[str, verify_link] | None = None
 
 
 class EmbedFlags(commands.FlagConverter, prefix='--', delimiter='', case_insensitive=True):
+    title: str | None = None
+    description: str | None = None
+    color: discord.Color | None = None
+    field: typing.List[FieldFlags] | None = None
+    footer: FooterFlags | None = None
+    image: typing.Annotated[str, verify_link] | None = None
+    author: AuthorFlags | None = None
+    thumbnail: typing.Annotated[str, verify_link] | None = None
+    save: TagName | None = None
+
     @classmethod
-    async def convert(cls, ctx: HideoutContext, argument: str):
+    async def convert(cls, ctx: HideoutContext, argument: str):  # pyright: reportIncompatibleMethodOverride=false
         argument = strip_codeblock(argument).replace(' —', ' --')
         # Here we strip the code block if any and replace the iOS dash with
         # a regular double-dash for ease of use.
         return await super().convert(ctx, argument)
-
-    title: str = None  # type: ignore
-    description: str = None  # type: ignore
-    color: discord.Color = None  # type: ignore
-    field: typing.List[FieldFlags] = None  # type: ignore
-    footer: FooterFlags = None  # type: ignore
-    image: verify_link = None  # type: ignore
-    author: AuthorFlags = None  # type: ignore
-    thumbnail: verify_link = None  # type: ignore
-    save: TagName = None  # type: ignore
 
 
 class JsonFlag(commands.FlagConverter, prefix='--', delimiter='', case_insensitive=True):
@@ -133,8 +133,9 @@ class EmbedMaker(HideoutCog):
             except Exception as e:
                 raise commands.BadArgument(f'An unexpected error occurred: {type(e).__name__}: {e}')
         else:
-            is_mod = await self.bot.is_owner(ctx.author)
-            is_mod = is_mod or ctx.author.guild_permissions.manage_messages
+            is_mod: bool = await self.bot.is_owner(ctx.author)
+            if isinstance(ctx.author, discord.Member):
+                is_mod = is_mod or ctx.author.guild_permissions.manage_messages
             query = """
                 SELECT EXISTS (
                     SELECT * FROM tags
@@ -143,37 +144,43 @@ class EmbedMaker(HideoutCog):
                     AND (owner_id = $3 OR $4::BOOL = TRUE)
                 )
             """
-            confirm = await ctx.bot.pool.fetchval(query, flags.save, ctx.guild.id, ctx.author.id, is_mod)
-            if confirm is True:
-                confirm = await ctx.confirm(
-                    f"{ctx.author.mention} do you want to add this embed to "
-                    f"tag {flags.save!r}\n_This prompt will time out in 3 minutes, "
-                    f"so take your time_",
-                    embed=embed,
-                    timeout=180,
-                )
+            confirm = False
+            if ctx.guild:
+                confirm = await ctx.bot.pool.fetchval(query, flags.save, ctx.guild.id, ctx.author.id, is_mod)
                 if confirm is True:
-                    query = """
-                        with upsert as (
-                            UPDATE tags
-                            SET embed = $1
-                            WHERE LOWER(name) = $2
-                            AND guild_id = $3
-                            AND (owner_id = $4) OR ($5::BOOL = TRUE)
-                            RETURNING *
-                        )
-                         SELECT EXISTS ( SELECT * FROM upsert )   
-                    """
-                    added = await ctx.bot.pool.fetchval(
-                        query, embed.to_dict(), flags.save, ctx.guild.id, ctx.author.id, is_mod
+                    confirm = await ctx.confirm(
+                        f"{ctx.author.mention} do you want to add this embed to "
+                        f"tag {flags.save!r}\n_This prompt will time out in 3 minutes, "
+                        f"so take your time_",
+                        embed=embed,
+                        timeout=180,
                     )
-                    if added is True:
-                        await ctx.send(f'Added embed to tag {flags.save!r}!')
-                    else:
-                        await ctx.send(f"Could not edit tag. Are you sure it exists{'' if is_mod else ' and you own it'}?")
-                elif confirm is False:
-                    await ctx.send(f'Cancelled!')
+                    if confirm is True:
+                        query = """
+                            with upsert as (
+                                UPDATE tags
+                                SET embed = $1
+                                WHERE LOWER(name) = $2
+                                AND guild_id = $3
+                                AND (owner_id = $4) OR ($5::BOOL = TRUE)
+                                RETURNING *
+                            )
+                            SELECT EXISTS ( SELECT * FROM upsert )   
+                        """
+                        added = await ctx.bot.pool.fetchval(
+                            query, embed.to_dict(), flags.save, ctx.guild.id, ctx.author.id, is_mod
+                        )
+                        if added is True:
+                            await ctx.send(f'Added embed to tag {flags.save!r}!')
+                        else:
+                            await ctx.send(
+                                f"Could not edit tag. Are you sure it exists{'' if is_mod else ' and you own it'}?"
+                            )
+                    elif confirm is False:
+                        await ctx.send(f'Cancelled!')
+                else:
+                    await ctx.send(
+                        f"Could not edit tag {flags.save!r}. Are you sure it exists {'' if is_mod else ' and you own it'}?"
+                    )
             else:
-                await ctx.send(
-                    f"Could not edit tag {flags.save!r}. Are you sure it exists{'' if is_mod else ' and you own it'}?"
-                )
+                raise commands.NoPrivateMessage

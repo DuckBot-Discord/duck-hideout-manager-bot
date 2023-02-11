@@ -3,14 +3,14 @@ from __future__ import annotations
 import os
 import asyncio
 from logging import getLogger
-from typing import Optional
+from typing import Optional, Any
 
 import asyncpg
 import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utils import ActionNotExecutable, HideoutCog, HideoutContext, ShortTime, Timer
+from utils import ActionNotExecutable, HideoutCog, HideoutGuildContext, ShortTime, Timer
 from utils.constants import ARCHIVE_CATEGORY, COUNSELORS_ROLE, PIT_CATEGORY
 
 from ._checks import counselor_only, pit_owner_only
@@ -19,13 +19,13 @@ log = getLogger('HM.pit')
 
 
 class PitsManagement(HideoutCog):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.no_auto: bool = os.getenv('NO_AUTO_FEATURES') is not None
 
     async def toggle_block(
         self,
-        channel: discord.TextChannel,
+        channel: discord.TextChannel | discord.ForumChannel | discord.Thread | None,
         member: discord.Member,
         blocked: bool = True,
         update_db: bool = True,
@@ -53,9 +53,13 @@ class PitsManagement(HideoutCog):
             raise commands.NoPrivateMessage()
 
         if isinstance(channel, discord.Thread):
-            channel = channel.parent  # type: ignore
+            channel = channel.parent
+
             if not channel:
                 raise ActionNotExecutable("Couldn't block! This thread has no parent channel... somehow.")
+
+        if not channel:
+            raise ActionNotExecutable('This ')
 
         val = False if blocked else None
         overwrites = channel.overwrites_for(member)
@@ -121,7 +125,7 @@ class PitsManagement(HideoutCog):
     @commands.hybrid_group(name='pit')
     @app_commands.guild_only()
     @app_commands.default_permissions(manage_messages=True)
-    async def pit(self, ctx: HideoutContext):
+    async def pit(self, ctx: HideoutGuildContext):
         """Pit management commands."""
 
         if ctx.invoked_subcommand is None and ctx.subcommand_passed is None:
@@ -132,7 +136,7 @@ class PitsManagement(HideoutCog):
     @app_commands.describe(
         member='The member to ban from this pit.', duration='How long should this member stay banned? (e.g. 1h, 1d, 1h2m30s)'
     )
-    async def pit_ban(self, ctx: HideoutContext, member: discord.Member, duration: Optional[ShortTime]):
+    async def pit_ban(self, ctx: HideoutGuildContext, member: discord.Member, duration: Optional[ShortTime]):
         """Ban a member from the pit."""
 
         if member.id == ctx.author.id:
@@ -167,7 +171,7 @@ class PitsManagement(HideoutCog):
     @pit.command(name='unban')
     @pit_owner_only()
     @app_commands.describe(member='The member to unban from this pit.')
-    async def pit_unban(self, ctx: HideoutContext, *, member: discord.Member):
+    async def pit_unban(self, ctx: HideoutGuildContext, *, member: discord.Member):
         """Unban a member from the pit."""
 
         if member.id == ctx.author.id:
@@ -195,7 +199,7 @@ class PitsManagement(HideoutCog):
 
     @commands.is_owner()
     @pit.command(name='setowner', aliases=['set-owner'], with_app_command=False)
-    async def pit_set_owner(self, ctx: HideoutContext, *, member: discord.Member):
+    async def pit_set_owner(self, ctx: HideoutGuildContext, *, member: discord.Member):
         """Set the owner of a pit."""
 
         try:
@@ -213,14 +217,14 @@ class PitsManagement(HideoutCog):
 
     @counselor_only()
     @pit.command(name='create', with_app_command=False)
-    async def pit_create(self, ctx: HideoutContext, owner: discord.Member, *, name: str):
+    async def pit_create(self, ctx: HideoutGuildContext, owner: discord.Member, *, name: str):
         """Create a pit."""
 
-        pit_id: int = await ctx.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_owner = $1''', owner.id)
+        pit_id: int | None = await ctx.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_owner = $1''', owner.id)
         if pit_id is not None and ctx.guild.get_channel(pit_id):
             raise commands.BadArgument('User already owns a pit.')
 
-        category: discord.CategoryChannel = ctx.guild.get_channel(PIT_CATEGORY)  # type: ignore
+        category: discord.CategoryChannel | None = ctx.guild.get_channel(PIT_CATEGORY)  # type: ignore
 
         if category is None:
             raise commands.BadArgument('There is no category for pits, for some reason...')
@@ -251,7 +255,7 @@ class PitsManagement(HideoutCog):
 
     @counselor_only()
     @pit.command(name='delete', with_app_command=False)
-    async def pit_delete(self, ctx: HideoutContext, *, channel: discord.TextChannel = commands.CurrentChannel):
+    async def pit_delete(self, ctx: HideoutGuildContext, *, channel: discord.TextChannel = commands.CurrentChannel):
         """Deletes a pit."""
 
         pit_id = await ctx.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_id = $1''', channel.id)
@@ -274,15 +278,15 @@ class PitsManagement(HideoutCog):
 
     @counselor_only()
     @pit.command(name='archive', with_app_command=False)
-    async def pit_archive(self, ctx: HideoutContext, *, channel: discord.TextChannel = commands.CurrentChannel):
+    async def pit_archive(self, ctx: HideoutGuildContext, *, channel: discord.TextChannel = commands.CurrentChannel):
         """Archives a pit."""
 
-        pit_id: int = await ctx.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_id = $1''', channel.id)
+        pit_id: int | None = await ctx.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_id = $1''', channel.id)
         if pit_id is None:
             raise commands.BadArgument('Could not find pit id')
 
         try:
-            pit: discord.TextChannel = ctx.guild.get_channel(pit_id)  # type: ignore
+            pit: discord.TextChannel | None = ctx.guild.get_channel(pit_id)  # type: ignore
             if pit is None:
                 raise commands.BadArgument('Could not find pit')
 
@@ -311,7 +315,7 @@ class PitsManagement(HideoutCog):
 
     @counselor_only()
     @pit.command(name='unarchive', with_app_command=False)
-    async def pit_unarchive(self, ctx: HideoutContext, *, channel: discord.TextChannel = commands.CurrentChannel):
+    async def pit_unarchive(self, ctx: HideoutGuildContext, *, channel: discord.TextChannel = commands.CurrentChannel):
         """Archives a pit."""
 
         record = await ctx.bot.pool.fetchrow('''SELECT * FROM pits WHERE pit_id = $1''', channel.id)
@@ -323,7 +327,7 @@ class PitsManagement(HideoutCog):
             raise commands.BadArgument('Could not find pit owner from id')
 
         try:
-            pit: discord.TextChannel = ctx.guild.get_channel(record["pit_id"])  # type: ignore
+            pit: discord.TextChannel | None = ctx.guild.get_channel(record["pit_id"])  # type: ignore
             if pit is None:
                 raise commands.BadArgument('Could not find pit from id')
 
@@ -348,8 +352,6 @@ class PitsManagement(HideoutCog):
     async def block_handler(self, member: discord.Member):
         """Blocks a user from your channel."""
         guild = member.guild
-        if guild is None:
-            return
 
         channel_ids = await self.bot.pool.fetch(
             'SELECT channel_id FROM blocks WHERE guild_id = $1 AND user_id = $2', guild.id, member.id
@@ -431,12 +433,12 @@ class PitsManagement(HideoutCog):
     async def pit_auto_archive(self, member: discord.Member):
         """Automatically archives pits that are not used."""
 
-        pit_id: int = await self.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_owner = $1''', member.id)
+        pit_id: int | None = await self.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_owner = $1''', member.id)
         if pit_id is None:
             return log.error('Could not find pit id')
 
         try:
-            pit: discord.TextChannel = member.guild.get_channel(pit_id)  # type: ignore
+            pit: discord.TextChannel | None = member.guild.get_channel(pit_id)  # type: ignore
             if pit is None:
                 return log.error('Could not find pit')
 
@@ -472,7 +474,7 @@ class PitsManagement(HideoutCog):
             return
 
         try:
-            pit: discord.TextChannel = member.guild.get_channel(record["pit_id"])  # type: ignore
+            pit: discord.TextChannel | None = member.guild.get_channel(record["pit_id"])  # type: ignore
             if pit is None:
                 raise commands.BadArgument('Could not find pit from id')
 

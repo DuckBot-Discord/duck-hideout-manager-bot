@@ -1,12 +1,12 @@
 import os
 import logging
-from typing import Union
+from typing import Union, Any
 
 import discord
 from discord import TextChannel, Thread, VoiceChannel
 from discord.ext import commands
 
-from utils import HideoutCog, HideoutContext
+from utils import HideoutCog, HideoutGuildContext
 from utils.constants import BOT_DEVS_ROLE, BOTS_ROLE, DUCK_HIDEOUT, GENERAL_CHANNEL, QUEUE_CHANNEL
 
 from ._checks import hideout_only
@@ -18,13 +18,13 @@ GuildMessageable = Union[TextChannel, VoiceChannel, Thread]
 
 
 class Addbot(HideoutCog):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.no_auto: bool = os.getenv('NO_AUTO_FEATURES') is not None
 
     @commands.command()
     @hideout_only()
-    async def addbot(self, ctx: HideoutContext, bot_id: discord.User, *, reason: commands.clean_content):
+    async def addbot(self, ctx: HideoutGuildContext, bot_id: discord.User, *, reason: commands.clean_content):
         """Adds a bot to the bot queue."""
 
         if not bot_id.bot:
