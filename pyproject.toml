@@ -1,6 +1,6 @@
 [tool.pyright]
 useLibraryCodeForTypes = true
-typeCheckingMode = "basic"
+typeCheckingMode = "strict"
 pythonVersion = "3.11"
 strictListInference = true
 strictDictionaryInference = true
@@ -16,7 +16,13 @@ reportFunctionMemberAccess = "error"
 reportDuplicateImport = "error"
 reportUntypedFunctionDecorator = "error"
 reportUnnecessaryTypeIgnoreComment = "warning"
-
+reportImportCycles = false
 [tool.black]
 line-length = 125
 skip-string-normalization = true
+
+[tool.isort]
+profile = "black"
+combine_as_imports = true
+combine_star = true
+line_length = 125

@@ -1,12 +1,12 @@
 import discord
 from discord.ext import commands
 from typing import Annotated, Optional
-from utils import HideoutCog, HideoutContext, UntilFlag, ShortTime, Timer
+from utils import HideoutCog, HideoutGuildContext, UntilFlag, ShortTime, Timer
 from ._checks import hideout_only, counselor_only
 
 
 class BanFlags(commands.FlagConverter, prefix='--', delimiter=' '):
-    until: Optional[ShortTime] = commands.Flag(name='duration', aliases=['for'])  # type: ignore
+    until: Optional[ShortTime] = commands.flag(name='duration', aliases=['for'])
 
 
 class Moderation(HideoutCog):
@@ -15,7 +15,7 @@ class Moderation(HideoutCog):
     @commands.command()
     async def ban(
         self,
-        ctx: HideoutContext,
+        ctx: HideoutGuildContext,
         member: discord.Member,
         *,
         reason: Optional[UntilFlag[Annotated[str, commands.clean_content], BanFlags]],

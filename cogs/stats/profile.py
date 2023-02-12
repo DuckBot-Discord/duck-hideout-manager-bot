@@ -1,3 +1,6 @@
+# TODO: make stub files for `aggdraw`, `PIL` and `colorthief` to be strict-compatible.
+# pyright: reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportMissingTypeStubs=false
+
 import io
 import itertools
 from datetime import datetime as dt
@@ -8,6 +11,7 @@ import aggdraw
 import asyncpg
 import discord
 from colorthief import ColorThief
+from discord import app_commands
 from discord.ext import commands
 from jishaku.functools import executor_function
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -21,7 +25,7 @@ class ImageThief(ColorThief):
 
 
 class DatabaseData(NamedTuple):
-    times: list[tuple[dt, str]]
+    times: list[tuple[dt, str]] | list[asyncpg.Record]
     rank: int
     max: int
     message_count: int
@@ -73,7 +77,7 @@ class ProfileCard:
         self.canvas = Image.new('RGB', (self.WIDTH, self.HEIGHT), self.BG_COLOR.to_rgb())
         self.draw = ImageDraw.Draw(self.canvas)
 
-    async def async_init(self, pool: asyncpg.Pool):
+    async def async_init(self, pool: asyncpg.Pool[asyncpg.Record]):
         # status info
         status_q = 'SELECT changed_at, status FROM status_history WHERE user_id = $1 ORDER BY changed_at DESC'
         status_f = await pool.fetch(status_q, self.author.id)
@@ -104,14 +108,12 @@ class ProfileCard:
         # Bots added
         bots_q = """SELECT
             (SELECT COUNT(*) FROM addbot WHERE owner_id = $1 AND added = TRUE) AS added,
-            (SELECT COUNT(*) FROM addbot WHERE owner_id = $1) as requested; 
-        """
+            (SELECT COUNT(*) FROM addbot WHERE owner_id = $1) as requested;"""
         bots_f = await pool.fetchrow(bots_q, self.author.id)
         if bots_f:
             added, requested = bots_f
         else:
             added = requested = 0
-
         self._data = DatabaseData(
             times=status_f,
             message_count=count or 0,
@@ -138,7 +140,6 @@ class ProfileCard:
     @executor_function
     def full_render(self) -> io.BytesIO:
         buffer = io.BytesIO()
-
         self.paste_status_bar()
         self.paste_avatar()
         self.draw_avatar_border()
@@ -170,7 +171,6 @@ class ProfileCard:
         """generate round corner for image"""  # Src: StackOverflow
         if top_radius is None:
             top_radius = radius
-
         mask = Image.new('L', image.size)  # filled with black by default
         draw = aggdraw.Draw(mask)
         brush = aggdraw.Brush('white')
@@ -386,6 +386,7 @@ class ProfileCard:
 
 class ProfileCardCog(HideoutCog):
     @commands.hybrid_command()
+    @app_commands.describe(user='The user whose profile you wish to get.')
     async def profile(self, ctx: HideoutContext, user: discord.Member | discord.User = commands.Author):
         """Shows your or someone else's profile."""
         async with ctx.typing():

@@ -21,7 +21,7 @@ from jishaku.functools import AsyncSender
 from jishaku.math import natural_size
 from jishaku.modules import ExtensionConverter, package_version
 from jishaku.paginators import PaginatorInterface, WrappedPaginator, use_file_check
-from jishaku.repl import AsyncCodeExecutor
+from jishaku.repl import AsyncCodeExecutor, Scope
 from jishaku.repl.repl_builtins import get_var_dict_from_ctx
 
 from utils.context import HideoutContext
@@ -118,7 +118,7 @@ class OverwrittenRootCommand(RootCommand):
         else:
             summary.append(f"This bot is not sharded and can see {cache_summary}.")
 
-        # pylint: disable=protected-access
+        # pyright: reportPrivateUsage=false
         if self.bot._connection.max_messages:
             message_cache = f"Message cache capped at {self.bot._connection.max_messages}"
         else:
@@ -134,7 +134,7 @@ class OverwrittenRootCommand(RootCommand):
 
             summary.append(f"{message_cache} and {guild_subscriptions}.")
 
-        # pylint: enable=protected-access
+        # pyright: reportPrivateUsage=strict
 
         # Show websocket latency in milliseconds
         summary.append(f"Average websocket latency: {round(self.bot.latency * 1000, 2)}ms")
@@ -149,7 +149,7 @@ class OverwrittenRootCommand(RootCommand):
 
 class OverwrittenManagementFeature(ManagementFeature):
     @Feature.Command(parent="jsk", name="load", aliases=["reload"])
-    async def jsk_load(self, ctx: HideoutContext, *extensions: ExtensionConverter):
+    async def jsk_load(self, ctx: HideoutContext, *extensions: Annotated[list[str], ExtensionConverter]):
         """
         Loads or reloads the given extension names.
 
@@ -159,9 +159,9 @@ class OverwrittenManagementFeature(ManagementFeature):
 
         # 'jsk reload' on its own just reloads jishaku
         if ctx.invoked_with == "reload" and not extensions:
-            extensions = [["utils.jishaku"]]  # type: ignore
+            extensions = (["utils.jishaku"],)
 
-        for extension in itertools.chain(*extensions):  # type: ignore
+        for extension in itertools.chain(*extensions):
             method, icon = (
                 (
                     self.bot.reload_extension,
@@ -271,7 +271,7 @@ class HideoutManagerJishaku(
         interface = PaginatorInterface(ctx.bot, paginator, owner=ctx.author)
         return await interface.send_to(ctx)
 
-    @discord.utils.copy_doc(PythonFeature.jsk_python)
+    @discord.utils.copy_doc(PythonFeature.jsk_python)  # type: ignore
     @Feature.Command(parent="jsk", name="py", aliases=["python"])
     async def jsk_python(self, ctx: HideoutContext, *, argument: Annotated[Codeblock, codeblock_converter]) -> None:
         """|coro|
@@ -301,7 +301,7 @@ class HideoutManagerJishaku(
             _g=ctx.guild,
         )
 
-        scope = self.scope  # type: ignore
+        scope: Scope = self.scope  # type: ignore
         printed = io.StringIO()
 
         try:
@@ -314,7 +314,7 @@ class HideoutManagerJishaku(
                         # Absolutely a garbage lib that I have to fix jesus christ.
                         # I have to rewrite this lib holy jesus its so bad.
                         async for send, result in AsyncSender(executor):  # type: ignore
-                            self.last_result = result
+                            self.last_result: Any = result
 
                             value = printed.getvalue()
                             send(

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, Optional, Sequence, Tuple, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, Optional, Sequence, Tuple, TypeVar, Union, overload
 
 import discord
 from discord.ext import commands
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from bot import HideoutManager
 
 
-__all__: Tuple[str, ...] = ('HideoutContext', 'ConfirmationView')
+__all__: Tuple[str, ...] = ('HideoutContext', 'HideoutGuildContext', 'ConfirmationView')
 
 BotT = TypeVar('BotT', bound='HideoutManager')
 
@@ -42,7 +42,7 @@ class ConfirmationView(discord.ui.View):
         super().stop()
 
     @discord.ui.button(label='Confirm', style=discord.ButtonStyle.primary)
-    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button[ConfirmationView]) -> None:
         assert interaction.message is not None
 
         self.value = True
@@ -50,7 +50,7 @@ class ConfirmationView(discord.ui.View):
         await interaction.message.delete()
 
     @discord.ui.button(label='Cancel', style=discord.ButtonStyle.danger)
-    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button[ConfirmationView]) -> None:
         assert interaction.message is not None
 
         self.value = False
@@ -58,17 +58,12 @@ class ConfirmationView(discord.ui.View):
         await interaction.message.delete()
 
 
-class HideoutContext(commands.Context, Generic[BotT]):
+class HideoutContext(commands.Context[HideoutManager]):
     """The subclassed Context to allow some extra functionality."""
-
-    if TYPE_CHECKING:
-        bot: HideoutManager
-        guild: discord.Guild
-        author: discord.Member
 
     __slots__: Tuple[str, ...] = ()
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.is_error_handled = False
 
@@ -92,7 +87,7 @@ class HideoutContext(commands.Context, Generic[BotT]):
     def color(self) -> discord.Color:
         """:class:`~discord.Color`: Returns HideoutManager's color, or the author's color. Falls back to blurple"""
 
-        def check(color):
+        def check(color: discord.Color):
             return color not in {discord.Color.default(), None}
 
         checks = (
@@ -155,7 +150,7 @@ class HideoutContext(commands.Context, Generic[BotT]):
 
         return await super().send(content, **kwargs)
 
-    async def confirm(self, content=None, /, *, timeout: int = 30, **kwargs) -> bool | None:
+    async def confirm(self, content: str | None = None, /, *, timeout: int = 30, **kwargs: Any) -> bool | None:
         """|coro|
 
         Prompts a confirmation message that users can confirm or deny.
@@ -196,6 +191,12 @@ class HideoutContext(commands.Context, Generic[BotT]):
         return resolved
 
 
+class HideoutGuildContext(HideoutContext):
+    if TYPE_CHECKING:
+        guild: discord.Guild  # type: ignore
+        author: discord.Member  # type: ignore
+
+
 async def setup(bot: HideoutManager) -> None:
     """Sets up the HideoutContext class.
 
@@ -204,7 +205,7 @@ async def setup(bot: HideoutManager) -> None:
     bot: HideoutManager
         The bot to set up the HideoutContext class for.
     """
-    bot._context_cls = HideoutContext
+    bot.context_class = HideoutContext
 
 
 async def teardown(bot: HideoutManager) -> None:
@@ -215,4 +216,4 @@ async def teardown(bot: HideoutManager) -> None:
     bot: HideoutManager
         The bot to tear down the HideoutContext class for.
     """
-    bot._context_cls = commands.Context
+    bot.context_class = commands.Context

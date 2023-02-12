@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import typing
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Self
 
 import discord
 from discord.ext import menus
@@ -20,11 +20,11 @@ log = logging.getLogger('HideoutManager.paginators')  # noqa
 
 
 class SkipToModal(Modal, title='Skip to page...'):
-    page = TextInput(
+    page = TextInput[Self](
         label='Which page do you want to skip to?', max_length=10, placeholder='This prompt times out in 20 seconds...'
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
         self.value = None
         self.interaction: typing.Optional[discord.Interaction] = None
@@ -34,10 +34,14 @@ class SkipToModal(Modal, title='Skip to page...'):
         self.value = self.page.value
 
 
-# Modified version of the RoboPages from R. Danny, source/credits:
-# https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/utils/paginator.py
-# noinspection PyProtectedMember
 class ViewMenuPages(discord.ui.View):
+    # This Source Code Form is subject to the terms of the Mozilla Public
+    # License, v. 2.0. If a copy of the MPL was not distributed with this
+    # file, You can obtain one at http://mozilla.org/MPL/2.0/.
+    #
+    # Modified version of the RoboPages class, from R. Danny, source/credits:
+    # https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/utils/paginator.py
+
     def __init__(
         self,
         source: menus.PageSource,
@@ -78,7 +82,8 @@ class ViewMenuPages(discord.ui.View):
             self.add_item(self.stop_pages)
 
     async def _get_kwargs_from_page(self, page: int) -> Dict[str, Any]:
-        value = await discord.utils.maybe_coroutine(self.source.format_page, self, page)
+        # fmt: off
+        value: dict[str, Any] | str | discord.Embed | Any = await discord.utils.maybe_coroutine(self.source.format_page, self, page)  # pyright: reportUnknownArgumentType=false
         if isinstance(value, dict):
             return value
         elif isinstance(value, str):
@@ -89,7 +94,7 @@ class ViewMenuPages(discord.ui.View):
             return {}
 
     async def show_page(self, interaction: discord.Interaction, page_number: int) -> None:
-        page = await self.source.get_page(page_number)
+        page: Any = await self.source.get_page(page_number)
         self.current_page = page_number
         kwargs = await self._get_kwargs_from_page(page)
         self._update_labels(page_number)
@@ -156,7 +161,7 @@ class ViewMenuPages(discord.ui.View):
         self.ctx.client.views.discard(self)
         super().stop()
 
-    async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item, /) -> None:
+    async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[Self], /) -> None:
         if interaction.response.is_done():
             await interaction.followup.send('An unknown error occurred, sorry', ephemeral=True)
         else:
@@ -172,8 +177,8 @@ class ViewMenuPages(discord.ui.View):
                     await self.ctx.followup.send('Bot does not have embed links permission in this channel.')
             return
 
-        await self.source._prepare_once()
-        page = await self.source.get_page(0)
+        await self.source._prepare_once()  # pyright: reportPrivateUsage=false
+        page: Any = await self.source.get_page(0)  # pyright: reportUnknownMemberType=false
         kwargs = await self._get_kwargs_from_page(page)
         self._update_labels(0)
         if isinstance(self.ctx, HideoutContext):
@@ -187,32 +192,32 @@ class ViewMenuPages(discord.ui.View):
         self.ctx.client.views.add(self)
 
     @discord.ui.button(label='≪', style=discord.ButtonStyle.grey)
-    async def go_to_first_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def go_to_first_page(self, interaction: discord.Interaction, button: discord.ui.Button[Self]):
         """go to the first page"""
         await self.show_page(interaction, 0)
 
     @discord.ui.button(label='Back', style=discord.ButtonStyle.blurple)
-    async def go_to_previous_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def go_to_previous_page(self, interaction: discord.Interaction, button: discord.ui.Button[Self]):
         """go to the previous page"""
         await self.show_checked_page(interaction, self.current_page - 1)
 
     @discord.ui.button(label='Current', style=discord.ButtonStyle.grey, disabled=True)
-    async def go_to_current_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def go_to_current_page(self, interaction: discord.Interaction, button: discord.ui.Button[Self]):
         pass
 
     @discord.ui.button(label='Next', style=discord.ButtonStyle.blurple)
-    async def go_to_next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def go_to_next_page(self, interaction: discord.Interaction, button: discord.ui.Button[Self]):
         """go to the next page"""
         await self.show_checked_page(interaction, self.current_page + 1)
 
     @discord.ui.button(label='≫', style=discord.ButtonStyle.grey)
-    async def go_to_last_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def go_to_last_page(self, interaction: discord.Interaction, button: discord.ui.Button[Self]):
         """go to the last page"""
         # The call here is safe because it's guarded by skip_if
         await self.show_page(interaction, self.source.get_max_pages() - 1)  # type: ignore
 
     @discord.ui.button(label='Skip to page...', style=discord.ButtonStyle.grey)
-    async def numbered_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def numbered_page(self, interaction: discord.Interaction, button: discord.ui.Button[Self]):
         """lets you type a page number to go to"""
         if self.current_modal is not None and not self.current_modal.is_finished():
             self.current_modal.stop()
@@ -235,7 +240,7 @@ class ViewMenuPages(discord.ui.View):
                 await self.show_checked_page(interaction, page - 1)
 
     @discord.ui.button(label='Quit', style=discord.ButtonStyle.red)
-    async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button[Self]):
         """stops the pagination session."""
         await interaction.response.defer()
         await interaction.delete_original_response()

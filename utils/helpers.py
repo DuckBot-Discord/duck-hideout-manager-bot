@@ -42,7 +42,7 @@ __all__: Tuple[str, ...] = (
 )
 
 
-def col(color=None, /, *, fmt=0, bg=False) -> str:
+def col(color: int | None = None, /, *, fmt: int = 0, bg: bool = False) -> str:
     """
     Returns the ascii color escape string for the given number.
 
@@ -175,7 +175,7 @@ class View(discord.ui.View):
             bot.views.add(self)
 
     async def on_error(self, interaction: discord.Interaction, error: Exception, item: discord.ui.Item[Any]) -> None:
-        bot: DuckBot = interaction.client  # type: ignore
+        bot: HideoutManager = interaction.client  # type: ignore
         await bot.exceptions.add_error(error=error)
         if interaction.response.is_done():
             await interaction.followup.send(f"Sorry! something went wrong....", ephemeral=True)
@@ -215,7 +215,7 @@ class DeleteButton(discord.ui.View):
         The emoji of the button. Defaults to None.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         self.bot: Optional[HideoutManager] = None
         self._message = kwargs.pop('message', None)
         self.author = kwargs.pop('author')
@@ -270,7 +270,9 @@ class DeleteButton(discord.ui.View):
             logging.error(f'Failed to get client from message %s: %s', message, exc_info=e)
 
     @classmethod
-    async def to_destination(cls, destination: discord.abc.Messageable | discord.Webhook, *args, **kwargs) -> 'DeleteButton':
+    async def to_destination(
+        cls, destination: discord.abc.Messageable | discord.Webhook, *args: Any, **kwargs: Any
+    ) -> 'DeleteButton':
         if kwargs.get('view', None):
             raise TypeError('Cannot pass a view to to_destination')
 

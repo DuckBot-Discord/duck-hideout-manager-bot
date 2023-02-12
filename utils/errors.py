@@ -5,7 +5,7 @@ import typing
 from typing import Tuple
 
 import discord
-from discord.ext.commands import CheckFailure, CommandError
+from discord.ext import commands
 
 log = logging.getLogger('Hideoutbot.utils.errors')
 
@@ -27,7 +27,7 @@ class HideoutManagerException(discord.ClientException):
     __slots__: Tuple[str, ...] = ()
 
 
-class HideoutManagerCommandError(CommandError, HideoutManagerException):
+class HideoutManagerCommandError(commands.CommandError, HideoutManagerException):
     """The base exception for HideoutManager command errors."""
 
     __slots__: Tuple[str, ...] = ()
@@ -42,7 +42,7 @@ class HideoutManagerNotStarted(HideoutManagerException):
 
 
 class ActionNotExecutable(HideoutManagerCommandError):
-    def __init__(self, message):
+    def __init__(self, message: str):
         super().__init__(f'{message}')
 
 
@@ -73,7 +73,7 @@ class SilentCommandError(HideoutManagerCommandError):
     __slots__: Tuple[str, ...] = ()
 
 
-class EntityBlacklisted(CheckFailure, HideoutManagerCommandError):
+class EntityBlacklisted(commands.CheckFailure, HideoutManagerCommandError):
     """Raised when an entity is blacklisted."""
 
     __slots__: Tuple[str, ...] = ('entity',)

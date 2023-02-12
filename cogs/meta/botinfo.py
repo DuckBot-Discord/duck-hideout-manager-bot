@@ -23,7 +23,7 @@ class BotInformation(HideoutCog):
 
         embed = discord.Embed(title='Bot info', timestamp=ctx.message.created_at, color=bot.color)
         embed.set_author(name=str(bot), icon_url=bot.display_avatar.url)
-        user: discord.User = await ctx.bot.get_or_fetch_user(data['owner_id'])  # type: ignore
+        user: discord.User = await ctx.bot.get_or_fetch_user(data['owner_id'])
         embed.add_field(name='Added by', value=f"{user.mention} (`{user.id}`)", inline=False)
         embed.add_field(name='Reason', value=data['reason'])
         embed.add_field(name='Joined at', value=discord.utils.format_dt(bot.joined_at or bot.created_at, 'R'))

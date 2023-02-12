@@ -182,7 +182,9 @@ class TimerManager:
         embed.add_field(name='No worries!', value='I\'ve contacted our developers and they\'ll be looking into it.')
         return await ctx.send(embed=embed)
 
-    async def get_active_timer(self, *, connection: Optional[Connection] = None, days: int = 7) -> Optional[Timer]:
+    async def get_active_timer(
+        self, *, connection: Optional[Connection[asyncpg.Record]] = None, days: int = 7
+    ) -> Optional[Timer]:
         """|coro|
 
         Called to get the most current active timer in the database. This timer is expired and should be dispatched.

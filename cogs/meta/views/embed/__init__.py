@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Any, TypeAlias, Self
 
 import asyncpg
 import discord
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
     from ... import Information
 
-    BotInteraction = discord.Interaction[HideoutManager]
+    BotInteraction: TypeAlias = discord.Interaction[HideoutManager]
 
 
 class Embed(discord.Embed):
@@ -47,12 +47,12 @@ class Embed(discord.Embed):
 
 
 class TagsWithOptionalOwners(TagsFromFetchedPageSource):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         self.bot: HideoutManager = kwargs.pop('bot')
         super().__init__(*args, **kwargs, colour=self.bot.color)
 
     def format_records(self, records: enumerate[asyncpg.Record]) -> str:
-        ret = []
+        ret: list[str] = []
         for idx, tag in records:
             if 'owned' in tag.keys() and not tag['owned']:
                 ret.append(f"{idx}. {tag['name']} (Owner: {str(self.bot.get_user(tag['owner_id']))})")
@@ -62,7 +62,7 @@ class TagsWithOptionalOwners(TagsFromFetchedPageSource):
 
 
 class TagSelector(discord.ui.Select['TagSelectorMenu']):
-    async def callback(self, interaction: BotInteraction):
+    async def callback(self, interaction: BotInteraction):  # pyright: reportIncompatibleMethodOverride=false
         await interaction.response.defer()
         tag_id = self.values[0]
         assert self.view
@@ -101,18 +101,18 @@ class TagSelectorMenu(utils.ViewMenuPages):
         ]
 
     @discord.ui.button(label='Go Back', style=discord.ButtonStyle.red)
-    async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button[TagSelectorMenu]):
         """stops the pagination session."""
         await interaction.response.edit_message(embed=self.parent.current_embed, view=self.parent)
         self.stop()
 
     @discord.ui.button(label='Go Back', row=4)
-    async def go_to_parent(self, interaction: BotInteraction, button: discord.ui.Button):
+    async def go_to_parent(self, interaction: BotInteraction, button: discord.ui.Button[TagSelectorMenu]):
         await interaction.response.edit_message(view=self.parent)
         self.stop()
 
     @discord.ui.button(label='Add to new tag', row=4)
-    async def new_tag(self, interaction: BotInteraction, button: discord.ui.Button):
+    async def new_tag(self, interaction: BotInteraction, button: discord.ui.Button[TagSelectorMenu]):
         await interaction.response.send_modal(ChooseATagName(self.parent, title='Create a new tag.'))
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -139,7 +139,7 @@ class UndoView(utils.View):
         super().__init__(timeout=10)
 
     @discord.ui.button(label='Undo deletion.')
-    async def undo(self, interaction: BotInteraction, button: discord.ui.Button):
+    async def undo(self, interaction: BotInteraction, button: discord.ui.Button[UndoView]):
         self.stop()
         await interaction.channel.send(view=self.parent, embed=self.parent.current_embed)  # type: ignore
         await interaction.response.edit_message(view=None)
@@ -173,7 +173,7 @@ class DeleteFieldWithSelect(utils.View):
             self.pick_field.add_option(label=f"{i + 1}) {field.name or ''[0:500]}", value=str(i))
 
     @discord.ui.select(placeholder='Select a field to delete.')
-    async def pick_field(self, interaction: BotInteraction, select: discord.ui.Select):
+    async def pick_field(self, interaction: BotInteraction, select: discord.ui.Select[DeleteFieldWithSelect]):
         index = int(select.values[0])
         self.parent.embed.remove_field(index)
         await self.parent.update_buttons()
@@ -181,7 +181,7 @@ class DeleteFieldWithSelect(utils.View):
         self.stop()
 
     @discord.ui.button(label='Go back')
-    async def cancel(self, interaction: BotInteraction, button: discord.ui.Button):
+    async def cancel(self, interaction: BotInteraction, button: discord.ui.Button[DeleteFieldWithSelect]):
         await interaction.response.edit_message(view=self.parent)
         self.stop()
 
@@ -198,13 +198,13 @@ class EditFieldSelect(utils.View):
             self.pick_field.add_option(label=f"{i + 1}) {field.name or ''[0:500]}", value=str(i))
 
     @discord.ui.select(placeholder='Select a field to edit.')
-    async def pick_field(self, interaction: BotInteraction, select: discord.ui.Select):
+    async def pick_field(self, interaction: BotInteraction, select: discord.ui.Select[EditFieldSelect]):
         index = int(select.values[0])
         self.parent.timeout = 600
         await interaction.response.send_modal(EditFieldModal(self.parent, index))
 
     @discord.ui.button(label='Go back')
-    async def cancel(self, interaction: BotInteraction, button: discord.ui.Button):
+    async def cancel(self, interaction: BotInteraction, button: discord.ui.Button[EditFieldSelect]):
         await interaction.response.edit_message(view=self.parent)
         self.stop()
 
@@ -228,7 +228,7 @@ class SendToView(utils.View):
             discord.ChannelType.public_thread,
         ],
     )
-    async def pick_a_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
+    async def pick_a_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect[SendToView]):
         await interaction.response.defer(ephemeral=True)
         channel = select.values[0]
         if not isinstance(interaction.user, discord.Member) or not interaction.guild:
@@ -246,7 +246,7 @@ class SendToView(utils.View):
         self.stop()
 
     @discord.ui.button(label='Go Back')
-    async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button[SendToView]):
         """stops the pagination session."""
         await interaction.response.edit_message(embed=self.parent.current_embed, view=self.parent)
         self.stop()
@@ -317,9 +317,9 @@ class EmbedEditor(utils.View):
         self.add_item(self.add_to_tag)
         self.add_item(self.help_page)
         # Row 4
-        self.character_count = discord.ui.Button(row=3, label='0/6,000 Characters', disabled=True)
+        self.character_count: discord.ui.Button[Self] = discord.ui.Button(row=3, label='0/6,000 Characters', disabled=True)
         self.add_item(self.character_count)
-        self.fields_count = discord.ui.Button(row=3, label='0/25 Total Fields', disabled=True)
+        self.fields_count: discord.ui.Button[Self] = discord.ui.Button(row=3, label='0/25 Total Fields', disabled=True)
         self.add_item(self.fields_count)
 
     async def update_buttons(self):
@@ -402,22 +402,22 @@ class EmbedEditor(utils.View):
         return embed
 
     @discord.ui.button(row=1, emoji='\N{HEAVY MINUS SIGN}', style=ButtonStyle.red, disabled=True)
-    async def remove_fields(self, interaction: BotInteraction, button: discord.ui.Button):
+    async def remove_fields(self, interaction: BotInteraction, button: discord.ui.Button[Self]):
         await interaction.response.edit_message(view=DeleteFieldWithSelect(self))
 
     @discord.ui.button(row=1, emoji=utils.EDIT_PENCIL, disabled=True, style=ButtonStyle.green)
-    async def edit_fields(self, interaction: BotInteraction, button: discord.ui.Button):
+    async def edit_fields(self, interaction: BotInteraction, button: discord.ui.Button[Self]):
         await interaction.response.edit_message(view=EditFieldSelect(self))
 
     @discord.ui.button(row=1, label='Reorder', style=ButtonStyle.blurple, disabled=True)
-    async def reorder(self, interaction: BotInteraction, button: discord.ui.Button):
+    async def reorder(self, interaction: BotInteraction, button: discord.ui.Button[Self]):
         return await interaction.response.send_message(
             f'This function is currently unavailable.\nPlease use {self.cog.bot.constants.EDIT_PENCIL} and edit the `index`',
             ephemeral=True,
         )
 
     @discord.ui.button(label='Send', row=2, style=ButtonStyle.red)
-    async def send(self, interaction: BotInteraction, button: discord.ui.Button):
+    async def send(self, interaction: BotInteraction, button: discord.ui.Button[Self]):
         if not self.embed:
             return await interaction.response.send_message('Your embed is empty!', ephemeral=True)
         elif len(self.embed) > 6000:
@@ -429,7 +429,7 @@ class EmbedEditor(utils.View):
         await interaction.delete_original_response()
 
     @discord.ui.button(label='Send To', row=2, style=ButtonStyle.red)
-    async def send_to(self, interaction: BotInteraction, button: discord.ui.Button):
+    async def send_to(self, interaction: BotInteraction, button: discord.ui.Button[Self]):
         if not self.embed:
             return await interaction.response.send_message('Your embed is empty!', ephemeral=True)
         elif len(self.embed) > 6000:
@@ -439,7 +439,7 @@ class EmbedEditor(utils.View):
         await interaction.response.edit_message(view=SendToView(parent=self))
 
     @discord.ui.button(label='Add To Tag', row=2, style=ButtonStyle.red)
-    async def add_to_tag(self, interaction: BotInteraction, button: discord.ui.Button):
+    async def add_to_tag(self, interaction: BotInteraction, button: discord.ui.Button[Self]):
         if not self.embed:
             return await interaction.response.send_message('Your embed is empty!', ephemeral=True)
         elif len(self.embed) > 6000:
@@ -483,7 +483,7 @@ class EmbedEditor(utils.View):
         await menu.start(edit_interaction=True)
 
     @discord.ui.button(label='Show Help Page', row=2, disabled=True)
-    async def help_page(self, interaction: BotInteraction, button: discord.ui.Button):
+    async def help_page(self, interaction: BotInteraction, button: discord.ui.Button[Self]):
         self.showing_help = not self.showing_help
         await self.update_buttons()
         await interaction.response.edit_message(embed=self.current_embed, view=self)
