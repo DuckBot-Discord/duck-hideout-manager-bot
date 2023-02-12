@@ -3,6 +3,8 @@ from discord.ext import commands
 
 from .profile import ProfileCardCog
 
+from bot import HideoutManager
+
 
 class Stats(ProfileCardCog):
     """Tracks User Statistics"""
@@ -72,5 +74,5 @@ class Stats(ProfileCardCog):
         await self.bot.pool.execute(query, after.id, str(after.status), discord.utils.utcnow())
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot: HideoutManager):
     await bot.add_cog(Stats(bot))

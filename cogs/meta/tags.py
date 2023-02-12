@@ -19,7 +19,7 @@ from utils import HideoutCog, HideoutGuildContext, ViewMenuPages
 T = TypeVar('T')
 CO_T = TypeVar("CO_T", bound="Union[Type[commands.Converter[Any]], commands.Converter[Any]]")
 AWARD_EMOJI = [chr(i) for i in range(129351, 129351 + 3)] + ['\N{SPORTS MEDAL}'] * 2
-Database: TypeAlias = Union[asyncpg.Connection[asyncpg.Record], asyncpg.Pool[asyncpg.Record]]
+Database: TypeAlias = 'Union[asyncpg.Connection[asyncpg.Record], asyncpg.Pool[asyncpg.Record]]'
 
 
 def copy_doc(original: Callable[[T], T]) -> Callable[[T], T]:

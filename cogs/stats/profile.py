@@ -1,6 +1,6 @@
 # TODO: make stub files for `aggdraw`, `PIL` and `colorthief` to be strict-compatible.
 # pyright: reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportMissingTypeStubs=false
-
+from __future__ import annotations
 import io
 import itertools
 from datetime import datetime as dt

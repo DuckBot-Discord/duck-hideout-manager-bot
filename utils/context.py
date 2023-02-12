@@ -58,7 +58,7 @@ class ConfirmationView(discord.ui.View):
         await interaction.message.delete()
 
 
-class HideoutContext(commands.Context[HideoutManager]):
+class HideoutContext(commands.Context['HideoutManager']):
     """The subclassed Context to allow some extra functionality."""
 
     __slots__: Tuple[str, ...] = ()
