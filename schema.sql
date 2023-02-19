@@ -112,3 +112,8 @@ CREATE TABLE IF NOT EXISTS pits (
     pit_owner BIGINT UNIQUE,
     archive_mode archive_mode
 );
+
+CREATE TABLE IF NOT EXISTS user_settings(
+    user_id BIGINT PRIMARY KEY,
+    timezone TEXT
+);
