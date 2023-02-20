@@ -6,7 +6,7 @@ import itertools
 import math
 import os
 import zoneinfo
-from typing import Any, Sequence, reveal_type
+from typing import Any, Sequence
 
 import cachetools
 import discord
