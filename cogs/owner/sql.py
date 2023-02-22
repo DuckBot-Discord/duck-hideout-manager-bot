@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import io
 import time
-from typing import List, Annotated, TYPE_CHECKING
+from typing import List, Annotated, TYPE_CHECKING, Any
 
 from discord import File
 from discord.ext import commands
@@ -45,7 +45,7 @@ class EvaluatedArg(commands.Converter[str]):
 
 
 class SqlCommandFlags(commands.FlagConverter, prefix="--", delimiter=" ", case_insensitive=True):
-    args: List[str] = commands.flag(name='argument', aliases=['a', 'arg'], default=[])
+    args: List[Any] = commands.flag(name='argument', aliases=['arg'], default=[], converter=List[EvaluatedArg])
 
 
 class SQLCommands(HideoutCog):
