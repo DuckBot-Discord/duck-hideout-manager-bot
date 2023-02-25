@@ -61,6 +61,7 @@ initial_extensions: Tuple[str, ...] = (
     'cogs.owner',
     'cogs.hideout',
     'cogs.stats',
+    'cogs.events',
 )
 
 

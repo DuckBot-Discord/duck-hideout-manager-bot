@@ -5,6 +5,7 @@ import discord
 from discord.ext import commands
 
 from utils import HideoutCog
+from bot import HideoutManager
 
 
 class DiscordEvents(HideoutCog):
@@ -37,3 +38,7 @@ class DiscordEvents(HideoutCog):
             except discord.HTTPException as e:
                 return await interaction.response.send_message(f"Failed to assign role: {e.text}", ephemeral=True)
             await interaction.response.send_message(message.format(role.name), ephemeral=True)
+
+
+async def setup(bot: HideoutManager):
+    await bot.add_cog(DiscordEvents(bot))
