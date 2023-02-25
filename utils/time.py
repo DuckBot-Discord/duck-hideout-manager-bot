@@ -17,6 +17,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+# pyright: reportUnknownMemberType=false, reportGeneralTypeIssues=false
+# pyright: reportUnknownVariableType=false, reportMissingTypeStubs=false
+# pyright: reportUnknownArgumentType=false
+
 from __future__ import annotations
 
 import datetime
@@ -31,12 +35,9 @@ from discord.ext import commands
 if TYPE_CHECKING:
     from .context import HideoutContext
 
-# Monkey patch mins and secs into the units
-# pyright: reportUnknownMemberType=false, reportGeneralTypeIssues=false
 units: dict[str, list[str]] = pdt.pdtLocales['en_US'].units
 units['minutes'].append('mins')
 units['seconds'].append('secs')
-# pyright: reportUnknownMemberType=strict, reportGeneralTypeIssues=strict
 
 STT = TypeVar('STT', bound='ShortTime')
 HTT = TypeVar('HTT', bound='HumanTime')
