@@ -7,7 +7,7 @@ from typing import Tuple
 import discord
 from discord.ext import commands
 
-log = logging.getLogger('Hideoutbot.utils.errors')
+log = logging.getLogger('HideoutManager.utils.errors')
 
 __all__: Tuple[str, ...] = (
     'HideoutManagerException',
