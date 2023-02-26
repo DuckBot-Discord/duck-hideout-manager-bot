@@ -65,6 +65,37 @@ initial_extensions: Tuple[str, ...] = (
 )
 
 
+class HideoutCommandTree(app_commands.CommandTree):
+    if TYPE_CHECKING:
+        client: HideoutManager
+
+    log = logging.getLogger('HideoutCommandTree')
+
+    async def sync(self, *, guild: Optional[discord.abc.Snowflake] = None) -> list[app_commands.AppCommand]:
+        commands = await super().sync(guild=guild)
+        self.client.app_commands[getattr(guild, 'id', None)] = commands
+        return commands
+
+    async def fetch_commands(self, *, guild: Optional[discord.abc.Snowflake] = None) -> list[app_commands.AppCommand]:
+        commands = await super().fetch_commands(guild=guild)
+        self.client.app_commands[getattr(guild, 'id', None)] = commands
+        return commands
+
+    async def on_error(
+        self,
+        interaction: discord.Interaction,
+        error: app_commands.AppCommandError,
+    ) -> None:
+        command = interaction.command
+        if command and getattr(command, 'on_error', None):
+            return
+
+        if self.client.extra_events.get('on_app_command_error'):
+            return interaction.client.dispatch('app_command_error', interaction, command, error)
+
+        raise error from None
+
+
 class DbTempContextManager(Generic[DBT]):
     """A class to handle a short term pool connection.
 
@@ -180,6 +211,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
     if TYPE_CHECKING:
         user: discord.ClientUser  # type: ignore
         cogs: dict[str, HideoutCog]  # type: ignore
+        tree: HideoutCommandTree  # type: ignore
 
     def __init__(self, *, session: ClientSession, pool: Pool[asyncpg.Record], error_wh: str, prefix: str) -> None:
         intents = discord.Intents.all()
@@ -195,6 +227,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
             chunk_guilds_at_startup=False,
             max_messages=4000,
             help_command=None,
+            tree_cls=HideoutCommandTree,
         )
         self.pool: Pool[asyncpg.Record] = pool
         self.session: ClientSession = session
@@ -206,15 +239,15 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         self.thread_pool: concurrent.futures.ThreadPoolExecutor = concurrent.futures.ThreadPoolExecutor(max_workers=20)
 
         self.constants = constants
-        self.tree.error(self.on_tree_error)
 
         self.views: Set[discord.ui.View] = set()
+        self.app_commands: dict[int | None, list[app_commands.AppCommand]] = {}
         self._auto_spam_count: DefaultDict[int, int] = defaultdict(int)
 
     async def setup_hook(self) -> None:
         for extension in initial_extensions:
             await self.load_extension(extension)
-
+        await self.tree.fetch_commands(guild=None)
         super(HideoutHelper, self).__init__(bot=self)
 
     @classmethod
@@ -435,20 +468,6 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
 
         await self.exceptions.add_error(error=error)  # type: ignore
         return await super().on_error(event, *args, **kwargs)
-
-    async def on_tree_error(
-        self,
-        interaction: discord.Interaction,
-        error: app_commands.AppCommandError,
-    ) -> None:
-        command = interaction.command
-        if command and getattr(command, 'on_error', None):
-            return
-
-        if self.extra_events.get('on_app_command_error'):
-            return interaction.client.dispatch('app_command_error', interaction, command, error)
-
-        raise error from None
 
     async def start(self, token: str, *, reconnect: bool = True, verbose: bool = True) -> None:
         """|coro|
