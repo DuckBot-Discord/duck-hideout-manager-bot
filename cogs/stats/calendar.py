@@ -38,7 +38,8 @@ class CalendarStatus:
     def __init__(self, bot: HideoutManager) -> None:
         self.bot = bot
 
-    async def async_init(self, user_id: int):
+    async def async_init(self, user_id: int, show_warning: bool = True):
+        self.show_missing_timezone_warning = show_warning
         query = """
             SELECT status, changed_at AT TIME ZONE COALESCE((SELECT timezone FROM user_settings WHERE user_id = $1), 'UTC') AS changed_at
             FROM status_history WHERE user_id = $1
@@ -125,12 +126,14 @@ class CalendarStatus:
         canvas.paste(lines_overlay, (100, 25), lines_overlay)
         canvas.save(buffer, format='PNG')
         buffer.seek(0)
-        return (
-            buffer,
-            None
-            if self.time_zone_name
-            else "You don't have a time zone set! Use /set-timezone to set it and display your calendar at your local time zone.",
-        )
+
+        message = None
+        if self.time_zone_name:
+            message = f"User's time zone: `{self.time_zone_name}`"
+        elif self.show_missing_timezone_warning:
+            message = "You don't have a time zone set! Use /set-timezone to set it and display your calendar at your local time zone."
+
+        return buffer, message
 
 
 class CalendarStatusCog(HideoutCog):
@@ -146,7 +149,7 @@ class CalendarStatusCog(HideoutCog):
         async with ctx.typing():
 
             status = CalendarStatus(self.bot)
-            error = await status.async_init(user.id)
+            error = await status.async_init(user.id, show_warning=ctx.author == user)
             if error:
                 return await ctx.send(error)
             image, content = await status.full_render()
