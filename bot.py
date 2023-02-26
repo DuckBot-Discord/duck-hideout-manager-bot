@@ -175,24 +175,6 @@ class HideoutHelper(TimerManager):
         for i in range(0, len(item), size):
             yield item[i : i + size]
 
-    def validate_locale(self, locale: str | discord.Locale | None, default: str = 'en_us') -> str:
-        """Validate a locale.
-
-        Parameters
-        ----------
-        locale: :class:`str`
-            The locale to validate.
-
-        Returns
-        -------
-        :class:`bool`
-            Whether or not the locale is valid.
-        """
-        locale = str(locale).lower().replace('-', '_')
-        if locale not in self.bot.allowed_locales:
-            locale = self.validate_locale(default)
-        return locale
-
 
 class HideoutManager(commands.AutoShardedBot, HideoutHelper):
     if TYPE_CHECKING:
@@ -219,7 +201,6 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         self.context_class: Type[commands.Context[HideoutManager]] = commands.Context
         self.error_webhook_url: Optional[str] = error_wh
         self._start_time: Optional[datetime.datetime] = None
-        self.allowed_locales: Set[str] = {'en_us', 'es_es', 'it'}
 
         self.exceptions: HideoutExceptionManager = HideoutExceptionManager(self)
         self.thread_pool: concurrent.futures.ThreadPoolExecutor = concurrent.futures.ThreadPoolExecutor(max_workers=20)
