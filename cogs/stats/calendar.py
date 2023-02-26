@@ -45,6 +45,11 @@ class CalendarStatus:
             AND changed_at > NOW() - INTERVAL '30 days'
             ORDER BY changed_at ASC
         """
+        self.time_zone_name: str | None = await self.bot.pool.fetchval(
+            "SELECT timezone FROM user_settings WHERE user_id = $1", user_id
+        )
+        time_zone = zoneinfo.ZoneInfo(self.time_zone_name or 'UTC')
+
         results = await self.bot.pool.fetch(query, user_id)
         if not results:
             return "I do not have any status history for that user..."
@@ -53,16 +58,18 @@ class CalendarStatus:
         self.first = times[0][1].replace(hour=0, minute=0, second=0, microsecond=0)
         self.last = times[-1][1].replace(hour=23, minute=59, second=59, microsecond=9999)
 
-        self.times = [(None, self.first)] + times + [(times[-1][0], datetime.datetime.now())] + [(None, self.last)]
+        self.times = (
+            [(None, self.first)]
+            + times
+            + [(times[-1][0], datetime.datetime.now(time_zone).replace(tzinfo=None))]
+            + [(None, self.last)]
+        )
 
         self.days = (self.last - self.first).days + 1
 
         self.HEIGHT = self.days * 25
 
-        time_zone_name = await self.bot.pool.fetchval(
-            "SELECT COALESCE((SELECT timezone FROM user_settings WHERE user_id = $1), 'UTC')", user_id
-        )
-        self.tz_offset = datetime.datetime.now(zoneinfo.ZoneInfo(time_zone_name)).strftime('UTC%z')
+        self.tz_offset = datetime.datetime.now(time_zone).strftime('UTC%z')
 
     @staticmethod
     def tripletwise(iterable: Sequence[Any]):
@@ -73,9 +80,10 @@ class CalendarStatus:
         return zip(a, b, c)
 
     @executor_function
-    def full_render(self) -> io.BytesIO:
-        # pyright: reportUnknownMemberType=false
+    def full_render(self) -> tuple[io.BytesIO, str | None]:
+        # at some point, this function should be made cleaner. but for now it works.
 
+        # pyright: reportUnknownMemberType=false
         array = np.zeros((self.HEIGHT, self.WIDTH, 4))
         font = ImageFont.truetype('assets/fonts/Oswald-SemiBold.ttf', 19)
 
@@ -117,7 +125,12 @@ class CalendarStatus:
         canvas.paste(lines_overlay, (100, 25), lines_overlay)
         canvas.save(buffer, format='PNG')
         buffer.seek(0)
-        return buffer
+        return (
+            buffer,
+            None
+            if self.time_zone_name
+            else "You don't have a time zone set! Use /set-timezone to set it and display your calendar at your local time zone.",
+        )
 
 
 class CalendarStatusCog(HideoutCog):
@@ -136,10 +149,8 @@ class CalendarStatusCog(HideoutCog):
             error = await status.async_init(user.id)
             if error:
                 return await ctx.send(error)
-            image = await status.full_render()
-            if isinstance(image, str):
-                return await ctx.send(image)
-            return await ctx.send(file=discord.File(image, filename=f'{user.id}-status-history.png'))
+            image, content = await status.full_render()
+            return await ctx.send(content, file=discord.File(image, filename=f'{user.id}-status-history.png'))
 
     @commands.hybrid_command(name='set-timezone', aliases=('settz', 'tz'))
     @app_commands.rename(timezone_name='timezone-name')
