@@ -231,12 +231,8 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         self._auto_spam_count: DefaultDict[int, int] = defaultdict(int)
 
     async def setup_hook(self) -> None:
-        failed = False
         for extension in initial_extensions:
-            result = await self.load_extension(extension)
-            failed = failed or not result
-
-        self.tree.copy_global_to(guild=discord.Object(id=constants.DUCK_HIDEOUT))
+            await self.load_extension(extension)
 
         super(HideoutHelper, self).__init__(bot=self)
 
