@@ -11,8 +11,6 @@ from utils.constants import BOT_DEVS_ROLE, BOTS_ROLE, DUCK_HIDEOUT, GENERAL_CHAN
 
 from ._checks import hideout_only
 
-log = logging.getLogger(__name__)
-
 
 GuildMessageable = Union[TextChannel, VoiceChannel, Thread]
 
