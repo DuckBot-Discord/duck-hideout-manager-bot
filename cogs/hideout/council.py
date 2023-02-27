@@ -16,9 +16,7 @@ class SelectAMessageView(discord.ui.View):
         self.nodes = nodes
         super().__init__()
         self.select_a_file.options = [
-            discord.SelectOption(label=n.path)
-            for n in sorted(nodes, key=lambda n: n.path, reverse=True)
-            if n.path not in EXCLUDED
+            discord.SelectOption(label=n.path) for n in sorted(nodes, key=lambda n: n.path) if n.path not in EXCLUDED
         ]
 
     @discord.ui.select(placeholder='Select a file...')
