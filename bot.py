@@ -29,7 +29,16 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utils import HideoutCog, HideoutContext, HideoutExceptionManager, TimerManager, col, constants, human_timedelta
+from utils import (
+    HideoutCog,
+    HideoutContext,
+    HideoutExceptionManager,
+    TimerManager,
+    col,
+    constants,
+    human_timedelta,
+    GithubClient,
+)
 from utils.errors import *
 
 try:
@@ -213,7 +222,15 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         cogs: dict[str, HideoutCog]  # type: ignore
         tree: HideoutCommandTree  # type: ignore
 
-    def __init__(self, *, session: ClientSession, pool: Pool[asyncpg.Record], error_wh: str, prefix: str) -> None:
+    def __init__(
+        self,
+        *,
+        session: ClientSession,
+        pool: Pool[asyncpg.Record],
+        error_wh: str,
+        prefix: str,
+        github_client: GithubClient,
+    ) -> None:
         intents = discord.Intents.all()
         intents.typing = False
 
@@ -231,6 +248,8 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         )
         self.pool: Pool[asyncpg.Record] = pool
         self.session: ClientSession = session
+        self.github: GithubClient = github_client
+
         self.context_class: Type[commands.Context[HideoutManager]] = commands.Context
         self.error_webhook_url: Optional[str] = error_wh
         self._start_time: Optional[datetime.datetime] = None
@@ -491,18 +510,9 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
 
         """
         if verbose is False:
-            _gw_log = logging.getLogger('discord.gateway')
-            _gw_log.disabled = True
-
-            _cl_log = logging.getLogger('discord.client')
-            _cl_log.disabled = True
-
-            _ht_log = logging.getLogger('discord.http')
-            _ht_log.disabled = True
-
-            _ds_log = logging.getLogger('discord.state')
-            _ds_log.disabled = True
-
+            loud = ['discord.gateway', 'discord.webhook', 'discord.http', 'discord.state', 'discord.client']
+            for logger in loud:
+                logging.getLogger(logger).setLevel(logging.INFO)
         await super().start(token, reconnect=reconnect)
 
     async def close(self) -> None:

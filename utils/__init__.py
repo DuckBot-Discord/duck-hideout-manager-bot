@@ -9,3 +9,4 @@ from .helpers import *
 from .paginators import *
 from .time import *
 from .timer import *
+from .github import *
