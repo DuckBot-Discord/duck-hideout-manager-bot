@@ -302,6 +302,7 @@ class PitsManagement(HideoutCog):
                 **pit.overwrites,
                 ctx.guild.default_role: discord.PermissionOverwrite(view_channel=False),
                 counselors: discord.PermissionOverwrite(view_channel=True),
+                ctx.guild.me: discord.PermissionOverwrite(view_channel=True, manage_channels=True, manage_permissions=True),
             }
             await pit.edit(
                 overwrites=new_overwrites, category=archive, reason=f"Pit archived by {ctx.author} ({ctx.author.id})"
@@ -452,6 +453,9 @@ class PitsManagement(HideoutCog):
 
             new_overwrites = {
                 **pit.overwrites,
+                member.guild.me: discord.PermissionOverwrite(
+                    view_channel=True, manage_channels=True, manage_permissions=True
+                ),
                 member.guild.default_role: discord.PermissionOverwrite(view_channel=False),
                 counselors: discord.PermissionOverwrite(view_channel=True),
             }
@@ -460,7 +464,6 @@ class PitsManagement(HideoutCog):
             await self.bot.pool.execute("UPDATE pits SET archive_mode = 'leave' WHERE pit_id = $1", pit.id)
         except discord.Forbidden:
             return log.error('I do not have permission to edit channels.')
-
         else:
             await pit.send('Pit archived automatically: member left')
 
