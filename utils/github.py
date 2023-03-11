@@ -126,31 +126,3 @@ class Repository(BaseModel):
 async def create_client(token: str) -> AsyncIterator[GithubClient]:
     async with ClientSession(headers={'Authorization': f'Bearer {token}'}) as session:
         yield GithubClient(session)
-
-
-if __name__ == '__main__':
-    import os
-    import asyncio
-    from dotenv import load_dotenv
-
-    load_dotenv()
-
-    import discord
-
-    async def main():
-        async with create_client(os.environ['GITHUB_ORG_TOKEN']) as client:
-            repo = await client.fetch_repo('DuckBot-Discord', 'DuckBot')
-
-            tree = await repo.fetch_tree()
-
-            def file_check(node: TreeNode):
-                return node.path == 'cogs/economy/_base.py'
-
-            node = discord.utils.find(file_check, tree)
-
-            if node:
-                file_data = await node.fetch_filedata()
-                if not isinstance(file_data, list):
-                    print(file_data.decode())
-
-    asyncio.run(main())

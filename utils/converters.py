@@ -110,7 +110,6 @@ class UntilFlag(Generic[T, FCT]):
         value = self._regex.split(argument, maxsplit=1)[0]
         converted_value: T = await commands.run_converters(ctx, self._converter, value, ctx.current_parameter)
         commands.core
-        print(f"converted is ", converted_value)
         if not await discord.utils.maybe_coroutine(self.validate_value, argument):
             raise commands.BadArgument('Failed to validate argument preceding flags.')
         flags = await self.flags.convert(ctx, argument=argument[len(value) :])
