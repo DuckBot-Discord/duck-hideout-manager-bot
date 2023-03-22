@@ -221,9 +221,11 @@ class Help(HideoutCog):
             inline=False,
         )
 
-        embed.add_field(
-            name='all sub-commands', value=cb('\n'.join(await self.command_tree(ctx, group)), lang=''), inline=False
-        )
+        paginator = commands.Paginator(max_size=1024)
+        for line in await self.command_tree(ctx, group):
+            paginator.add_line(f"\u200b{line}")
+        for page in paginator.pages:
+            embed.add_field(name='all sub-commands', value=page, inline=False)
         embed.set_footer(
             text="\N{HEAVY MULTIPLICATION X} means you can't run that sub-command.\n[/] means that the subcommand is a slash command."
         )
