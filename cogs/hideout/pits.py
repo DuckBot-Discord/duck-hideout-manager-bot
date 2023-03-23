@@ -496,6 +496,6 @@ class PitsManagement(HideoutCog):
             return log.error('I do not have permission to edit channels.')
         else:
             await pit.send(
-                f'Pit unarchived automatically: {member.mention} rejoined',
+                f'Pit un-archived automatically: {member.mention} rejoined',
                 allowed_mentions=discord.AllowedMentions(users=True),
             )

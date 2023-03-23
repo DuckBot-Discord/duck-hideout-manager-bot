@@ -1,6 +1,7 @@
 import os
-import logging
+from logging import getLogger
 from typing import Union, Any
+from datetime import timedelta
 
 import discord
 from discord import TextChannel, Thread, VoiceChannel
@@ -13,6 +14,8 @@ from ._checks import hideout_only
 
 
 GuildMessageable = Union[TextChannel, VoiceChannel, Thread]
+
+log = getLogger(__name__)
 
 
 class Addbot(HideoutCog):
@@ -76,9 +79,9 @@ class Addbot(HideoutCog):
 
         mem_id = await self.bot.pool.fetchval('SELECT owner_id FROM addbot WHERE bot_id = $1', member.id)
         if not mem_id:
-            await member.kick(reason='Unauthorised bot')
+            await member.kick(reason='Unauthorized bot')
             return await queue_channel.send(
-                f'{member} automatically kicked - unauthorised. Please re-invite using the `addbot` command.'
+                f'{member} automatically kicked - unauthorized. Please re-invite using the `addbot` command.'
             )
 
         await self.bot.pool.execute('UPDATE addbot SET added = TRUE, pending = FALSE WHERE bot_id = $1', member.id)
@@ -130,17 +133,11 @@ class Addbot(HideoutCog):
         if not bots:
             return
 
-        for bot in bots:
-            await self.bot.pool.execute('UPDATE addbot SET added = FALSE WHERE bot_id = $1', bot.id)
-            try:
-                await bot.kick(reason='Bot owner left the server.')
-            except discord.HTTPException:
-                pass
+        then = discord.utils.utcnow() + timedelta(days=1)
 
-        embed = discord.Embed(
-            title=f'{member} left!', description=f"**Kicking all their bots:**\n{', '.join(map(str, bots))}"
-        )
-        await queue_channel.send(embed=embed)
+        await self.bot.create_timer(then, 'member_leave', member.id, [m.id for m in bots])
+
+        await queue_channel.send(f'Scheduled banning {member}\'s bots in 1 day.')
 
     @commands.Cog.listener('on_ready')
     async def on_ready(self):
@@ -148,7 +145,7 @@ class Addbot(HideoutCog):
             return
         guild = self.bot.get_guild(DUCK_HIDEOUT)
         if not guild:
-            return logging.error('Could not find Duck Hideout!', exc_info=False)
+            return log.error('Could not find Duck Hideout!', exc_info=False)
 
         bots = await self.bot.pool.fetch('SELECT * FROM addbot')
         queue_channel: discord.TextChannel = guild.get_channel(QUEUE_CHANNEL)  # type: ignore
@@ -177,3 +174,46 @@ class Addbot(HideoutCog):
 
             else:
                 await self.bot.pool.execute('UPDATE addbot SET pending = FALSE WHERE bot_id = $1', bot['bot_id'])
+
+    @commands.Cog.listener('on_member_leave_timer_complete')
+    async def auto_kick_members(self, member_id: int, bot_ids: list[int]):
+        guild = self.bot.get_guild(DUCK_HIDEOUT)
+        if not guild:
+            # Delay action by one day. Why did this happen?
+            log.critical('Could not find Duck Hideout guild!')
+            return await self.bot.create_timer(
+                discord.utils.utcnow() + timedelta(days=1),
+                'member_leave',
+                member_id,
+                bot_ids,
+            )
+        queue_channel: discord.TextChannel = member.guild.get_channel(QUEUE_CHANNEL)  # type: ignore
+
+        if not queue_channel:
+            log.critical('Could not find Duck Hideout Bots Queue channel!')
+            return await self.bot.create_timer(
+                discord.utils.utcnow() + timedelta(days=1),
+                'member_leave',
+                member_id,
+                bot_ids,
+            )
+
+        member = await self.bot.get_or_fetch_member(guild, member_id)
+
+        if member:
+            return
+
+        bots = [_ent for _ent in map(lambda ent: guild.get_member(ent), bot_ids) if _ent is not None]
+
+        for bot in bots:
+            await self.bot.pool.execute('UPDATE addbot SET added = FALSE WHERE bot_id = $1;', bot.id)
+            try:
+                await bot.kick(reason='Bot owner left the server.')
+            except discord.HTTPException as e:
+                log.error(f'Could not ban {bot} ({bot.id}): {type(e)} {e}', exc_info=None)
+                pass
+
+            embed = discord.Embed(
+                title=f'{member} left!', description=f"**Kicking all their bots:**\n{', '.join(map(str, bots))}"
+            )
+            await queue_channel.send(embed=embed)
