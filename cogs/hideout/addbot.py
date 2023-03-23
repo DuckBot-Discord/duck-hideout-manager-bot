@@ -123,7 +123,7 @@ class Addbot(HideoutCog):
             mem = member.guild.get_member(mem_id)
 
             if mem:
-                embed.add_field(name='Added by', value=str(member), inline=False)
+                embed.add_field(name='Added by', value=str(mem), inline=False)
                 await queue_channel.send(embed=embed)
 
             return
