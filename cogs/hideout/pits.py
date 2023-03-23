@@ -17,6 +17,10 @@ from ._checks import counselor_only, pit_owner_only
 
 log = getLogger('HM.pit')
 
+MANAGES_PIT_PERMISSIONS = discord.PermissionOverwrite(
+    manage_messages=True, manage_channels=True, manage_threads=True, view_channel=True
+)
+
 
 class PitsManagement(HideoutCog):
     def __init__(self, *args: Any, **kwargs: Any):
@@ -234,11 +238,8 @@ class PitsManagement(HideoutCog):
             users = [
                 _ent for _ent in map(lambda ent: owner.guild.get_member(ent['bot_id']), _bot_ids) if _ent is not None
             ] + [owner]
-            overs = discord.PermissionOverwrite(
-                manage_messages=True, manage_channels=True, manage_threads=True, view_channel=True
-            )
             channel = await ctx.guild.create_text_channel(
-                name, category=category, overwrites={user: overs for user in users}
+                name, category=category, overwrites={user: MANAGES_PIT_PERMISSIONS for user in users}
             )
 
         except discord.Forbidden:
@@ -347,7 +348,7 @@ class PitsManagement(HideoutCog):
             raise commands.BadArgument('I do not have permission to edit channels.')
 
         else:
-            await ctx.send(f'✅ **|** Unarchived **{pit.name}**')
+            await ctx.send(f'✅ **|** Un-archived **{pit.name}**')
 
     @commands.Cog.listener('on_member_join')
     async def block_handler(self, member: discord.Member):
@@ -479,15 +480,16 @@ class PitsManagement(HideoutCog):
         try:
             pit: discord.TextChannel | None = member.guild.get_channel(record["pit_id"])  # type: ignore
             if pit is None:
-                raise commands.BadArgument('Could not find pit from id')
+                return log.info(f'Could not find pit from id {record["pit_id"]}')
 
             pits_category: Optional[discord.CategoryChannel] = member.guild.get_channel(PIT_CATEGORY)  # type: ignore
             if pits_category is None:
-                raise commands.BadArgument('Could not find pit category')
+                return log.critical(f'Could not find pits category')
 
             overs = {
                 **pit.overwrites,
                 member.guild.default_role: discord.PermissionOverwrite(),
+                member: MANAGES_PIT_PERMISSIONS,
             }
 
             await pit.edit(category=pits_category, overwrites=overs)
