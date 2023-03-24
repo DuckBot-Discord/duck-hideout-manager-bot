@@ -25,7 +25,6 @@ class AsyncABC(metaclass=AsyncABCMeta):
 
 
 class AsyncInstanceType(AsyncABCMeta):
-    # Probably needs better type hints
     @staticmethod
     def __new__(cls: Type[_T], clsname: str, bases: Tuple[Type[Any], ...], attributes: Dict[str, Any]) -> _T:  # type: ignore
         if '__init__' in attributes and not inspect.iscoroutinefunction(attributes['__init__']):
@@ -40,4 +39,27 @@ class AsyncInstanceType(AsyncABCMeta):
 
 
 class AsyncInstance(metaclass=AsyncInstanceType):
+    """A class that creates asynchronous instances.
+
+    Its a base class for classes that need to be asynchronous.
+
+    Example
+    -------
+
+    >>> import asyncio
+    >>> from utils import AsyncInstance
+    ...
+    >>> class TestClass(AsyncInstance):
+    ...     # Note creating this constructor with `def` will raise an error.
+    ...     async def __init__(self, name: str):
+    ...         self.name = name
+    ...
+    ...
+    >>> async def main():
+    ...     test = await TestClass("test")
+    ...     print(test.name)
+    ...     await asyncio.get_running_loop().shutdown_asyncgens()
+    ...
+    >>> asyncio.run(main())
+    """
     pass
