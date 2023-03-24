@@ -187,7 +187,7 @@ class Addbot(HideoutCog):
                 member_id,
                 bot_ids,
             )
-        queue_channel: discord.TextChannel = member.guild.get_channel(QUEUE_CHANNEL)  # type: ignore
+        queue_channel: discord.TextChannel = guild.get_channel(QUEUE_CHANNEL)  # type: ignore
 
         if not queue_channel:
             log.critical('Could not find Duck Hideout Bots Queue channel!')
@@ -202,6 +202,8 @@ class Addbot(HideoutCog):
 
         if member:
             return
+
+        member = await self.bot.get_or_fetch_user(member_id)
 
         bots = [_ent for _ent in map(lambda ent: guild.get_member(ent), bot_ids) if _ent is not None]
 
