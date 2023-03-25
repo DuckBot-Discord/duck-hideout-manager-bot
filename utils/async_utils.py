@@ -178,7 +178,7 @@ class AsyncInstanceType(metaclass=AsyncABCMeta):
     def loop(self) -> asyncio.AbstractEventLoop:
         return asyncio.get_running_loop()
 
-    def __await__(self) -> Generator[Any, None, "AsyncInstanceType"]:
+    def __await__(self) -> Generator[Any, None, AsyncInstanceType]:
         yield from self.__ainit__(*self._args, **self._kwargs).__await__()
 
         # blep :<
