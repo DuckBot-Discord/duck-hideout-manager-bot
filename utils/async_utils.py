@@ -4,7 +4,7 @@ import asyncio
 import logging
 from abc import ABCMeta
 from contextlib import suppress
-from typing import Any, Callable, Coroutine, Generator, MutableSet, Optional, overload
+from typing import Any, Callable, Coroutine, Generator, MutableSet, Optional, overload, Self
 from weakref import WeakSet
 
 __all__: tuple[str, ...] = ("AsyncInstance",)
