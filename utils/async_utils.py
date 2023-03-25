@@ -220,7 +220,7 @@ class AsyncInstance(AsyncInstanceType):
     async def __adel__(self) -> None:
         pass
 
-    def __await__(self) -> Generator[Any, None, AsyncInstance]:
+    def __await__(self) -> Generator[Any, None, Self]:
         if not hasattr(self, "_async_class_task_store"):
             self._async_class_task_store = Task(self.loop)
 
