@@ -269,6 +269,13 @@ class AsyncInstance(AsyncInstanceType):
     async def __ainit__(self, *args: Any, **kwargs: Any) -> None:
         ...
 
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        # We don't want to allow overriding __await__ as it is used
+        if cls.__await__ is not AsyncInstance.__await__:
+            raise TypeError(
+                f"{cls.__name__} cannot override __await__",
+            )
+
 
 if __name__ == "__main__":
     # NOTE: DELETE THIS BEFORE MERGING
@@ -291,10 +298,24 @@ if __name__ == "__main__":
         print("Test.__await__ done")
         await test.close()
 
+        try:
+            class FailOverride(AsyncInstance):  # type: ignore # reportUnusedClass
+                def __init__(self, *args: Any, **kwargs: Any) -> None:
+                    super().__init__(*args, **kwargs)
+
+                # This case is not allowed and should raise a TypeError
+                async def __await__(self) -> Generator[Any, None, AsyncInstance]:  # type: ignore
+                    ...
+            
+            print("This should not print")
+        except TypeError as e:
+            print(e)
+
     # Test.__ainit__ (1, 2, 3) {'a': 4, 'b': 5, 'c': 6}
     # Test.__ainit__ done
     # Test.__await__ done
     # Test.__adel__
     # Test.__adel__ done
+    # FailOverride cannot override __await__
 
     asyncio.run(compose_test_instance())
