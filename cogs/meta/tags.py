@@ -584,7 +584,7 @@ class Tags(HideoutCog):
         is_mod = is_mod or ctx.author.guild_permissions.manage_messages
         async with self.bot.safe_connection() as conn:
             tagobj = await self.get_tag(tag, ctx.guild.id, connection=conn)
-            if tagobj.owner_id != ctx.author.id or not is_mod:
+            if tagobj.owner_id != ctx.author.id and not is_mod:
                 raise commands.BadArgument(
                     f"Could not edit tag. Are you sure it exists{'' if is_mod else ' and you own it'}?"
                 )
