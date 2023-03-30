@@ -233,7 +233,6 @@ class TagsFromFetchedPageSource(menus.ListPageSource):
     display_owner = True
 
     if TYPE_CHECKING:
-        current_page: int
         per_page: int
         entries: list[asyncpg.Record]
 
@@ -255,7 +254,7 @@ class TagsFromFetchedPageSource(menus.ListPageSource):
     async def format_page(
         self, menu: menus.MenuPages, entries: typing.List[asyncpg.Record]
     ):  # pyright: reportIncompatibleMethodOverride=false
-        source = enumerate(entries, start=(self.current_page * self.per_page) + 1)
+        source = enumerate(entries, start=(menu.current_page * self.per_page) + 1)
         formatted = self.format_records(source)
         embed = discord.Embed(title=f"Tags List", description=discord.utils.escape_markdown(formatted), colour=self.colour)
         if self.member and self.display_owner:
