@@ -230,9 +230,10 @@ class TimerManager:
                 self._have_data.set()
                 return timer
 
-            self._have_data.clear()
-            self._current_timer = None
-            await self._have_data.wait()
+        self._have_data.clear()
+        self._current_timer = None
+        await self._have_data.wait()
+        async with self.bot.safe_connection() as con:
             return await self.get_active_timer(connection=con, days=days)
 
     async def call_timer(self, timer: Timer) -> None:
