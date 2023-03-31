@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 from utils import HideoutContext, HideoutGuildContext, SilentCommandError
-from utils.constants import COUNSELORS_ROLE, DUCK_HIDEOUT, PIT_CATEGORY
+from utils.constants import COUNSELORS_ROLE, DUCK_HIDEOUT, PIT_CATEGORY, HELP_FORUM
 
 
 def pit_owner_only():
@@ -43,3 +43,21 @@ def counselor_only():
         raise SilentCommandError
 
     return commands.check(predicate)
+
+
+def is_help_forum_post():
+    def predicate(ctx: HideoutGuildContext):
+        if not ctx.guild:
+            raise commands.NoPrivateMessage
+        if not isinstance(ctx.channel, discord.Thread) or ctx.channel.parent_id != HELP_FORUM:
+            raise SilentCommandError
+        return True
+
+    return commands.check(predicate)
+
+
+def can_solve_thread(ctx: HideoutGuildContext):
+    assert isinstance(ctx.channel, discord.Thread)
+
+    perms = ctx.channel.permissions_for(ctx.author)
+    return perms.manage_messages or ctx.channel.owner_id == ctx.author.id

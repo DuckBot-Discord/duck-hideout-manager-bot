@@ -5,10 +5,11 @@ from typing import TYPE_CHECKING, Any, Optional, Sequence, Tuple, TypeVar, Union
 import discord
 from discord.ext import commands
 
+from utils.helpers import View
+
 if TYPE_CHECKING:
     from discord import AllowedMentions, Embed, File, Message, MessageReference, PartialMessage
     from discord.message import Message
-    from discord.ui import View
 
     from bot import HideoutManager
 
@@ -18,44 +19,39 @@ __all__: Tuple[str, ...] = ('HideoutContext', 'HideoutGuildContext', 'Confirmati
 BotT = TypeVar('BotT', bound='HideoutManager')
 
 
-class ConfirmationView(discord.ui.View):
-    def __init__(self, ctx: HideoutContext, *, timeout: int = 60) -> None:
-        super().__init__(timeout=timeout)
+class ConfirmationView(View):
+    def __init__(self, ctx: HideoutContext, *, owner_id: Optional[int] = None, timeout: int = 60) -> None:
+        super().__init__(timeout=timeout, bot=ctx.bot)
+        self.owner_id = owner_id or ctx.author.id
         self.ctx = ctx
         self.value = None
         self.message: discord.Message | None = None
-        self.ctx.bot.views.add(self)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return interaction.user == self.ctx.author
+        return interaction.user.id == self.owner_id
 
     async def on_timeout(self) -> None:
-        self.ctx.bot.views.discard(self)
         if self.message:
             for item in self.children:
                 item.disabled = True  # type: ignore
 
-            await self.message.edit(content=f'Timed out waiting for a button press from {self.ctx.author}.', view=self)
-
-    def stop(self) -> None:
-        self.ctx.bot.views.discard(self)
-        super().stop()
+            await self.message.edit(content=f'Timed out waiting for a response from <@{self.owner_id}>.', view=self)
 
     @discord.ui.button(label='Confirm', style=discord.ButtonStyle.primary)
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button[ConfirmationView]) -> None:
-        assert interaction.message is not None
+        await interaction.response.defer()
 
         self.value = True
         self.stop()
-        await interaction.message.delete()
+        await interaction.delete_original_response()
 
     @discord.ui.button(label='Cancel', style=discord.ButtonStyle.danger)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button[ConfirmationView]) -> None:
-        assert interaction.message is not None
-
+        await interaction.response.defer()
         self.value = False
         self.stop()
-        await interaction.message.delete()
+
+        await interaction.delete_original_response()
 
 
 class HideoutContext(commands.Context['HideoutManager']):
@@ -117,7 +113,7 @@ class HideoutContext(commands.Context['HideoutManager']):
         allowed_mentions: Optional[AllowedMentions] = None,
         reference: Optional[Union[Message, MessageReference, PartialMessage]] = None,
         mention_author: Optional[bool] = None,
-        view: Optional[View] = None,
+        view: Optional[discord.ui.View] = None,
         suppress_embeds: bool = False,
         ephemeral: bool = False,
     ) -> Message:
@@ -148,9 +144,21 @@ class HideoutContext(commands.Context['HideoutManager']):
 
             kwargs['embeds'] = embeds
 
+        if kwargs.get('view') and kwargs.get('delete_button'):
+            raise TypeError("'view' and 'delete_button' cannot be passed together.")
+
         return await super().send(content, **kwargs)
 
-    async def confirm(self, content: str | None = None, /, *, timeout: int = 30, **kwargs: Any) -> bool | None:
+    async def confirm(
+        self,
+        content: str | None = None,
+        /,
+        *,
+        owner: Optional[int] = None,
+        timeout: int = 30,
+        delete_after: bool = True,
+        **kwargs: Any,
+    ) -> bool | None:
         """|coro|
 
         Prompts a confirmation message that users can confirm or deny.
@@ -159,6 +167,8 @@ class HideoutContext(commands.Context['HideoutManager']):
         ----------
         content: str | None
             The content of the message. Can be an embed.
+        owner: int | None
+            The owner of this view. Defaults to ctx.author.id
         timeout: int | None
             The timeout for the confirmation.
         kwargs:
@@ -170,7 +180,7 @@ class HideoutContext(commands.Context['HideoutManager']):
             Whether the user confirmed or not.
             None if the view timed out.
         """
-        view = ConfirmationView(self, timeout=timeout)
+        view = ConfirmationView(self, timeout=timeout, owner_id=owner)
         try:
             view.message = await self.channel.send(content, **kwargs, view=view)
             await view.wait()
