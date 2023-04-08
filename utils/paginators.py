@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import typing
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Self
+from typing import TYPE_CHECKING, Any, Dict, Optional, Self, Tuple
 
 import discord
 from discord.ext import menus
@@ -83,7 +83,7 @@ class ViewMenuPages(discord.ui.View):
 
     async def _get_kwargs_from_page(self, page: int) -> Dict[str, Any]:
         # fmt: off
-        value: dict[str, Any] | str | discord.Embed | Any = await discord.utils.maybe_coroutine(self.source.format_page, self, page)  # pyright: reportUnknownArgumentType=false
+        value: dict[str, Any] | str | discord.Embed | Any = await discord.utils.maybe_coroutine(self.source.format_page, self, page)  # type: ignore
         if isinstance(value, dict):
             return value
         elif isinstance(value, str):

@@ -52,9 +52,9 @@ class UntilFlag(Generic[T, FCT]):
 
         if hasattr(converter, '__metadata__'):
             # Annotated[X, Y] can access Y via __metadata__
-            converter = converter.__metadata__[0]
+            converter = converter.__metadata__[0]  # type: ignore
 
-        self._converter = converter
+        self._converter: Type[T] = converter
         self._regex: re.Pattern[str] = self.flags.__commands_flag_regex__  # pyright: reportUnknownMemberType=false, reportGeneralTypeIssues=false
         self._start: str = (self.flags.__commands_flag_prefix__)  # pyright: reportUnknownMemberType=false, reportGeneralTypeIssues=false
 
@@ -108,9 +108,10 @@ class UntilFlag(Generic[T, FCT]):
             The converted argument.
         """
         value = self._regex.split(argument, maxsplit=1)[0]
-        converted_value: T = await commands.run_converters(ctx, self._converter, value, ctx.current_parameter)
-        commands.core
+        converted_value: T = await commands.run_converters(ctx, self._converter, value, ctx.current_parameter)  # type: ignore
+
         if not await discord.utils.maybe_coroutine(self.validate_value, argument):
             raise commands.BadArgument('Failed to validate argument preceding flags.')
+
         flags = await self.flags.convert(ctx, argument=argument[len(value) :])
-        return UntilFlag(value=converted_value, flags=flags, converter=self._converter)
+        return UntilFlag(value=converted_value, flags=flags, converter=self._converter)  # type: ignore

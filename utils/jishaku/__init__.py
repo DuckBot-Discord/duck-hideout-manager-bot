@@ -25,7 +25,6 @@ from utils.context import HideoutContext
 
 from .. import HideoutCog, add_logging
 
-
 if TYPE_CHECKING:
     from bot import HideoutManager
 
@@ -181,6 +180,7 @@ class HideoutManagerJishaku(
         )
 
         scope: Scope = self.scope  # type: ignore
+        assert isinstance(scope, Scope)
         printed = io.StringIO()
 
         try:
