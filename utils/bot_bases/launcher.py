@@ -8,7 +8,7 @@ import aiohttp
 from dotenv import load_dotenv
 import discord
 
-from utils import github
+from . import github
 from bot import HideoutManager
 
 load_dotenv('utils/.env')

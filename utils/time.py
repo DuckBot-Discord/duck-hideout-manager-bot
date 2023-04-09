@@ -33,7 +33,7 @@ from dateutil.relativedelta import relativedelta
 from discord.ext import commands
 
 if TYPE_CHECKING:
-    from .context import HideoutContext
+    from .bot_bases.context import HideoutContext
 
 units: dict[str, list[str]] = pdt.pdtLocales['en_US'].units
 units['minutes'].append('mins')

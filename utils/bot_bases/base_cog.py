@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Tuple
 
 from discord.ext import commands
 
-from .errors import *
+from ..errors import *
 
 if TYPE_CHECKING:
     from bot import HideoutManager

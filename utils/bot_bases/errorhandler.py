@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Tuple, T
 
 import discord
 
-from utils.context import HideoutContext
+from .context import HideoutContext
 from utils.errors import HideoutManagerException, SilentCommandError, log
 from utils.types.exception import HideoutTraceback, HideoutTracebackOptional
 

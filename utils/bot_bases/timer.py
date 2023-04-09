@@ -9,9 +9,9 @@ import asyncpg
 import discord
 from discord.ext import commands
 
-from . import time
+from .. import time
 from .context import HideoutContext
-from .errors import TimerNotFound
+from ..errors import TimerNotFound
 
 if TYPE_CHECKING:
     from asyncpg import Connection, Record

@@ -9,7 +9,7 @@ from utils import errors
 if TYPE_CHECKING:
     from bot import HideoutManager
 
-    from .context import HideoutContext
+    from .bot_bases.context import HideoutContext
 
 __all__: Tuple[str, ...] = ()
 

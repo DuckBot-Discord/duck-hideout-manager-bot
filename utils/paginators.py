@@ -8,7 +8,7 @@ import discord
 from discord.ext import menus
 from discord.ui import Modal, TextInput
 
-from .context import HideoutContext
+from .bot_bases.context import HideoutContext
 
 if TYPE_CHECKING:
     from bot import HideoutManager

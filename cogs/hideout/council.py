@@ -3,8 +3,9 @@ from typing import Self
 import discord
 from discord import app_commands
 
-from utils import github, HideoutCog
+from utils import HideoutCog
 from bot import HideoutManager
+from utils import github
 
 
 EXCLUDED = ['LICENSE', 'README.md', '.gitignore']

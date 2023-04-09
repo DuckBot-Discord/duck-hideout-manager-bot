@@ -6,7 +6,7 @@ from typing import Any, Generic, Tuple, Type, TypeVar
 import discord
 from discord.ext import commands
 
-from .context import HideoutContext
+from .bot_bases.context import HideoutContext
 
 BET = TypeVar('BET', bound='discord.guild.BanEntry')
 FCT = TypeVar('FCT', bound='commands.FlagConverter')

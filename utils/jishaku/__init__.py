@@ -21,7 +21,7 @@ from jishaku.paginators import PaginatorInterface, WrappedPaginator, use_file_ch
 from jishaku.repl import AsyncCodeExecutor, Scope
 from jishaku.repl.repl_builtins import get_var_dict_from_ctx
 
-from utils.context import HideoutContext
+from utils.bot_bases.context import HideoutContext
 
 from .. import HideoutCog, add_logging
 
