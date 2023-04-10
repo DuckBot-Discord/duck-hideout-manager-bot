@@ -55,7 +55,7 @@ class EmbedFlags(commands.FlagConverter, prefix='--', delimiter='', case_insensi
     title: str | None = None
     description: str | None = None
     color: discord.Color | None = None
-    field: typing.List[FieldFlags] | None = None
+    field: typing.List[FieldFlags] = commands.flag(converter=list[FieldFlags], default=None)
     footer: FooterFlags | None = None
     image: typing.Annotated[str, verify_link] | None = None
     author: AuthorFlags | None = None
