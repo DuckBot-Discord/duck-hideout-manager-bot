@@ -63,7 +63,7 @@ log = logging.getLogger('HideoutManager.main')
 initial_extensions: Tuple[str, ...] = (
     # Helpers
     'utils.jishaku',
-    'utils.context',
+    'utils.bot_bases.context',
     'utils.command_errors',
     # Cogs
     'cogs.meta',
