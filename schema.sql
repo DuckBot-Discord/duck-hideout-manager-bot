@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS message_info (
     created_at TIMESTAMP WITH TIME ZONE,
     edited_at TIMESTAMP WITH TIME ZONE,
     deleted BOOLEAN DEFAULT FALSE,
+    is_bot BOOLEAN DEFAULT FALSE,
     PRIMARY KEY (message_id, channel_id)
 );
 
