@@ -345,9 +345,9 @@ class PitsManagement(HideoutCog):
         is_not_counselor = ctx.guild.get_role(COUNSELORS_ROLE) not in ctx.author.roles
 
         if archive_mode is ArchiveMode.MANUAL and ctx.author != owner or is_not_counselor:
-            raise ActionNotExecutable("This pit was manually archived, only the pit owner and counsellors can unarchive it")
+            raise ActionNotExecutable('This pit was manually archived, only the pit owner and counsellors can unarchive it.')
         elif archive_mode is ArchiveMode.INACTIVE and is_not_counselor:
-            raise ActionNotExecutable("This pit was marked as inactive, only the counsellors can unarchive it")
+            raise ActionNotExecutable('This pit was marked as inactive, only the counsellors can unarchive it.')
 
         overs = {
             **pit.overwrites,
@@ -356,7 +356,7 @@ class PitsManagement(HideoutCog):
 
         try:
             await pit.edit(category=pits_category, overwrites=overs)
-            await ctx.bot.pool.execute("UPDATE pits SET archive_mode = NULL WHERE pit_id = $1", pit.id)
+            await ctx.bot.pool.execute('''UPDATE pits SET archive_mode = NULL WHERE pit_id = $1''', pit.id)
         except discord.Forbidden:
             raise commands.BadArgument('I do not have permission to edit channels.')
         else:
