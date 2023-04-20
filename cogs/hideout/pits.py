@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import os
 import asyncio
+import enum
+import os
 from logging import getLogger
-from typing import Optional, Any
+from typing import Any, Optional
 
 import asyncpg
 import discord
@@ -20,6 +21,12 @@ log = getLogger('HM.pit')
 MANAGES_PIT_PERMISSIONS = discord.PermissionOverwrite(
     manage_messages=True, manage_channels=True, manage_threads=True, view_channel=True
 )
+
+
+class ArchiveMode(enum.Enum):
+    LEAVE = "leave"
+    INACTIVE = "inactive"
+    MANUAL = "manual"
 
 
 class PitsManagement(HideoutCog):
@@ -315,38 +322,43 @@ class PitsManagement(HideoutCog):
         else:
             await ctx.send(f'✅ **|** Archived **{pit.name}**')
 
-    @counselor_only()
     @pit.command(name='unarchive', with_app_command=False)
     async def pit_unarchive(self, ctx: HideoutGuildContext, *, channel: discord.TextChannel = commands.CurrentChannel):
         """Archives a pit."""
-
         record = await ctx.bot.pool.fetchrow('''SELECT * FROM pits WHERE pit_id = $1''', channel.id)
+
         if record is None:
             raise commands.BadArgument('Could not find pit')
 
         owner = await self.bot.get_or_fetch_member(ctx.guild, record['pit_owner'])
+        pit = ctx.guild.get_channel(record["pit_id"])
+        pits_category = ctx.guild.get_channel(PIT_CATEGORY)
+
         if owner is None:
             raise commands.BadArgument('Could not find pit owner from id')
+        elif pit is None or not isinstance(pit, discord.TextChannel):
+            raise commands.BadArgument('Could not find pit from id')
+        elif pits_category is None or not isinstance(pits_category, discord.CategoryChannel):
+            raise commands.BadArgument('Could not find valid pit category')
+
+        archive_mode = ArchiveMode(record['archive_mode'])
+        is_not_counselor = ctx.guild.get_role(COUNSELORS_ROLE) not in ctx.author.roles
+
+        if archive_mode is ArchiveMode.INACTIVE and ctx.author != owner or is_not_counselor:
+            raise ActionNotExecutable('This pit was manually archived, only the pit owner and counsellors can unarchive it.')
+        elif archive_mode is ArchiveMode.MANUAL and is_not_counselor:
+            raise ActionNotExecutable('This pit was marked as inactive, only the counsellors can unarchive it.')
+
+        overs = {
+            **pit.overwrites,
+            ctx.guild.default_role: discord.PermissionOverwrite(),
+        }
 
         try:
-            pit: discord.TextChannel | None = ctx.guild.get_channel(record["pit_id"])  # type: ignore
-            if pit is None:
-                raise commands.BadArgument('Could not find pit from id')
-
-            pits_category: Optional[discord.CategoryChannel] = ctx.guild.get_channel(PIT_CATEGORY)  # type: ignore
-            if pits_category is None:
-                raise commands.BadArgument('Could not find pit category')
-
-            overs = {
-                **pit.overwrites,
-                ctx.guild.default_role: discord.PermissionOverwrite(),
-            }
-
             await pit.edit(category=pits_category, overwrites=overs)
-            await ctx.bot.pool.execute("UPDATE pits SET archive_mode = NULL WHERE pit_id = $1", pit.id)
+            await ctx.bot.pool.execute('''UPDATE pits SET archive_mode = NULL WHERE pit_id = $1''', pit.id)
         except discord.Forbidden:
             raise commands.BadArgument('I do not have permission to edit channels.')
-
         else:
             await ctx.send(f'✅ **|** Un-archived **{pit.name}**')
 
