@@ -344,9 +344,9 @@ class PitsManagement(HideoutCog):
         archive_mode = ArchiveMode(record['archive_mode'])
         is_not_counselor = ctx.guild.get_role(COUNSELORS_ROLE) not in ctx.author.roles
 
-        if archive_mode is ArchiveMode.MANUAL and ctx.author != owner or is_not_counselor:
+        if archive_mode is ArchiveMode.INACTIVE and ctx.author != owner or is_not_counselor:
             raise ActionNotExecutable('This pit was manually archived, only the pit owner and counsellors can unarchive it.')
-        elif archive_mode is ArchiveMode.INACTIVE and is_not_counselor:
+        elif archive_mode is ArchiveMode.MANUAL and is_not_counselor:
             raise ActionNotExecutable('This pit was marked as inactive, only the counsellors can unarchive it.')
 
         overs = {
