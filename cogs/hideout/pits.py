@@ -24,9 +24,9 @@ MANAGES_PIT_PERMISSIONS = discord.PermissionOverwrite(
 
 
 class ArchiveMode(enum.Enum):
-    LEAVE = 0
-    INACTIVE = 1
-    MANUAL = 2
+    LEAVE = "leave"
+    INACTIVE = "inactive"
+    MANUAL = "manual"
 
 
 class PitsManagement(HideoutCog):
