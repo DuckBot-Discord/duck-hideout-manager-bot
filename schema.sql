@@ -96,8 +96,8 @@ CREATE TABLE IF NOT EXISTS message_info (
 );
 
 CREATE TABLE IF NOT EXISTS status_history(
-    user_id BIGINT, 
-    status TEXT, 
+    user_id BIGINT,
+    status TEXT,
     changed_at TIMESTAMP WITH TIME ZONE
 );
 
@@ -111,7 +111,9 @@ END$$;
 CREATE TABLE IF NOT EXISTS pits (
     pit_id BIGINT UNIQUE,
     pit_owner BIGINT UNIQUE,
-    archive_mode archive_mode
+    archive_mode archive_mode,
+    archive_duration INT DEFAULT 86400,
+    last_message_sent_at TIMESTAMP WITH TIME ZONE
 );
 
 CREATE TABLE IF NOT EXISTS user_settings(

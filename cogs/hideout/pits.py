@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import datetime
 import enum
 import os
 from logging import getLogger
@@ -9,7 +10,7 @@ from typing import Any, Optional
 import asyncpg
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from utils import ActionNotExecutable, HideoutCog, HideoutGuildContext, ShortTime, Timer
 from utils.constants import ARCHIVE_CATEGORY, COUNSELORS_ROLE, PIT_CATEGORY
@@ -17,6 +18,7 @@ from utils.constants import ARCHIVE_CATEGORY, COUNSELORS_ROLE, PIT_CATEGORY
 from ._checks import counselor_only, pit_owner_only
 
 log = getLogger('HM.pit')
+auto_archival_log = getLogger('HM.pit.auto-archival')
 
 MANAGES_PIT_PERMISSIONS = discord.PermissionOverwrite(
     manage_messages=True, manage_channels=True, manage_threads=True, view_channel=True
@@ -24,15 +26,111 @@ MANAGES_PIT_PERMISSIONS = discord.PermissionOverwrite(
 
 
 class ArchiveMode(enum.Enum):
-    LEAVE = "leave"
-    INACTIVE = "inactive"
-    MANUAL = "manual"
+    LEAVE = 0
+    INACTIVE = 1
+    MANUAL = 2
 
 
 class PitsManagement(HideoutCog):
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
+
         self.no_auto: bool = os.getenv('NO_AUTO_FEATURES') is not None
+        self.auto_archival_system = self.auto_archival.start()
+
+    async def _try_get_latest_message(self, text_channel: discord.TextChannel) -> discord.Message | None:
+        if text_channel.last_message:
+            return text_channel.last_message
+
+        async for message in text_channel.history(limit=1):
+            return message
+
+        return None
+
+    @tasks.loop(seconds=1)
+    async def auto_archival(self):
+        NOW = datetime.datetime.now()
+        records = await self.bot.pool.fetch('SELECT pit_id, archive_duration, archive_mode, last_message_sent_at FROM pits;')
+        shortest: asyncpg.Record | None = None
+        pit_ids_to_invalidate: list[list[int]] = []
+        archive_category_found = self.bot.get_channel(ARCHIVE_CATEGORY)
+
+        if not (archive_category_found and isinstance(archive_category_found, discord.CategoryChannel)):
+            raise ActionNotExecutable('Could not find archive category')
+
+        for record in records:
+            pit_id = record['pit_id']
+            pit = self.bot.get_channel(pit_id)
+            is_archived = pit in archive_category_found.text_channels
+            last_message_creation_date: datetime.datetime | None = record['last_message_sent_at']
+
+            if (
+                pit is None
+                or not isinstance(pit, discord.TextChannel)
+                or is_archived
+                or last_message_creation_date is None
+                or last_message_creation_date <= NOW
+            ):
+                pit_ids_to_invalidate.append([pit_id])
+
+                continue
+            elif not shortest:
+                shortest = record
+
+                continue
+
+            shortest_last_message_creation_date = shortest['last_message_sent_at']
+
+            if shortest_last_message_creation_date is None:
+                latest_message = await self._try_get_latest_message(pit)
+
+                if latest_message is not None:
+                    shortest_last_message_creation_date = latest_message.created_at
+                else:
+                    shortest_last_message_creation_date = pit.created_at
+
+            assert isinstance(
+                shortest_last_message_creation_date, datetime.datetime
+            ), 'Unable to get pit channel date or latest message creation date from pit'
+
+            if last_message_creation_date < shortest_last_message_creation_date:
+                shortest = record
+
+        await self.bot.pool.executemany('''DELETE FROM pits WHERE pit_id=$1;''', pit_ids_to_invalidate)
+
+        if shortest is None:
+            return await asyncio.sleep(60)
+
+        shortest_pit_id: int = shortest['pit_id']
+        shortest_pit = self.bot.get_channel(shortest_pit_id)
+
+        if shortest_pit is None or not isinstance(shortest_pit, discord.TextChannel):
+            return
+
+        latest_message: discord.Message | None = None
+        shortest_last_message_creation_date = shortest['last_message_sent_at']
+
+        if shortest_last_message_creation_date is None:
+            latest_message = await self._try_get_latest_message(shortest_pit)
+
+            if latest_message is not None:
+                shortest_last_message_creation_date = latest_message.created_at
+            else:
+                shortest_last_message_creation_date = shortest_pit.created_at
+
+        if shortest_last_message_creation_date is None:
+            return
+
+        archival_date = shortest_last_message_creation_date + datetime.timedelta(seconds=shortest['archive_duration'])
+        completion_delta = archival_date - NOW
+        seconds_to_wait = float(completion_delta.total_seconds())
+
+        await asyncio.sleep(seconds_to_wait)
+        await shortest_pit.edit(category=archive_category_found, sync_permissions=True)
+
+    @auto_archival.before_loop
+    async def before_auto_archival(self):
+        await self.bot.wait_until_ready()
 
     async def toggle_block(
         self,
@@ -344,9 +442,9 @@ class PitsManagement(HideoutCog):
         archive_mode = ArchiveMode(record['archive_mode'])
         is_not_counselor = ctx.guild.get_role(COUNSELORS_ROLE) not in ctx.author.roles
 
-        if archive_mode is ArchiveMode.INACTIVE and ctx.author != owner or is_not_counselor:
+        if archive_mode is ArchiveMode.MANUAL and ctx.author != owner or is_not_counselor:
             raise ActionNotExecutable('This pit was manually archived, only the pit owner and counsellors can unarchive it.')
-        elif archive_mode is ArchiveMode.MANUAL and is_not_counselor:
+        elif archive_mode is ArchiveMode.INACTIVE and is_not_counselor:
             raise ActionNotExecutable('This pit was marked as inactive, only the counsellors can unarchive it.')
 
         overs = {
