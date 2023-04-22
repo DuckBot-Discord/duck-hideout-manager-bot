@@ -31,6 +31,22 @@ class ArchiveMode(enum.Enum):
     MANUAL = "manual"
 
 
+class ArchiveDuration(enum.Enum):
+    TWENTY_FOUR_HOURS = 86_400
+    THREE_DAYS = 259_200
+    ONE_WEEK = 604_800
+    ONE_MONTH = 2_419_200
+
+    @classmethod
+    def convert(cls, _: HideoutGuildContext, argument: str):
+        try:
+            as_integer = int(argument)
+        except ValueError as error:
+            raise commands.BadArgument(f"Invalid archive duration passed: {argument}") from error
+
+        return cls(as_integer)
+
+
 class PitsManagement(HideoutCog):
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
@@ -469,6 +485,17 @@ class PitsManagement(HideoutCog):
             raise commands.BadArgument('I do not have permission to edit channels.')
         else:
             await ctx.send(f'✅ **|** Un-archived **{pit.name}**')
+
+    @pit.command(name='setduration', with_app_command=False)
+    async def pit_set_duration(self, ctx: HideoutGuildContext, duration: ArchiveDuration):
+        assert isinstance(ctx.channel, discord.TextChannel), "Command must be ran within a guild's text channel"
+
+        await self.bot.pool.execute(
+            '''UPDATE pits SET archive_duration = $1 WHERE pit_id = $2;''',
+            duration,
+            ctx.channel.id,
+        )
+        self.auto_archival.restart()
 
     @commands.Cog.listener('on_member_join')
     async def block_handler(self, member: discord.Member):
