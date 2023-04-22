@@ -558,7 +558,7 @@ class PitsManagement(HideoutCog):
             )
 
     @commands.Cog.listener('on_member_remove')
-    async def pit_auto_archive(self, member: discord.Member):
+    async def pit_auto_archive_on_member_remove(self, member: discord.Member):
         """Automatically archives pits that are not used."""
         if self.no_auto:
             return
@@ -597,7 +597,7 @@ class PitsManagement(HideoutCog):
             await pit.send('Pit archived automatically: member left')
 
     @commands.Cog.listener('on_member_join')
-    async def pit_auto_unarchive(self, member: discord.Member):
+    async def pit_auto_unarchive_on_member_join(self, member: discord.Member):
         """Automatically archives pits that are not used."""
         if self.no_auto:
             return
