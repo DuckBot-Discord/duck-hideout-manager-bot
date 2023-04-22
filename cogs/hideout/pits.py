@@ -137,7 +137,8 @@ class PitsManagement(HideoutCog):
         if shortest_last_message_creation_date is None:
             return
 
-        archival_date = shortest_last_message_creation_date + datetime.timedelta(seconds=shortest['archive_duration'])
+        archive_duration = ArchiveDuration(shortest['archive_duration'])
+        archival_date = shortest_last_message_creation_date + datetime.timedelta(seconds=archive_duration.value)
         completion_delta = archival_date - NOW
         seconds_to_wait = float(completion_delta.total_seconds())
 
@@ -384,7 +385,7 @@ class PitsManagement(HideoutCog):
                    ON CONFLICT (pit_owner) DO UPDATE SET pit_id = $1''',
                 channel.id,
                 owner.id,
-                ArchiveDuration.THREE_DAYS
+                ArchiveDuration.THREE_DAYS,
             )
             await ctx.send(f'✅ **|** Created **{channel}**')
 
