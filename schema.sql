@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS pits (
     pit_id BIGINT UNIQUE,
     pit_owner BIGINT UNIQUE,
     archive_mode archive_mode,
-    archive_duration INT DEFAULT 86400,
+    archive_duration INT,
     last_message_sent_at TIMESTAMP WITH TIME ZONE
 );
 

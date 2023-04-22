@@ -6,8 +6,8 @@ import logging
 import random
 import re
 import sys
-from types import TracebackType
 from collections import defaultdict
+from types import TracebackType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -30,6 +30,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from utils import (
+    GithubClient,
     HideoutCog,
     HideoutContext,
     HideoutExceptionManager,
@@ -37,7 +38,6 @@ from utils import (
     col,
     constants,
     human_timedelta,
-    GithubClient,
 )
 from utils.errors import *
 
@@ -68,7 +68,7 @@ initial_extensions: Tuple[str, ...] = (
     # Cogs
     'cogs.meta',
     'cogs.owner',
-    'cogs.hideout',
+    # 'cogs.hideout',
     'cogs.stats',
     'cogs.events',
 )
