@@ -59,7 +59,7 @@ class PitsManagement(HideoutCog):
             raise ActionNotExecutable('Could not find archive category')
 
         for record in records:
-            pit_id = record['pit_id']
+            pit_id: int = record['pit_id']
             pit = self.bot.get_channel(pit_id)
             is_archived = pit in archive_category_found.text_channels
             last_message_creation_date: datetime.datetime | None = record['last_message_sent_at']
@@ -126,7 +126,13 @@ class PitsManagement(HideoutCog):
         seconds_to_wait = float(completion_delta.total_seconds())
 
         await asyncio.sleep(seconds_to_wait)
-        await shortest_pit.edit(category=archive_category_found, sync_permissions=True)
+
+        try:
+            await shortest_pit.edit(category=archive_category_found, sync_permissions=True)
+        except discord.Forbidden:
+            auto_archival_log.warn(f'I do not have permission to edit channel "{shortest_pit}" with ID {shortest_pit.id}')
+        else:
+            auto_archival_log.info(f'Archived {shortest_pit}')
 
     @auto_archival.before_loop
     async def before_auto_archival(self):
@@ -310,13 +316,18 @@ class PitsManagement(HideoutCog):
     @pit.command(name='setowner', aliases=['set-owner'], with_app_command=False)
     async def pit_set_owner(self, ctx: HideoutGuildContext, *, member: discord.Member):
         """Set the owner of a pit."""
+        assert isinstance(ctx.channel, discord.TextChannel), "Command must be ran within a guild's text channel"
+
+        latest_message = await self._try_get_latest_message(ctx.channel)
+        latest_message_timestamp = latest_message.created_at if latest_message else None
 
         try:
             await ctx.bot.pool.execute(
-                '''INSERT INTO pits (pit_id, pit_owner) VALUES ($1, $2)
-                                        ON CONFLICT (pit_id) DO UPDATE SET pit_owner = $2''',
+                '''INSERT INTO pits (pit_id, pit_owner) VALUES ($1, $2, NULL, 86400, $3)
+                   ON CONFLICT (pit_id) DO UPDATE SET pit_owner = $2''',
                 ctx.channel.id,
                 member.id,
+                latest_message_timestamp,
             )
 
         except asyncpg.UniqueViolationError:
@@ -349,11 +360,10 @@ class PitsManagement(HideoutCog):
 
         except discord.Forbidden:
             raise commands.BadArgument('I do not have permission to create a channel.')
-
         else:
             await ctx.bot.pool.execute(
-                '''INSERT INTO pits (pit_id, pit_owner) VALUES ($1, $2)
-                                          ON CONFLICT (pit_owner) DO UPDATE SET pit_id = $1''',
+                '''INSERT INTO pits (pit_id, pit_owner) VALUES ($1, $2, NULL, 86400, NULL)
+                   ON CONFLICT (pit_owner) DO UPDATE SET pit_id = $1''',
                 channel.id,
                 owner.id,
             )
