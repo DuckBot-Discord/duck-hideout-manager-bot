@@ -339,10 +339,12 @@ class PitsManagement(HideoutCog):
 
         try:
             await ctx.bot.pool.execute(
-                '''INSERT INTO pits (pit_id, pit_owner) VALUES ($1, $2, NULL, 86400, $3)
-                   ON CONFLICT (pit_id) DO UPDATE SET pit_owner = $2''',
+                '''INSERT INTO pits (pit_id, pit_owner, archive_mode,
+                archive_duration, last_message_sent_at) VALUES ($1, $2, NULL,
+                $3, $4) ON CONFLICT (pit_id) DO UPDATE SET pit_owner = $2''',
                 ctx.channel.id,
                 member.id,
+                ArchiveDuration.THREE_DAYS,
                 latest_message_timestamp,
             )
 
@@ -378,10 +380,11 @@ class PitsManagement(HideoutCog):
             raise commands.BadArgument('I do not have permission to create a channel.')
         else:
             await ctx.bot.pool.execute(
-                '''INSERT INTO pits (pit_id, pit_owner) VALUES ($1, $2, NULL, 86400, NULL)
+                '''INSERT INTO pits (pit_id, pit_owner, archive_mode, archive_duration, last_message_sent_at) VALUES ($1, $2, NULL, $3, NULL)
                    ON CONFLICT (pit_owner) DO UPDATE SET pit_id = $1''',
                 channel.id,
                 owner.id,
+                ArchiveDuration.THREE_DAYS
             )
             await ctx.send(f'✅ **|** Created **{channel}**')
 
