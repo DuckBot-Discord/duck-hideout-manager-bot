@@ -142,6 +142,7 @@ class PitsManagement(HideoutCog):
         completion_delta = archival_date - NOW
         seconds_to_wait = float(completion_delta.total_seconds())
 
+        auto_archival_log.info(f"Waiting to archive for {seconds_to_wait:,} seconds...")
         await asyncio.sleep(seconds_to_wait)
 
         try:
