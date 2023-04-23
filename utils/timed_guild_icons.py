@@ -154,7 +154,7 @@ class EventsManager:
     async def populate_events_calendar(self):
         self.events = {}
 
-        for file in Path(ICONS_FOLDER).glob('*'):
+        for file in Path(ICONS_FOLDER).glob('*.*'):
             file_data = await self.parse_filename(file=file)
 
             if not file_data:
