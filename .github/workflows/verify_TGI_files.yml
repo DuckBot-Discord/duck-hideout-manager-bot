@@ -15,17 +15,17 @@ jobs:
     steps:
 
       - name: checkout repo content
-        uses: actions/checkout@v2 # checkout the repository content to github runner
+        uses: actions/checkout@v3 # checkout the repository content to github runner
 
       - name: setup python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11' # install the python version needed
           
-      - name: install python packages
+      - name: install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r .github/requirements_TGI_CI.txt
           
-      - name: execute validation checks for TGI files
+      - name: Validate file names and time periods for TGI
         run: python . --verify-dates --verbose
