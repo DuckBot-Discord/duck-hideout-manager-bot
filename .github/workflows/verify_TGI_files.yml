@@ -2,8 +2,12 @@ name: run main.py
 
 on:
   push:
+    paths:
+      - 'assets/guild_icons/**'
   pull_request:
     types: [ opened, reopened, synchronize ]
+    paths:
+      - 'assets/guild_icons/**'
 
 jobs:
   build:
