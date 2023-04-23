@@ -9,7 +9,7 @@ import click
 def run(verbose: bool, verify_dates: bool):
     """Options to run the bot."""
     if verify_dates:
-        from utils.timed_guild_icons import run_TGI_checks
+        from cogs.tgi_event_manager import run_TGI_checks
 
         asyncio.run(run_TGI_checks(verbose=verbose))
     else:

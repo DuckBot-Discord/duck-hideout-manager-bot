@@ -7,7 +7,7 @@ from discord.ext import tasks
 
 from bot import HideoutManager
 from utils import HideoutCog, DUCK_HIDEOUT
-from utils.timed_guild_icons import EventsManager, EventNotFound, ICONS_FOLDER, DEFAULT_GUILD_ICON
+from cogs.tgi_event_manager import EventsManager, EventNotFound, ICONS_FOLDER, DEFAULT_GUILD_ICON
 
 DatePair: TypeAlias = Tuple[date, date]
 CaseGetter: TypeAlias = Callable[[], Awaitable[DatePair] | DatePair]
