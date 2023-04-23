@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import os
 import logging
 
@@ -40,11 +39,8 @@ async def run_bot(verbose: bool = False) -> None:
             github_client=gh_client,
             error_wh=ERROR_WH,
             prefix=PREFIX,
+            no_automatic_features=os.getenv('NO_AUTO_FEATURES') not in ('False', 'false', None),
         ) as bot,
     ):
         discord.utils.setup_logging(level=logging.DEBUG)
         await bot.start(TOKEN, reconnect=True, verbose=verbose)
-
-
-if __name__ == '__main__':
-    asyncio.run(run_bot())
