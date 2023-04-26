@@ -7,3 +7,4 @@ from .paginators import *
 from .time import *
 from .async_utils import *
 from .bot_bases import *
+from ..cogs.tgi_event_manager import *

@@ -1,0 +1,31 @@
+name: run main.py
+
+on:
+  push:
+    paths:
+      - 'assets/guild_icons/**'
+  pull_request:
+    types: [ opened, reopened, synchronize ]
+    paths:
+      - 'assets/guild_icons/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: checkout repo content
+        uses: actions/checkout@v3 # checkout the repository content to github runner
+
+      - name: setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11' # install the python version needed
+          
+      - name: install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r .github/requirements_TGI_CI.txt
+          
+      - name: Validate file names and time periods for TGI
+        run: python . --verify-dates --verbose

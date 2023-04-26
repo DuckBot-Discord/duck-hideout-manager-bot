@@ -230,6 +230,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         error_wh: str,
         prefix: str,
         github_client: GithubClient,
+        no_automatic_features: bool,
     ) -> None:
         intents = discord.Intents.all()
         intents.typing = False
@@ -249,6 +250,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         self.pool: Pool[asyncpg.Record] = pool
         self.session: ClientSession = session
         self.github: GithubClient = github_client
+        self.no_automatic_features = no_automatic_features
 
         self.context_class: Type[commands.Context[HideoutManager]] = commands.Context
         self.error_webhook_url: Optional[str] = error_wh

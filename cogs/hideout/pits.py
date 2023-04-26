@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import enum
-import os
 from logging import getLogger
 from typing import Any, Optional
 
@@ -32,7 +31,6 @@ class ArchiveMode(enum.Enum):
 class PitsManagement(HideoutCog):
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        self.no_auto: bool = os.getenv('NO_AUTO_FEATURES') is not None
 
     async def toggle_block(
         self,
@@ -365,7 +363,7 @@ class PitsManagement(HideoutCog):
     @commands.Cog.listener('on_member_join')
     async def block_handler(self, member: discord.Member):
         """Blocks a user from your channel."""
-        if self.no_auto:
+        if self.bot.no_automatic_features:
             return
 
         guild = member.guild
@@ -410,7 +408,7 @@ class PitsManagement(HideoutCog):
     @commands.Cog.listener('on_tempblock_timer_complete')
     async def on_tempblock_timer_complete(self, timer: Timer):
         """Automatic temp block expire handler"""
-        if self.no_auto:
+        if self.bot.no_automatic_features:
             return
 
         guild_id, channel_id, user_id, author_id = timer.args
@@ -452,7 +450,7 @@ class PitsManagement(HideoutCog):
     @commands.Cog.listener('on_member_remove')
     async def pit_auto_archive(self, member: discord.Member):
         """Automatically archives pits that are not used."""
-        if self.no_auto:
+        if self.bot.no_automatic_features:
             return
 
         pit_id: int | None = await self.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_owner = $1''', member.id)
@@ -491,7 +489,7 @@ class PitsManagement(HideoutCog):
     @commands.Cog.listener('on_member_join')
     async def pit_auto_unarchive(self, member: discord.Member):
         """Automatically archives pits that are not used."""
-        if self.no_auto:
+        if self.bot.no_automatic_features:
             return
 
         record = await self.bot.pool.fetchrow('''SELECT * FROM pits WHERE pit_owner = $1''', member.id)
