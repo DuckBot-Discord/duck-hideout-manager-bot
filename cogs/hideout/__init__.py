@@ -5,9 +5,10 @@ from .pits import PitsManagement
 from .moderation import Moderation
 from .council import CouncilMessages
 from .help_forum import HelpForum
+from .timed_guild_icons import TimedEvents
 
 
-class DuckHideout(Addbot, PitsManagement, Moderation, CouncilMessages, HelpForum, name='Duck Hideout Stuff'):
+class DuckHideout(Addbot, PitsManagement, Moderation, CouncilMessages, HelpForum, TimedEvents, name='Duck Hideout Stuff'):
     """Commands PitsManagement to the server, like pits and addbot."""
 
 

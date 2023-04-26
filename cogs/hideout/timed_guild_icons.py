@@ -23,7 +23,7 @@ class TimedEvents(HideoutCog):
         self.events = EventsManager()
 
     @tasks.loop(time=time(hour=0, minute=0, second=0, tzinfo=timezone.utc))
-    async def daily_task(self):
+    async def timed_guild_icons_task(self):
         guild = self.bot.get_guild(DUCK_HIDEOUT)
 
         if not guild:
@@ -61,11 +61,11 @@ class TimedEvents(HideoutCog):
 
     async def cog_load(self) -> None:
         await self.events.populate_events_calendar()
-        self.daily_task.start()
+        self.timed_guild_icons_task.start()
         return await super().cog_load()
 
     async def cog_unload(self) -> None:
-        self.daily_task.cancel()
+        self.timed_guild_icons_task.cancel()
         return await super().cog_unload()
 
 
