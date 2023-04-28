@@ -346,7 +346,7 @@ class PitsManagement(HideoutCog):
                 $3, $4) ON CONFLICT (pit_id) DO UPDATE SET pit_owner = $2''',
                 ctx.channel.id,
                 member.id,
-                ArchiveDuration.THREE_DAYS,
+                ArchiveDuration.THREE_DAYS.value,
                 latest_message_timestamp,
             )
 
@@ -386,7 +386,7 @@ class PitsManagement(HideoutCog):
                    ON CONFLICT (pit_owner) DO UPDATE SET pit_id = $1''',
                 channel.id,
                 owner.id,
-                ArchiveDuration.THREE_DAYS,
+                ArchiveDuration.THREE_DAYS.value,
             )
             await ctx.send(f'✅ **|** Created **{channel}**')
 
