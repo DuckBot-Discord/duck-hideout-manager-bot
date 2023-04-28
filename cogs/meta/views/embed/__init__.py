@@ -161,7 +161,7 @@ class DeleteButton(discord.ui.Button['EmbedEditor']):
         )
 
 
-class DeleteFieldWithSelect(utils.View):
+class FieldSelectorView(utils.View):
     def __init__(self, parent_view: EmbedEditor):
         self.parent = parent_view
         super().__init__(timeout=300, bot=parent_view.bot)
@@ -170,47 +170,35 @@ class DeleteFieldWithSelect(utils.View):
     def update_options(self):
         self.pick_field.options = []
         for i, field in enumerate(self.parent.embed.fields):
-            self.pick_field.add_option(label=f"{i + 1}) {field.name or ''[0:500]}", value=str(i))
+            self.pick_field.add_option(label=f"{i + 1}) {(field.name or '')[0:95]}", value=str(i))
 
     @discord.ui.select(placeholder='Select a field to delete.')
-    async def pick_field(self, interaction: BotInteraction, select: discord.ui.Select[DeleteFieldWithSelect]):
+    async def pick_field(self, interaction: BotInteraction, select: discord.ui.Select[Self]):
+        await self.actual_logic(interaction, select)
+
+    @discord.ui.button(label='Go back')
+    async def cancel(self, interaction: BotInteraction, button: discord.ui.Button[Self]):
+        await interaction.response.edit_message(view=self.parent)
+        self.stop()
+
+    async def actual_logic(self, interaction: BotInteraction, select: discord.ui.Select[Self]) -> None:
+        raise NotImplementedError('Child classes must overwrite this method.')
+
+
+class DeleteFieldWithSelect(FieldSelectorView):
+    async def actual_logic(self, interaction: BotInteraction, select: discord.ui.Select[Self]):
         index = int(select.values[0])
         self.parent.embed.remove_field(index)
         await self.parent.update_buttons()
         await interaction.response.edit_message(embed=self.parent.current_embed, view=self.parent)
         self.stop()
 
-    @discord.ui.button(label='Go back')
-    async def cancel(self, interaction: BotInteraction, button: discord.ui.Button[DeleteFieldWithSelect]):
-        await interaction.response.edit_message(view=self.parent)
-        self.stop()
 
-    async def on_timeout(self) -> None:
-        if self.parent.message:
-            await self.parent.message.edit(view=self.parent)
-
-
-class EditFieldSelect(utils.View):
-    def __init__(self, parent_view: EmbedEditor):
-        self.parent = parent_view
-        super().__init__(timeout=300, bot=parent_view.bot)
-        for i, field in enumerate(parent_view.embed.fields):
-            self.pick_field.add_option(label=f"{i + 1}) {field.name or ''[0:500]}", value=str(i))
-
-    @discord.ui.select(placeholder='Select a field to edit.')
-    async def pick_field(self, interaction: BotInteraction, select: discord.ui.Select[EditFieldSelect]):
+class EditFieldSelect(FieldSelectorView):
+    async def actual_logic(self, interaction: BotInteraction, select: discord.ui.Select[Self]):
         index = int(select.values[0])
         self.parent.timeout = 600
         await interaction.response.send_modal(EditFieldModal(self.parent, index))
-
-    @discord.ui.button(label='Go back')
-    async def cancel(self, interaction: BotInteraction, button: discord.ui.Button[EditFieldSelect]):
-        await interaction.response.edit_message(view=self.parent)
-        self.stop()
-
-    async def on_timeout(self) -> None:
-        if self.parent.message:
-            await self.parent.message.edit(view=self.parent)
 
 
 class SendToView(utils.View):
