@@ -5,7 +5,7 @@ import logging
 import re
 import time as time_lib
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional, Tuple, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional, Tuple, TypeVar, Union, Self
 
 import discord
 from discord.ext import commands
@@ -168,6 +168,11 @@ class DeleteButtonCallback(discord.ui.Button['DeleteButton']):
 
 
 class View(discord.ui.View):
+    def __new__(cls, *args: Any, **kwargs: Any):
+        self = super().__new__(cls)
+        self.on_timeout = cls._wrap_timeout(self)
+        return self
+
     def __init__(self, *, timeout: Optional[float] = 180, bot: Optional[HideoutManager] = None):
         super().__init__(timeout=timeout)
         self.bot: Optional[HideoutManager] = bot
@@ -187,10 +192,16 @@ class View(discord.ui.View):
             self.bot.views.discard(self)
         return super().stop()
 
-    async def on_timeout(self) -> None:
-        if self.bot:
-            self.bot.views.discard(self)
-        return await super().on_timeout()
+    @classmethod
+    def _wrap_timeout(cls, self: Self):
+        original_on_timeout = self.on_timeout
+
+        async def on_timeout():
+            if self.bot:
+                self.bot.views.discard(self)
+            await original_on_timeout()
+
+        return on_timeout
 
     def __del__(self) -> None:
         if self.bot:
