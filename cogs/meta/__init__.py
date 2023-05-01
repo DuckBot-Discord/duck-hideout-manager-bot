@@ -1,6 +1,6 @@
 from bot import HideoutManager
 
-from .botinfo import BotInformation
+from .bot_related import BotInformation
 from .embed import EmbedMaker
 from .help import Help
 from .tags import Tags

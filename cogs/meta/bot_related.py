@@ -1,3 +1,5 @@
+from collections import Counter
+
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -53,3 +55,50 @@ class BotInformation(HideoutCog):
 
             embed.add_field(name=str(user), value=f"Added: {is_added}\nReason: {reason}", inline=False)
         await ctx.send(embed=embed)
+
+    @commands.command()
+    async def cleanup(self, ctx: HideoutContext, amount: int = 25):
+        """
+        Cleans up the bots messages. it defaults to 25 messages. If you or the bot don't have manage_messages permission, the search will be limited to 25 messages.
+        """
+        if (
+            not isinstance(ctx.channel, discord.abc.GuildChannel)
+            or not isinstance(ctx.author, discord.Member)
+            or not ctx.guild
+        ):
+            raise commands.NoPrivateMessage  # it's a dm. Or something broke, either way, raise.
+
+        if amount > 25:
+            if not ctx.channel.permissions_for(ctx.author).manage_messages:
+                await ctx.send("You must have `manage_messages` permission to perform a search greater than 25")
+                return
+            if not ctx.channel.permissions_for(ctx.guild.me).manage_messages:
+                await ctx.send("I need the `manage_messages` permission to perform a search greater than 25")
+                return
+
+        use_bulk_delete = ctx.channel.permissions_for(ctx.guild.me).manage_messages
+
+        actual_prefix = await self.bot.get_prefix(ctx.message)
+        prefix = (actual_prefix,) if isinstance(actual_prefix, str) else tuple(actual_prefix)
+
+        def check(msg: discord.Message):
+            return msg.author == ctx.me or (use_bulk_delete and msg.content.startswith(prefix))
+
+        deleted = await ctx.channel.purge(check=check, bulk=use_bulk_delete, limit=amount)
+
+        spammers = Counter(m.author.display_name for m in deleted)
+
+        deleted = len(deleted)
+        messages = [f'{deleted} message{" was" if deleted == 1 else "s were"} removed.']
+
+        if deleted:
+            messages.append('')
+            spammers = sorted(spammers.items(), key=lambda t: t[1], reverse=True)
+            messages.extend(f'**{name}**: {count}' for name, count in spammers)
+
+        to_send = '\n'.join(messages)
+
+        if len(to_send) > 2000:
+            await ctx.send(f'Successfully removed {deleted} messages.', delete_after=10)
+        else:
+            await ctx.send(to_send, delete_after=10)
