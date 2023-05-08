@@ -18,7 +18,7 @@ from ._checks import counselor_only, pit_owner_only
 log = getLogger('HM.pit')
 
 MANAGES_PIT_PERMISSIONS = discord.PermissionOverwrite(
-    manage_messages=True, manage_channels=True, manage_threads=True, view_channel=True
+    manage_messages=True, manage_channels=True, manage_threads=True
 )
 
 
