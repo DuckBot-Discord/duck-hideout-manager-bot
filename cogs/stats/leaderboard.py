@@ -89,8 +89,7 @@ class LeaderboardView(discord.ui.View):
 
 class LeaderboardEmbed(discord.Embed):
     def __init__(self):
-        self.color = discord.Color.from_str("#1b1d21")
-        self.title = "Leaderboard"
+        super().__init__(title="Leaderboard", color=discord.Color.from_str("#1b1d21"))
 
     async def update_leaderboard(
         self, pool: asyncpg.Pool[asyncpg.Record], interval: str | None, bot: HideoutManager
