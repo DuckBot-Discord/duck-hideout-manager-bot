@@ -99,7 +99,7 @@ class LeaderboardEmbed(discord.Embed):
             FROM message_info  
             WHERE deleted = FALSE  
             AND is_bot = $1 
-            AND created_at > NOW() - INTERVAL '30 DAYS'
+            {0}
             GROUP BY author_id  
             ORDER BY message_count DESC
         ), ret AS (
