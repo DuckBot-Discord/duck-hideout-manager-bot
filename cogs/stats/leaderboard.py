@@ -110,7 +110,7 @@ class LeaderboardEmbed(discord.Embed):
             if not pos_user:
                 pos_user = await self._bot.fetch_user(user['author_id'])
 
-            self.add_field(name=f"Rank {rank}", value=pos_user, inline=False)
+            self.add_field(name=f"Rank {rank}", value=f"{pos_user}\n{user['message_count']:,} messages", inline=False)
 
         return self
 
