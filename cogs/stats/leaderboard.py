@@ -88,6 +88,8 @@ class LeaderboardEmbed(discord.Embed):
         super().__init__(title="Leaderboard", color=discord.Color.from_str("#1b1d21"))
 
     async def update_leaderboard(self, interval: str | None) -> discord.Embed:
+        self.clear_fields()
+
         query = """
         SELECT author_id, COUNT(*) as message_count FROM message_info 
         WHERE deleted = FALSE 
