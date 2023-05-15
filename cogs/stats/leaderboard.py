@@ -54,7 +54,7 @@ class LeaderboardView(View):
 
         embed = await self.current_embed.update_leaderboard(interval=None)
 
-        await interaction.edit_original_response(embed=embed, view=self)
+        await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.button(style=discord.ButtonStyle.secondary, label="Last 30 Days")
     async def _30_day_callback(self, interaction: discord.Interaction[HideoutManager], button: discord.ui.Button):  # type: ignore
@@ -66,7 +66,7 @@ class LeaderboardView(View):
 
         embed = await self.current_embed.update_leaderboard(interval="'30 DAYS'")
 
-        await interaction.edit_original_response(embed=embed, view=self)
+        await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.button(style=discord.ButtonStyle.secondary, label="Last 7 Days")
     async def _7_day_callback(self, interaction: discord.Interaction[HideoutManager], button: discord.ui.Button):  # type: ignore
