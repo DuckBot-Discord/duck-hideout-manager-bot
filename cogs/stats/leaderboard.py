@@ -85,7 +85,7 @@ class LeaderboardEmbed(discord.Embed):
     def __init__(self, pool: asyncpg.Pool[asyncpg.Record], bot: HideoutManager, creator: discord.User | discord.Member):
         self._pool = pool
         self._bot = bot
-        self._author = creator
+        self._creator = creator
         super().__init__(title="Leaderboard", color=discord.Color.from_str("#1b1d21"))
 
     async def update_leaderboard(self, interval: str | None) -> discord.Embed:
@@ -112,7 +112,7 @@ class LeaderboardEmbed(discord.Embed):
         self._data: list[asyncpg.Record] = await self._pool.fetch(
             query.format("--" if interval is None else f"AND created_at > NOW() - INTERVAL {interval}"),
             False,
-            self._author.id,
+            self._creator.id,
         )
 
         if not self._data:
