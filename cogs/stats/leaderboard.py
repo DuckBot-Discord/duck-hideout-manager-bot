@@ -82,37 +82,52 @@ class LeaderboardView(View):
 
 
 class LeaderboardEmbed(discord.Embed):
-    def __init__(self, pool: asyncpg.Pool[asyncpg.Record], bot: HideoutManager):
+    def __init__(self, pool: asyncpg.Pool[asyncpg.Record], bot: HideoutManager, creator: discord.User | discord.Member):
         self._pool = pool
         self._bot = bot
+        self._author = creator
         super().__init__(title="Leaderboard", color=discord.Color.from_str("#1b1d21"))
 
     async def update_leaderboard(self, interval: str | None) -> discord.Embed:
         self.clear_fields()
 
         query = """
-        SELECT author_id, COUNT(*) as message_count FROM message_info 
-        WHERE deleted = FALSE 
-        AND is_bot = $1
-        {0}
-        GROUP BY author_id 
-        ORDER BY message_count DESC LIMIT 10
+        WITH counts AS (
+            SELECT 
+                author_id, 
+                COUNT(*) as message_count
+            FROM message_info  
+            WHERE deleted = FALSE  
+            AND is_bot = $1 
+            AND created_at > NOW() - INTERVAL '30 DAYS'
+            GROUP BY author_id  
+            ORDER BY message_count DESC
+        ), ret AS (
+            SELECT *, row_number() over() as rank FROM counts
+        )
+        SELECT * FROM ret
+        WHERE (message_count > (SELECT message_count FROM ret LIMIT 1 OFFSET 10))
+        OR author_id = $2
         """
         self._data: list[asyncpg.Record] = await self._pool.fetch(
-            query.format("--" if interval is None else f"AND created_at > NOW() - INTERVAL {interval}"), False
+            query.format("--" if interval is None else f"AND created_at > NOW() - INTERVAL {interval}"),
+            False,
+            self._author.id,
         )
 
         if not self._data:
             raise RuntimeError("No leaderboard can be generated.")
 
-        for rank, user in enumerate(self._data, start=1):
+        for user in self._data:
             # Fetch the user
             pos_user = self._bot.get_user(user['author_id'])
 
             if not pos_user:
                 pos_user = await self._bot.fetch_user(user['author_id'])
 
-            self.add_field(name=f"Rank {rank}", value=f"{pos_user}\n{user['message_count']:,} messages", inline=False)
+            self.add_field(
+                name=f"Rank {user['rank']}", value=f"{pos_user}\n{user['message_count']:,} messages", inline=False
+            )
 
         return self
 
@@ -123,7 +138,7 @@ class LeaderboardCog(HideoutCog):
     async def leaderboard(self, ctx: HideoutContext):
         """Shows the top 10 leaderboard"""
         async with ctx.typing():
-            LBEmbed = LeaderboardEmbed(ctx.bot.pool, ctx.bot)
+            LBEmbed = LeaderboardEmbed(ctx.bot.pool, ctx.bot, ctx.author)
             embed = await LBEmbed.update_leaderboard(interval=None)
 
             await ctx.send(embed=embed, view=LeaderboardView(LBEmbed, ctx.author))
