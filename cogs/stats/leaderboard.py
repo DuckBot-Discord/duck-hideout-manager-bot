@@ -7,7 +7,7 @@ import asyncpg
 import discord
 from discord.ext import commands
 
-from utils import HideoutCog, HideoutContext
+from utils import HideoutCog, HideoutContext, View
 from bot import HideoutManager
 
 
@@ -32,7 +32,7 @@ class LeaderboardCard:
     """WIP. Using embed for now"""
 
 
-class LeaderboardView(discord.ui.View):
+class LeaderboardView(View):
     def __init__(self, embed: LeaderboardEmbed, author: discord.User | discord.Member):
         self.author = author
         self.current_embed: LeaderboardEmbed = embed
@@ -103,7 +103,7 @@ class LeaderboardEmbed(discord.Embed):
         if not self._data:
             raise RuntimeError("No leaderboard can be generated.")
 
-        for rank, user in enumerate(self._data):
+        for rank, user in enumerate(self._data, start=1):
             # Fetch the user
             pos_user = self._bot.get_user(user['author_id'])
 
