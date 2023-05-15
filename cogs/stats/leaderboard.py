@@ -52,9 +52,7 @@ class LeaderboardView(discord.ui.View):
 
         button.disabled = True
 
-        embed = await self.current_embed.update_leaderboard(
-            pool=interaction.client.pool, interval=None, bot=interaction.client
-        )
+        embed = await self.current_embed.update_leaderboard(interval=None)
 
         await interaction.edit_original_response(embed=embed, view=self)
 
@@ -66,9 +64,7 @@ class LeaderboardView(discord.ui.View):
 
         button.disabled = True
 
-        embed = await self.current_embed.update_leaderboard(
-            pool=interaction.client.pool, interval="30 DAYS", bot=interaction.client
-        )
+        embed = await self.current_embed.update_leaderboard(interval="30 DAYS")
 
         await interaction.edit_original_response(embed=embed, view=self)
 
@@ -80,20 +76,18 @@ class LeaderboardView(discord.ui.View):
 
         button.disabled = True
 
-        embed = await self.current_embed.update_leaderboard(
-            pool=interaction.client.pool, interval="7 DAYS", bot=interaction.client
-        )
+        embed = await self.current_embed.update_leaderboard(interval="7 DAYS")
 
-        await interaction.edit_original_response(embed=embed, view=self)
+        await interaction.response.edit_message(embed=embed, view=self)
 
 
 class LeaderboardEmbed(discord.Embed):
-    def __init__(self):
+    def __init__(self, pool: asyncpg.Pool[asyncpg.Record], bot: HideoutManager):
+        self._pool = pool
+        self._bot = bot
         super().__init__(title="Leaderboard", color=discord.Color.from_str("#1b1d21"))
 
-    async def update_leaderboard(
-        self, pool: asyncpg.Pool[asyncpg.Record], interval: str | None, bot: HideoutManager
-    ) -> discord.Embed:
+    async def update_leaderboard(self, interval: str | None) -> discord.Embed:
         query = """
         SELECT author_id, COUNT(*) as message_count FROM message_info 
         WHERE deleted = FALSE 
@@ -102,23 +96,21 @@ class LeaderboardEmbed(discord.Embed):
         GROUP BY author_id 
         ORDER BY message_count DESC LIMIT 10
         """
-        self._data: list[asyncpg.Record] = await pool.fetch(
+        self._data: list[asyncpg.Record] = await self._pool.fetch(
             query.format("--" if interval is None else f"AND created_at > NOW - INTERVAL {interval}"), False
         )
 
         if not self._data:
             raise RuntimeError("No leaderboard can be generated.")
 
-        i = 1
-
-        for user in self._data:
+        for rank, user in enumerate(self._data):
             # Fetch the user
-            pos_user = bot.get_user(user['author_id'])
+            pos_user = self._bot.get_user(user['author_id'])
 
             if not pos_user:
-                pos_user = await bot.fetch_user(user['author_id'])
+                pos_user = await self._bot.fetch_user(user['author_id'])
 
-            self.add_field(name=f"Rank {i}", value=pos_user, inline=False)
+            self.add_field(name=f"Rank {rank}", value=pos_user, inline=False)
 
         return self
 
@@ -129,7 +121,7 @@ class LeaderboardCog(HideoutCog):
     async def leaderboard(self, ctx: HideoutContext):
         """Shows the top 10 leaderboard"""
         async with ctx.typing():
-            LBEmbed = LeaderboardEmbed()
-            embed = await LBEmbed.update_leaderboard(pool=ctx.bot.pool, interval=None, bot=ctx.bot)
+            LBEmbed = LeaderboardEmbed(ctx.bot.pool, ctx.bot)
+            embed = await LBEmbed.update_leaderboard(interval=None)
 
             await ctx.send(embed=embed, view=LeaderboardView(LBEmbed, ctx.author))
