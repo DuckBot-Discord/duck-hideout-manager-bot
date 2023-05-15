@@ -3,11 +3,12 @@ from discord.ext import commands
 
 from .profile import ProfileCardCog
 from .calendar import CalendarStatusCog
+from .leaderboard import LeaderboardCog
 
 from bot import HideoutManager
 
 
-class Stats(ProfileCardCog, CalendarStatusCog):
+class Stats(ProfileCardCog, CalendarStatusCog, LeaderboardCog):
     """Tracks User Statistics"""
 
     @commands.Cog.listener('on_message')
