@@ -97,7 +97,7 @@ class LeaderboardEmbed(discord.Embed):
         ORDER BY message_count DESC LIMIT 10
         """
         self._data: list[asyncpg.Record] = await self._pool.fetch(
-            query.format("--" if interval is None else f"AND created_at > NOW - INTERVAL {interval}"), False
+            query.format("--" if interval is None else f"AND created_at > NOW() - INTERVAL {interval}"), False
         )
 
         if not self._data:
