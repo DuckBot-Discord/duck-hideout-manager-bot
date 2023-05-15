@@ -64,7 +64,7 @@ class LeaderboardView(View):
 
         button.disabled = True
 
-        embed = await self.current_embed.update_leaderboard(interval="30 DAYS")
+        embed = await self.current_embed.update_leaderboard(interval="'30 DAYS'")
 
         await interaction.edit_original_response(embed=embed, view=self)
 
@@ -76,7 +76,7 @@ class LeaderboardView(View):
 
         button.disabled = True
 
-        embed = await self.current_embed.update_leaderboard(interval="7 DAYS")
+        embed = await self.current_embed.update_leaderboard(interval="'7 DAYS'")
 
         await interaction.response.edit_message(embed=embed, view=self)
 
