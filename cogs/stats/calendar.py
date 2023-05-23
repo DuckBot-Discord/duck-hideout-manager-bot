@@ -193,7 +193,7 @@ class CalendarStatusCog(HideoutCog):
         tz = zoneinfo.ZoneInfo(tz_name)
         dt = datetime.datetime.now(tz)
         await ctx.send(
-            dt.strftime("It is `%A, %B %m %Y at %I:%M %p` for **{}** ({})").format(
+            dt.strftime("It is `%A, %B %d %Y at %I:%M %p` for **{}** ({})").format(
                 discord.utils.escape_markdown(user.display_name), tz_name
             )
         )
