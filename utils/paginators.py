@@ -5,7 +5,7 @@ import typing
 from typing import TYPE_CHECKING, Any, Dict, Optional, Self, Tuple
 
 import discord
-from discord.ext import menus
+from discord.ext import menus, commands
 from discord.ui import Modal, TextInput
 
 from .bot_bases.context import HideoutContext
@@ -94,7 +94,7 @@ class ViewMenuPages(discord.ui.View):
             return {}
 
     async def show_page(self, interaction: discord.Interaction, page_number: int) -> None:
-        page: Any = await self.source.get_page(page_number)
+        page: Any = await self.source.get_page(page_number)  # type: ignore
         self.current_page = page_number
         kwargs = await self._get_kwargs_from_page(page)
         self._update_labels(page_number)
@@ -170,18 +170,18 @@ class ViewMenuPages(discord.ui.View):
 
     async def start(self, edit_interaction: bool = False) -> None:
         if self.check_embeds and not self.ctx.channel.permissions_for(self.ctx.guild.me).embed_links:  # type: ignore
-            if isinstance(self.ctx, HideoutContext):
+            if isinstance(self.ctx, commands.Context):
                 await self.ctx.send('Bot does not have embed links permission in this channel.')
             else:
                 if self.ctx.response.is_done():
                     await self.ctx.followup.send('Bot does not have embed links permission in this channel.')
             return
 
-        await self.source._prepare_once()  # pyright: reportPrivateUsage=false
-        page: Any = await self.source.get_page(0)  # pyright: reportUnknownMemberType=false
+        await self.source._prepare_once()  # type: ignore
+        page: Any = await self.source.get_page(0)  # type: ignore
         kwargs = await self._get_kwargs_from_page(page)
         self._update_labels(0)
-        if isinstance(self.ctx, HideoutContext):
+        if isinstance(self.ctx, commands.Context):
             self.message = await self.ctx.send(**kwargs, view=self)
         else:
             if edit_interaction:
