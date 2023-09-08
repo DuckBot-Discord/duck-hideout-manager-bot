@@ -170,7 +170,7 @@ class EditAuthorModal(BaseModal, title='Editing the embed author:'):
             failed.append('Image URL did not match the http/https format.')
 
         url = None
-        sti = self.image.value.strip()
+        sti = self.url.value.strip()
         if URL_REGEX.fullmatch(sti):
             if not author:
                 failed.append(
