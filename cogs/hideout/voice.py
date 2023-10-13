@@ -57,8 +57,8 @@ class VoiceChatLogs(HideoutCog):
 
         if before.deaf != after.deaf:
             if before.deaf:
-                await channel.send(
-                    f"[{ts}] {NO_DEAF} **{discord.utils.escape_markdown(member.display_name)}** got undeafened."
+                await self.enqueue_message(
+                    f"[{ts}] {NO_DEAF} **{discord.utils.escape_markdown(member.display_name)}** got undeafened.", channel
                 )
             if after.deaf:
                 await self.enqueue_message(
@@ -77,20 +77,22 @@ class VoiceChatLogs(HideoutCog):
 
         if before.self_deaf != after.self_deaf:
             if before.self_deaf:
-                await channel.send(
-                    f"[{ts}] {NO_DEAF} **{discord.utils.escape_markdown(member.display_name)}** undeafened themselves."
+                await self.enqueue_message(
+                    f"[{ts}] {NO_DEAF} **{discord.utils.escape_markdown(member.display_name)}** undeafened themselves.",
+                    channel,
                 )
             if after.self_deaf:
-                await channel.send(
-                    f"[{ts}] {SELF_DEAF} **{discord.utils.escape_markdown(member.display_name)}** deafened themselves."
+                await self.enqueue_message(
+                    f"[{ts}] {SELF_DEAF} **{discord.utils.escape_markdown(member.display_name)}** deafened themselves.",
+                    channel,
                 )
 
         elif before.self_mute != after.self_mute:
             if before.self_mute:
-                await channel.send(
-                    f"[{ts}] {NO_MUTE} **{discord.utils.escape_markdown(member.display_name)}** unmuted themselves."
+                await self.enqueue_message(
+                    f"[{ts}] {NO_MUTE} **{discord.utils.escape_markdown(member.display_name)}** unmuted themselves.", channel
                 )
             if after.self_mute:
-                await channel.send(
-                    f"[{ts}] {SELF_MUTE} **{discord.utils.escape_markdown(member.display_name)}** muted themselves."
+                await self.enqueue_message(
+                    f"[{ts}] {SELF_MUTE} **{discord.utils.escape_markdown(member.display_name)}** muted themselves.", channel
                 )
