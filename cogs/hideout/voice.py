@@ -40,7 +40,7 @@ class VoiceChatLogs(HideoutCog):
                     f"[{ts}] {SELF_DEAF} **{discord.utils.escape_markdown(member.display_name)}** deafened themselves."
                 )
 
-        if before.self_mute != after.self_mute:
+        elif before.self_mute != after.self_mute:
             if before.self_mute:
                 await channel.send(f"[{ts}] {NO_MUTE} **{discord.utils.escape_markdown(member.display_name)}** unmuted.")
             if after.self_mute:
