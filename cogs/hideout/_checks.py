@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 from utils import HideoutContext, HideoutGuildContext, SilentCommandError
-from utils.constants import COUNSELORS_ROLE, DUCK_HIDEOUT, PIT_CATEGORY, HELP_FORUM
+from utils.constants import COUNCILLORS_ROLE, DUCK_HIDEOUT, PIT_CATEGORY, HELP_FORUM
 
 
 def pit_owner_only():
@@ -34,11 +34,11 @@ def hideout_only():
     return commands.check(predicate)
 
 
-def counselor_only():
+def councillor_only():
     def predicate(ctx: HideoutContext):
         if not isinstance(ctx.author, discord.Member) or not ctx.guild:
             return False
-        if ctx.guild.get_role(COUNSELORS_ROLE) in ctx.author.roles:
+        if ctx.guild.get_role(COUNCILLORS_ROLE) in ctx.author.roles:
             return True
         raise SilentCommandError
 

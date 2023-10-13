@@ -11,15 +11,13 @@ from discord import app_commands
 from discord.ext import commands
 
 from utils import ActionNotExecutable, HideoutCog, HideoutGuildContext, ShortTime, Timer
-from utils.constants import ARCHIVE_CATEGORY, COUNSELORS_ROLE, PIT_CATEGORY
+from utils.constants import ARCHIVE_CATEGORY, COUNCILLORS_ROLE, PIT_CATEGORY
 
-from ._checks import counselor_only, pit_owner_only
+from ._checks import councillor_only, pit_owner_only
 
 log = getLogger('HM.pit')
 
-MANAGES_PIT_PERMISSIONS = discord.PermissionOverwrite(
-    manage_messages=True, manage_channels=True, manage_threads=True
-)
+MANAGES_PIT_PERMISSIONS = discord.PermissionOverwrite(manage_messages=True, manage_channels=True, manage_threads=True)
 
 
 class ArchiveMode(enum.Enum):
@@ -224,7 +222,7 @@ class PitsManagement(HideoutCog):
 
         await ctx.message.add_reaction('✅')
 
-    @counselor_only()
+    @councillor_only()
     @pit.command(name='create', with_app_command=False)
     async def pit_create(self, ctx: HideoutGuildContext, owner: discord.Member, *, name: str):
         """Create a pit."""
@@ -259,7 +257,7 @@ class PitsManagement(HideoutCog):
             )
             await ctx.send(f'✅ **|** Created **{channel}**')
 
-    @counselor_only()
+    @councillor_only()
     @pit.command(name='delete', with_app_command=False)
     async def pit_delete(self, ctx: HideoutGuildContext, *, channel: discord.TextChannel = commands.CurrentChannel):
         """Deletes a pit."""
@@ -282,7 +280,7 @@ class PitsManagement(HideoutCog):
             await ctx.bot.pool.execute('''DELETE FROM pits WHERE pit_id = $1''', pit.id)
             await ctx.send(f'✅ **|** Deleted **{pit.name}**')
 
-    @counselor_only()
+    @councillor_only()
     @pit.command(name='archive', with_app_command=False)
     async def pit_archive(self, ctx: HideoutGuildContext, *, channel: discord.TextChannel = commands.CurrentChannel):
         """Archives a pit."""
@@ -300,14 +298,14 @@ class PitsManagement(HideoutCog):
             if archive is None:
                 raise commands.BadArgument('Could not find archive category')
 
-            counselors = ctx.guild.get_role(COUNSELORS_ROLE)
-            if counselors is None:
-                raise commands.BadArgument('Could not find counselors role')
+            councillors = ctx.guild.get_role(COUNCILLORS_ROLE)
+            if councillors is None:
+                raise commands.BadArgument('Could not find councillors role')
 
             new_overwrites = {
                 **pit.overwrites,
                 ctx.guild.default_role: discord.PermissionOverwrite(view_channel=False),
-                counselors: discord.PermissionOverwrite(view_channel=True),
+                councillors: discord.PermissionOverwrite(view_channel=True),
                 ctx.guild.me: discord.PermissionOverwrite(view_channel=True, manage_channels=True, manage_permissions=True),
             }
             await pit.edit(
@@ -340,11 +338,11 @@ class PitsManagement(HideoutCog):
             raise commands.BadArgument('Could not find valid pit category')
 
         archive_mode = ArchiveMode(record['archive_mode'])
-        is_not_counselor = ctx.guild.get_role(COUNSELORS_ROLE) not in ctx.author.roles
+        is_not_councillor = ctx.guild.get_role(COUNCILLORS_ROLE) not in ctx.author.roles
 
-        if archive_mode is ArchiveMode.INACTIVE and ctx.author != owner or is_not_counselor:
+        if archive_mode is ArchiveMode.INACTIVE and ctx.author != owner or is_not_councillor:
             raise ActionNotExecutable('This pit was manually archived, only the pit owner and counsellors can unarchive it.')
-        elif archive_mode is ArchiveMode.MANUAL and is_not_counselor:
+        elif archive_mode is ArchiveMode.MANUAL and is_not_councillor:
             raise ActionNotExecutable('This pit was marked as inactive, only the counsellors can unarchive it.')
 
         overs = {
@@ -466,9 +464,9 @@ class PitsManagement(HideoutCog):
             if archive is None:
                 return log.error('Could not find archive category')
 
-            counselors = member.guild.get_role(COUNSELORS_ROLE)
-            if counselors is None:
-                return log.error('Could not find counselors role')
+            councillors = member.guild.get_role(COUNCILLORS_ROLE)
+            if councillors is None:
+                return log.error('Could not find councillors role')
 
             new_overwrites = {
                 **pit.overwrites,
@@ -476,7 +474,7 @@ class PitsManagement(HideoutCog):
                     view_channel=True, manage_channels=True, manage_permissions=True
                 ),
                 member.guild.default_role: discord.PermissionOverwrite(view_channel=False),
-                counselors: discord.PermissionOverwrite(view_channel=True),
+                councillors: discord.PermissionOverwrite(view_channel=True),
             }
 
             await pit.edit(overwrites=new_overwrites, category=archive, reason=f"Pit archived by automatically: member left")

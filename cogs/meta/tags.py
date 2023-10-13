@@ -13,7 +13,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands, menus
 
-from cogs.hideout._checks import COUNSELORS_ROLE
+from cogs.hideout._checks import COUNCILLORS_ROLE
 from utils import HideoutCog, HideoutGuildContext, ViewMenuPages
 
 T = TypeVar('T')
@@ -211,11 +211,11 @@ class TagName(commands.clean_content):
         if first_word in root.all_commands:  # pyright: reportUnknownMemberType=false
             raise error('This tag name starts with a reserved word.')
 
-        is_counselor = False
-        if isinstance(ctx.author, discord.Member) and ctx.author.get_role(COUNSELORS_ROLE):
-            is_counselor = True
+        is_councillor = False
+        if isinstance(ctx.author, discord.Member) and ctx.author.get_role(COUNCILLORS_ROLE):
+            is_councillor = True
 
-        if lower.startswith('topic:') and not is_counselor:
+        if lower.startswith('topic:') and not is_councillor:
             raise error('Tag name starts with a reserved key (`topic:` - moderator only)')
 
         if lower.startswith('category:') and not await ctx.bot.is_owner(ctx.author):

@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from typing import Annotated, Optional
 from utils import HideoutCog, HideoutGuildContext, UntilFlag, ShortTime, Timer
-from ._checks import hideout_only, counselor_only
+from ._checks import hideout_only, councillor_only
 
 
 class BanFlags(commands.FlagConverter, prefix='--', delimiter=' '):
@@ -11,7 +11,7 @@ class BanFlags(commands.FlagConverter, prefix='--', delimiter=' '):
 
 class Moderation(HideoutCog):
     @hideout_only()
-    @counselor_only()
+    @councillor_only()
     @commands.command()
     async def ban(
         self,
