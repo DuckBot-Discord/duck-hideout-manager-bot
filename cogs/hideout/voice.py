@@ -22,19 +22,23 @@ class VoiceChatLogs(HideoutCog):
 
         if before.deaf != after.deaf:
             if before.deaf:
-                await channel.send(f"[{ts}] {NO_DEAF} **{discord.utils.escape_markdown(member.display_name)}** undeafened.")
+                await channel.send(
+                    f"[{ts}] {NO_DEAF} **{discord.utils.escape_markdown(member.display_name)}** got undeafened."
+                )
             if after.deaf:
                 await channel.send(f"[{ts}] {DEAF} **{discord.utils.escape_markdown(member.display_name)}** got deafened.")
 
         if before.mute != after.mute:
             if before.mute:
-                await channel.send(f"[{ts}] {NO_MUTE} **{discord.utils.escape_markdown(member.display_name)}** unmuted.")
+                await channel.send(f"[{ts}] {NO_MUTE} **{discord.utils.escape_markdown(member.display_name)}** got unmuted.")
             if after.mute:
                 await channel.send(f"[{ts}] {MUTE} **{discord.utils.escape_markdown(member.display_name)}** got muted.")
 
         if before.self_deaf != after.self_deaf:
             if before.self_deaf:
-                await channel.send(f"[{ts}] {NO_DEAF} **{discord.utils.escape_markdown(member.display_name)}** undeafened.")
+                await channel.send(
+                    f"[{ts}] {NO_DEAF} **{discord.utils.escape_markdown(member.display_name)}** undeafened themselves."
+                )
             if after.self_deaf:
                 await channel.send(
                     f"[{ts}] {SELF_DEAF} **{discord.utils.escape_markdown(member.display_name)}** deafened themselves."
@@ -42,7 +46,9 @@ class VoiceChatLogs(HideoutCog):
 
         elif before.self_mute != after.self_mute:
             if before.self_mute:
-                await channel.send(f"[{ts}] {NO_MUTE} **{discord.utils.escape_markdown(member.display_name)}** unmuted.")
+                await channel.send(
+                    f"[{ts}] {NO_MUTE} **{discord.utils.escape_markdown(member.display_name)}** unmuted themselves."
+                )
             if after.self_mute:
                 await channel.send(
                     f"[{ts}] {SELF_MUTE} **{discord.utils.escape_markdown(member.display_name)}** muted themselves."
