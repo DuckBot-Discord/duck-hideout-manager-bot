@@ -339,9 +339,7 @@ class ChooseATagName(discord.ui.Modal):
         super().__init__(title=title)
         self.parent = parent
 
-    async def on_submit(
-        self, interaction: discord.Interaction[HideoutManager]
-    ):  # pyright: reportIncompatibleMethodOverride=false
+    async def on_submit(self, interaction: discord.Interaction[HideoutManager]):
         try:
             tag = await self.parent.cog.make_tag(
                 interaction.guild, interaction.user, self.name.value, self.content.value, embed=self.parent.embed

@@ -1,5 +1,3 @@
-from typing import Self
-
 import discord
 from discord import app_commands
 
@@ -21,9 +19,9 @@ class SelectAMessageView(discord.ui.View):
         ]
 
     @discord.ui.select(placeholder='Select a file...')
-    async def select_a_file(self, interaction: discord.Interaction, selecet: discord.ui.Select[Self]):
+    async def select_a_file(self, interaction: discord.Interaction, select: discord.ui.Select):
         await interaction.response.edit_message(content='Please wait...', view=None, delete_after=20)
-        node = discord.utils.get(self.nodes, path=selecet.values[0])
+        node = discord.utils.get(self.nodes, path=select.values[0])
         if not node:
             return await interaction.edit_original_response(content='node not found somehow.')
         data = await node.fetch_filedata()

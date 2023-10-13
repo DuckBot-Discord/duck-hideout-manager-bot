@@ -187,7 +187,7 @@ class TagName(commands.clean_content):
         super().__init__()
 
     def __class_getitem__(cls, attr: bool):
-        if not isinstance(attr, bool):  # pyright: reportUnnecessaryIsInstance=false
+        if not isinstance(attr, bool):
             raise TypeError("Expected bool, not {}".format(type(attr).__name__))
         return TagName(lower=attr)
 
@@ -208,7 +208,7 @@ class TagName(commands.clean_content):
 
         # get tag command.
         root: commands.Group = ctx.bot.get_command('tag')  # type: ignore # known type
-        if first_word in root.all_commands:  # pyright: reportUnknownMemberType=false
+        if first_word in root.all_commands:
             raise error('This tag name starts with a reserved word.')
 
         is_councillor = False
@@ -251,9 +251,7 @@ class TagsFromFetchedPageSource(menus.ListPageSource):
     def format_records(self, records: enumerate[asyncpg.Record]):
         return '\n'.join(f"{idx}. {tag['name']} (ID: {tag['id']})" for idx, tag in records)
 
-    async def format_page(
-        self, menu: menus.MenuPages, entries: typing.List[asyncpg.Record]
-    ):  # pyright: reportIncompatibleMethodOverride=false
+    async def format_page(self, menu: menus.MenuPages, entries: typing.List[asyncpg.Record]):
         source = enumerate(entries, start=(menu.current_page * self.per_page) + 1)
         formatted = self.format_records(source)
         embed = discord.Embed(title=f"Tags List", description=discord.utils.escape_markdown(formatted), colour=self.colour)
@@ -491,7 +489,7 @@ class Tags(HideoutCog):
             if converter is not None:
                 try:
                     if inspect.isclass(converter) and issubclass(converter, commands.Converter):
-                        if inspect.ismethod(converter.convert):  # pyright: reportUnknownArgumentType=false
+                        if inspect.ismethod(converter.convert):
                             content = await converter.convert(ctx, message.content)
                         else:
                             content = await converter().convert(ctx, message.content)  # type: ignore
@@ -510,7 +508,7 @@ class Tags(HideoutCog):
                 raise commands.BadArgument('No content was provided... Somehow...')
             if isinstance(content, str) and len(content) > 2000:
                 raise commands.BadArgument('Content is too long! 2000 characters max.')
-            return content  # type: ignore
+            return content
         except asyncio.TimeoutError:
             raise commands.BadArgument(f'Timed out waiting for message from {str(author)}...')
 
@@ -566,7 +564,7 @@ class Tags(HideoutCog):
 
     @tag.command(name='claim')
     async def tag_claim(self, ctx: HideoutGuildContext, name: TagName):
-        """Claims a tag from a user that isn't in this server anymore."""
+        """Claims a tag from a user that isn't in this server any more."""
         tag = await self.get_tag(name, ctx.guild.id)
         user = await self.bot.get_or_fetch_member(guild=ctx.guild, user=tag.owner_id)
         if user:
@@ -612,7 +610,7 @@ class Tags(HideoutCog):
             """
             confirm = await conn.fetchval(query, content, tag, ctx.guild.id, ctx.author.id, is_mod)
             if confirm:
-                await ctx.send(f'Succesfully edited tag!')
+                await ctx.send(f'Successfully edited tag!')
             else:
                 await ctx.send(f"Could not edit tag. Are you sure it exists{'' if is_mod else ' and you own it'}?")
 
@@ -1064,7 +1062,7 @@ class Tags(HideoutCog):
         else:
             kwargs = {'content': tag.content, 'embed': tag.embed, 'ephemeral': False if ephemeral is None else ephemeral}
 
-        await interaction.response.send_message(**kwargs)
+        await interaction.response.send_message(**kwargs)  # type: ignore
 
         try:
             query = "INSERT INTO commands (guild_id, user_id, command) VALUES ($1, $2, 'tag')"

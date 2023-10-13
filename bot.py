@@ -219,9 +219,9 @@ class HideoutHelper(TimerManager):
 
 class HideoutManager(commands.AutoShardedBot, HideoutHelper):
     if TYPE_CHECKING:
-        user: discord.ClientUser  # type: ignore
-        cogs: dict[str, HideoutCog]  # type: ignore
-        tree: HideoutCommandTree  # type: ignore
+        user: discord.ClientUser
+        cogs: dict[str, HideoutCog]
+        tree: HideoutCommandTree
 
     def __init__(
         self,
@@ -297,10 +297,10 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         """  # copy_doc for create_pool maybe?
 
         def _encode_jsonb(value: Any):
-            return discord.utils._to_json(value)  # pyright: reportPrivateUsage=false
+            return discord.utils._to_json(value)
 
         def _decode_jsonb(value: Any):
-            return discord.utils._from_json(value)  # pyright: reportPrivateUsage=false
+            return discord.utils._from_json(value)
 
         old_init = kwargs.pop('init', None)
 
@@ -405,7 +405,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         return DbContextManager(self, timeout=timeout)
 
     async def get_context(
-        self, message: discord.Message, *, cls: Type[DCT] = None
+        self, message: discord.Message, *, cls: Type[DCT] | None = None
     ) -> Union[HideoutContext, commands.Context[HideoutManager]]:
         """|coro|
 

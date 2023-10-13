@@ -1,5 +1,5 @@
 # TODO: make stub files for `aggdraw`, `PIL` and `colorthief` to be strict-compatible.
-# pyright: reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportMissingTypeStubs=false
+# pyright: ignore[reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportMissingTypeStubs]
 from __future__ import annotations
 import io
 import itertools
@@ -58,7 +58,7 @@ class ProfileCard:
     BG_COLOR = discord.Color.from_str('#1b1d21')
 
     # constants
-    STATUS_COLORS = {
+    STATUS_COLOURS = {
         'online': discord.Colour.from_str('#43b581'),
         'offline': discord.Colour.from_str('#747f8d'),
         'idle': discord.Colour.from_str('#faa61a'),
@@ -163,7 +163,7 @@ class ProfileCard:
         return (
             self.WIDTH - self.seconds_to_px(x_seconds_from_right),
             self.seconds_to_px(x_seconds_width),
-            self.STATUS_COLORS[color],
+            self.STATUS_COLOURS[color],
         )
 
     # Image modifiers
@@ -201,7 +201,7 @@ class ProfileCard:
         canvas = Image.new('RGBA', (self.WIDTH, self.STATUSBAR_HEIGHT), "white")
         draw = ImageDraw.Draw(canvas)
         ret: list[tuple[int, int, discord.Colour]] = []
-        for (next, _), (current, status) in itertools.pairwise([(self.now, None)] + list(self.data.times)):
+        for (next, _), (current, status) in itertools.pairwise([(self.now, None)] + list(self.data.times)):  # type: ignore
             offset, width, color = self.calc_size(current, status, self.now, next)
             ret.append((offset, width, color))
             if current < self.now - td(days=1):
@@ -210,7 +210,7 @@ class ProfileCard:
             try:
                 ret.append((0, offset, color))  # type: ignore
             except NameError:
-                ret.append((0, self.WIDTH, self.STATUS_COLORS['offline']))
+                ret.append((0, self.WIDTH, self.STATUS_COLOURS['offline']))
 
         for offset, width, color in ret:
             draw.rectangle(((offset, 0), (offset + width, self.STATUSBAR_HEIGHT)), fill=(color.r, color.g, color.b))

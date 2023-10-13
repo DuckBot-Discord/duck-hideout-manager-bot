@@ -20,7 +20,6 @@ DEALINGS IN THE SOFTWARE.
 # pyright: reportUnknownMemberType=false, reportGeneralTypeIssues=false
 # pyright: reportUnknownVariableType=false, reportMissingTypeStubs=false
 # pyright: reportUnknownArgumentType=false
-
 from __future__ import annotations
 
 import datetime
@@ -182,9 +181,7 @@ class UserFriendlyTime(commands.Converter[str]):
         obj.default = self.default
         return obj
 
-    async def convert(
-        self, ctx: HideoutContext, argument: str
-    ) -> UserFriendlyTime:  # pyright: reportIncompatibleMethodOverride=false
+    async def convert(self, ctx: HideoutContext, argument: str) -> UserFriendlyTime:
         # Create a copy of ourselves to prevent race conditions from two
         # events modifying the same instance of a converter
         result = self.copy()

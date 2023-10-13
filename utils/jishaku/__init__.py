@@ -74,8 +74,8 @@ class OverwrittenManagementFeature(ManagementFeature):
 class HideoutManagerJishaku(
     HideoutCog,
     OverwrittenManagementFeature,
-    *STANDARD_FEATURES,  # type: ignore
-    *OPTIONAL_FEATURES,  # type: ignore
+    *STANDARD_FEATURES,
+    *OPTIONAL_FEATURES,
 ):
     """
     The main frontend class for JIshaku.
@@ -149,7 +149,7 @@ class HideoutManagerJishaku(
         interface = PaginatorInterface(ctx.bot, paginator, owner=ctx.author)
         return await interface.send_to(ctx)
 
-    @discord.utils.copy_doc(PythonFeature.jsk_python)  # type: ignore
+    @discord.utils.copy_doc(PythonFeature.jsk_python)
     @Feature.Command(parent="jsk", name="py", aliases=["python"])
     async def jsk_python(self, ctx: HideoutContext, *, argument: Annotated[Codeblock, codeblock_converter]) -> None:
         """|coro|
@@ -179,7 +179,7 @@ class HideoutManagerJishaku(
             _g=ctx.guild,
         )
 
-        scope: Scope = self.scope  # type: ignore
+        scope: Scope = self.scope
         assert isinstance(scope, Scope)
         printed = io.StringIO()
 

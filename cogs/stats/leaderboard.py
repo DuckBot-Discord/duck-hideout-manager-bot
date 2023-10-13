@@ -1,7 +1,5 @@
 from __future__ import annotations
 from typing import NamedTuple
-from datetime import datetime
-from datetime import timedelta as td
 
 import asyncpg
 import discord
@@ -38,14 +36,14 @@ class LeaderboardView(View):
         self.current_embed: LeaderboardEmbed = embed
         super().__init__(timeout=300)
 
-    async def interaction_check(self, interaction: discord.Interaction):  # type: ignore
+    async def interaction_check(self, interaction: discord.Interaction):
         if interaction.user != self.author:
             return await interaction.response.send_message("This is not your view!", ephemeral=True)
 
         return True
 
     @discord.ui.button(style=discord.ButtonStyle.secondary, label="All Time", disabled=True)
-    async def all_time_callback(self, interaction: discord.Interaction[HideoutManager], button: discord.ui.Button):  # type: ignore
+    async def all_time_callback(self, interaction: discord.Interaction[HideoutManager], button: discord.ui.Button):
         for btn in self.children:
             if isinstance(btn, discord.ui.Button):
                 btn.disabled = False
@@ -57,7 +55,7 @@ class LeaderboardView(View):
         await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.button(style=discord.ButtonStyle.secondary, label="Last 30 Days")
-    async def _30_day_callback(self, interaction: discord.Interaction[HideoutManager], button: discord.ui.Button):  # type: ignore
+    async def _30_day_callback(self, interaction: discord.Interaction[HideoutManager], button: discord.ui.Button):
         for btn in self.children:
             if isinstance(btn, discord.ui.Button):
                 btn.disabled = False
@@ -69,7 +67,7 @@ class LeaderboardView(View):
         await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.button(style=discord.ButtonStyle.secondary, label="Last 7 Days")
-    async def _7_day_callback(self, interaction: discord.Interaction[HideoutManager], button: discord.ui.Button):  # type: ignore
+    async def _7_day_callback(self, interaction: discord.Interaction[HideoutManager], button: discord.ui.Button):
         for btn in self.children:
             if isinstance(btn, discord.ui.Button):
                 btn.disabled = False

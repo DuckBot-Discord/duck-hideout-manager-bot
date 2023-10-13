@@ -83,7 +83,7 @@ class ViewMenuPages(discord.ui.View):
 
     async def _get_kwargs_from_page(self, page: int) -> Dict[str, Any]:
         # fmt: off
-        value: dict[str, Any] | str | discord.Embed | Any = await discord.utils.maybe_coroutine(self.source.format_page, self, page)  # type: ignore
+        value: dict[str, Any] | str | discord.Embed | Any = await discord.utils.maybe_coroutine(self.source.format_page, self, page)
         if isinstance(value, dict):
             return value
         elif isinstance(value, str):
@@ -94,7 +94,7 @@ class ViewMenuPages(discord.ui.View):
             return {}
 
     async def show_page(self, interaction: discord.Interaction, page_number: int) -> None:
-        page: Any = await self.source.get_page(page_number)  # type: ignore
+        page: Any = await self.source.get_page(page_number)
         self.current_page = page_number
         kwargs = await self._get_kwargs_from_page(page)
         self._update_labels(page_number)
@@ -177,8 +177,8 @@ class ViewMenuPages(discord.ui.View):
                     await self.ctx.followup.send('Bot does not have embed links permission in this channel.')
             return
 
-        await self.source._prepare_once()  # type: ignore
-        page: Any = await self.source.get_page(0)  # type: ignore
+        await self.source._prepare_once()
+        page: Any = await self.source.get_page(0)
         kwargs = await self._get_kwargs_from_page(page)
         self._update_labels(0)
         if isinstance(self.ctx, commands.Context):

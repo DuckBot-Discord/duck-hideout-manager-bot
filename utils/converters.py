@@ -55,8 +55,8 @@ class UntilFlag(Generic[T, FCT]):
             converter = converter.__metadata__[0]  # type: ignore
 
         self._converter: Type[T] = converter
-        self._regex: re.Pattern[str] = self.flags.__commands_flag_regex__  # pyright: reportUnknownMemberType=false, reportGeneralTypeIssues=false
-        self._start: str = (self.flags.__commands_flag_prefix__)  # pyright: reportUnknownMemberType=false, reportGeneralTypeIssues=false
+        self._regex: re.Pattern[str] = self.flags.__commands_flag_regex__  # pyright: ignore[reportUnknownMemberType=false, reportGeneralTypeIssues]
+        self._start: str = (self.flags.__commands_flag_prefix__)  # pyright: ignore[reportUnknownMemberType=false, reportGeneralTypeIssues]
 
     def __class_getitem__(cls, item: Tuple[Type[T], Type[commands.FlagConverter]]) -> UntilFlag[T, FCT]:
         converter, flags = item
@@ -114,4 +114,4 @@ class UntilFlag(Generic[T, FCT]):
             raise commands.BadArgument('Failed to validate argument preceding flags.')
 
         flags = await self.flags.convert(ctx, argument=argument[len(value) :])
-        return UntilFlag(value=converted_value, flags=flags, converter=self._converter)  # type: ignore
+        return UntilFlag(value=converted_value, flags=flags, converter=self._converter)

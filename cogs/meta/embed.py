@@ -10,9 +10,9 @@ from utils import HideoutCog, HideoutContext
 from .views.embed import EmbedEditor, Embed
 
 try:
-    from utils.ignored import HORRIBLE_HELP_EMBED
+    from utils.ignored import HORRIBLE_HELP_EMBED  # type: ignore
 except ImportError:
-    HORRIBLE_HELP_EMBED = discord.Embed(title='No information available...')  # type: ignore
+    HORRIBLE_HELP_EMBED = discord.Embed(title='No information available...')
 
 __all__ = ('EmbedMaker', 'EmbedFlags')
 
@@ -63,7 +63,7 @@ class EmbedFlags(commands.FlagConverter, prefix='--', delimiter='', case_insensi
     save: TagName | None = None
 
     @classmethod
-    async def convert(cls, ctx: HideoutContext, argument: str):  # pyright: reportIncompatibleMethodOverride=false
+    async def convert(cls, ctx: HideoutContext, argument: str):
         argument = strip_codeblock(argument).replace(' —', ' --')
         # Here we strip the code block if any and replace the iOS dash with
         # a regular double-dash for ease of use.

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import base64
-from typing import Any, AsyncIterator
+from typing import AsyncIterator
 
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
-from aiohttp import BasicAuth, ClientSession, ClientResponse, ClientResponseError  # pyright: reportUnusedImport=false
+from aiohttp import BasicAuth, ClientSession, ClientResponse, ClientResponseError  # pyright: ignore[reportUnusedImport]
 
 __all__: tuple[str, ...] = ('GithubClient', 'FileData', 'TreeNode', 'Repository', 'create_client')
 

@@ -189,7 +189,7 @@ class HideoutExceptionManager:
                 'guild': (ctx.guild and ctx.guild.id) or None,
                 'channel': ctx.channel_id or 0,
             }
-            packet.update(addons)  # type: ignore
+            packet.update(addons)
 
         traceback_string = ''.join(traceback.format_exception(type(error), error, error.__traceback__)).replace(
             os.getcwd(), 'CWD'
@@ -296,7 +296,6 @@ class HandleHTTPException(AbstractAsyncContextManager[Self], AbstractContextMana
         exc_tb: Optional[TracebackType] = None,
     ) -> bool:
         if exc_val is not None and isinstance(exc_val, discord.HTTPException) and exc_type:
-
             embed = discord.Embed(
                 title=self.message or 'An unexpected error occurred!',
                 description=f'{exc_type.__name__}: {exc_val.text}',

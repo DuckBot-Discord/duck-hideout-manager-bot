@@ -62,7 +62,7 @@ class TagsWithOptionalOwners(TagsFromFetchedPageSource):
 
 
 class TagSelector(discord.ui.Select['TagSelectorMenu']):
-    async def callback(self, interaction: BotInteraction):  # pyright: reportIncompatibleMethodOverride=false
+    async def callback(self, interaction: BotInteraction):
         await interaction.response.defer()
         tag_id = self.values[0]
         assert self.view
@@ -173,7 +173,7 @@ class FieldSelectorView(utils.View):
             self.pick_field.add_option(label=f"{i + 1}) {(field.name or '')[0:95]}", value=str(i))
 
     @discord.ui.select(placeholder='Select a field to delete.')
-    async def pick_field(self, interaction: BotInteraction, select: discord.ui.Select[Self]):
+    async def pick_field(self, interaction: BotInteraction, select: discord.ui.Select):
         await self.actual_logic(interaction, select)
 
     @discord.ui.button(label='Go back')

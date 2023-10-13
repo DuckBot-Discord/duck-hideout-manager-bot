@@ -203,8 +203,8 @@ class HideoutContext(commands.Context['HideoutManager']):
 
 class HideoutGuildContext(HideoutContext):
     if TYPE_CHECKING:
-        guild: discord.Guild  # type: ignore
-        author: discord.Member  # type: ignore
+        guild: discord.Guild
+        author: discord.Member
 
 
 async def setup(bot: HideoutManager) -> None:

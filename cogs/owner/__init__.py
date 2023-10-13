@@ -14,7 +14,7 @@ class Owner(
 ):
     """The Cog for All owner commands."""
 
-    async def cog_check(self, ctx: HideoutContext) -> bool:  # pyright: reportIncompatibleMethodOverride=false
+    async def cog_check(self, ctx: HideoutContext) -> bool:
         """Check if the user is a bot owner."""
         if await ctx.bot.is_owner(ctx.author):
             return True

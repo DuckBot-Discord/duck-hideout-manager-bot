@@ -84,7 +84,6 @@ class CalendarStatus:
     def full_render(self) -> tuple[io.BytesIO, str | None]:
         # at some point, this function should be made cleaner. but for now it works.
 
-        # pyright: reportUnknownMemberType=false
         array = np.zeros((self.HEIGHT, self.WIDTH, 4))
         font = ImageFont.truetype('assets/fonts/Oswald-SemiBold.ttf', 19)
 
@@ -147,7 +146,6 @@ class CalendarStatusCog(HideoutCog):
         """Gets yours or another user's calendar status log."""
         os.system('cls')
         async with ctx.typing():
-
             status = CalendarStatus(self.bot)
             error = await status.async_init(user.id, show_warning=ctx.author == user)
             if error:
