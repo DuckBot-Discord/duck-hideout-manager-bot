@@ -41,9 +41,9 @@ class VoiceChatLogs(HideoutCog):
                 )
 
         if before.self_mute != after.self_mute:
-            if before.mute:
+            if before.self_mute:
                 await channel.send(f"[{ts}] {NO_MUTE} **{discord.utils.escape_markdown(member.display_name)}** unmuted.")
-            if after.mute:
+            if after.self_mute:
                 await channel.send(
                     f"[{ts}] {SELF_MUTE} **{discord.utils.escape_markdown(member.display_name)}** muted themselves."
                 )
