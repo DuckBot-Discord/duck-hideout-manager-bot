@@ -8,7 +8,21 @@ import discord
 from discord.ext import commands, tasks
 from bot import HideoutManager
 
-from utils import HideoutCog, JOINED, LEFT, DEAF, MUTE, SELF_DEAF, SELF_MUTE, NO_DEAF, NO_MUTE
+from utils import (
+    HideoutCog,
+    JOINED,
+    LEFT,
+    DEAF,
+    MUTE,
+    SELF_DEAF,
+    SELF_MUTE,
+    NO_DEAF,
+    NO_MUTE,
+    LIVE,
+    NO_LIVE,
+    VIDEO,
+    NO_VIDEO,
+)
 
 
 class VoiceChatLogs(HideoutCog):
@@ -95,4 +109,26 @@ class VoiceChatLogs(HideoutCog):
             if after.self_mute:
                 await self.enqueue_message(
                     f"[{ts}] {SELF_MUTE} **{discord.utils.escape_markdown(member.display_name)}** muted themselves.", channel
+                )
+
+        if before.self_stream != after.self_stream:
+            if before.self_stream:
+                await self.enqueue_message(
+                    f"[{ts}] {LIVE} **{discord.utils.escape_markdown(member.display_name)}** started streaming.", channel
+                )
+            if after.self_stream:
+                await self.enqueue_message(
+                    f"[{ts}] {NO_LIVE} **{discord.utils.escape_markdown(member.display_name)}** stopped streaming.", channel
+                )
+
+        if before.self_video != after.self_video:
+            if before.self_video:
+                await self.enqueue_message(
+                    f"[{ts}] {VIDEO} **{discord.utils.escape_markdown(member.display_name)}** turned on their camera.",
+                    channel,
+                )
+            if after.self_video:
+                await self.enqueue_message(
+                    f"[{ts}] {NO_VIDEO} **{discord.utils.escape_markdown(member.display_name)}** turned off their camera.",
+                    channel,
                 )
