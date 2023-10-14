@@ -114,21 +114,21 @@ class VoiceChatLogs(HideoutCog):
         if before.self_stream != after.self_stream:
             if before.self_stream:
                 await self.enqueue_message(
-                    f"[{ts}] {LIVE} **{discord.utils.escape_markdown(member.display_name)}** started streaming.", channel
+                    f"[{ts}] {NO_LIVE} **{discord.utils.escape_markdown(member.display_name)}** stopped streaming.", channel
                 )
             if after.self_stream:
                 await self.enqueue_message(
-                    f"[{ts}] {NO_LIVE} **{discord.utils.escape_markdown(member.display_name)}** stopped streaming.", channel
+                    f"[{ts}] {LIVE} **{discord.utils.escape_markdown(member.display_name)}** started streaming.", channel
                 )
 
         if before.self_video != after.self_video:
             if before.self_video:
                 await self.enqueue_message(
-                    f"[{ts}] {VIDEO} **{discord.utils.escape_markdown(member.display_name)}** turned on their camera.",
+                    f"[{ts}] {NO_VIDEO} **{discord.utils.escape_markdown(member.display_name)}** turned off their camera.",
                     channel,
                 )
             if after.self_video:
                 await self.enqueue_message(
-                    f"[{ts}] {NO_VIDEO} **{discord.utils.escape_markdown(member.display_name)}** turned off their camera.",
+                    f"[{ts}] {VIDEO} **{discord.utils.escape_markdown(member.display_name)}** turned on their camera.",
                     channel,
                 )
