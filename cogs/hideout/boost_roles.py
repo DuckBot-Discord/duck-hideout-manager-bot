@@ -13,12 +13,11 @@ from utils import HideoutCog
 from . import HideoutManager
 
 BOOSTER_ROLE_ID: int = 878410045505798154
-T = Optional[Union[str, bytes]]
 
 
 class BoostRoles(HideoutCog):
     @staticmethod
-    async def get_emoji(input: str) -> T:
+    async def get_emoji(input: str) -> Optional[Union[str, bytes]]:
         if is_emoji(input):
             return input
 
@@ -28,8 +27,16 @@ class BoostRoles(HideoutCog):
 
         return await partial.read()
 
-    boost = app_commands.Group(name="boost", description="Commands for managing your boost.")
-    role = app_commands.Group(name="role", description="Commands for manging your boost role.", parent=boost)
+    @app_commands.guild_only()
+    class BoostGroup(app_commands.Group):
+        pass
+
+    @app_commands.guild_only()
+    class RoleGroup(app_commands.Group):
+        pass
+
+    boost = BoostGroup(name="boost", description="Commands for managing your boost.")
+    role = RoleGroup(name="role", description="Commands for manging your boost role.", parent=boost)
 
     @role.command()
     @app_commands.describe(
@@ -67,7 +74,7 @@ class BoostRoles(HideoutCog):
                     "Could not parse the colour, make sure it's a valid hex colour code.", ephemeral=True
                 )
 
-        if all((icon, emoji)):
+        if icon and emoji:
             return await interaction.response.send_message("You can not supply both `icon` and `emoji`.", ephemeral=True)
 
         elif emoji is not None:
@@ -122,11 +129,12 @@ class BoostRoles(HideoutCog):
     ):
         """Edits your boost role."""
         assert isinstance(interaction.user, discord.Member) and interaction.guild
+
         if BOOSTER_ROLE_ID not in [role.id for role in interaction.user.roles]:
-            return await interaction.response.send_message("You're currently not boosting this server.", ephemeral=True)
+            return await interaction.response.send_message("You're currently not boosting the server.", ephemeral=True)
 
         colour_: discord.Colour = discord.Colour.default()
-        icon_: T = ""
+        icon_ = ""
 
         db = await interaction.client.pool.fetchrow("SELECT * FROM booster_roles WHERE user_id = $1", interaction.user.id)
         if db is None:
