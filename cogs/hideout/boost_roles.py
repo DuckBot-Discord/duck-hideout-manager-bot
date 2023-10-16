@@ -1,6 +1,5 @@
 from contextlib import suppress
 from io import BytesIO
-from textwrap import dedent
 from typing import Optional, Union
 
 import discord
@@ -11,8 +10,6 @@ from emoji import is_emoji
 from utils import HideoutCog
 
 from . import HideoutManager
-
-BOOSTER_ROLE_ID: int = 878410045505798154
 
 
 class BoostRoles(HideoutCog):
@@ -28,7 +25,6 @@ class BoostRoles(HideoutCog):
         return await partial.read()
 
     boost = app_commands.Group(name="boost", description="Commands for managing your boost.", guild_only=True)
-    @app_commands.guild_only()
     role = app_commands.Group(name="role", description="Commands for manging your boost role.", parent=boost)
 
     @role.command()
@@ -123,7 +119,7 @@ class BoostRoles(HideoutCog):
         """Edits your boost role."""
         assert isinstance(interaction.user, discord.Member) and interaction.guild
 
-        if BOOSTER_ROLE_ID not in [role.id for role in interaction.user.roles]:
+        if interaction.guild.premium_subscriber_role not in interaction.user.roles:
             return await interaction.response.send_message("You're currently not boosting the server.", ephemeral=True)
 
         colour_: discord.Colour = discord.Colour.default()
@@ -190,9 +186,10 @@ class BoostRoles(HideoutCog):
             role_icon = discord.File(filename=f"icon.png", fp=BytesIO(db["role_icon"]))
             embed = discord.Embed().set_thumbnail(url="attachment://icon.png")
 
-        text = f"""
-            Successfully edited {role.mention}
-            Name: {role}
-            Color: {db['role_colour'].upper()}
-        """
-        await interaction.response.send_message(dedent(text), file=role_icon or MISSING, embed=embed or MISSING)
+        text = (
+            f"Successfully edited {role.mention}"
+            f"\nName: {role}"
+            f"\nColor: {db['role_colour'].upper()}"
+        )
+        await interaction.response.send_message(text, file=role_icon or MISSING, embed=embed or MISSING)
+
