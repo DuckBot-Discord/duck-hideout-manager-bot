@@ -27,16 +27,9 @@ class BoostRoles(HideoutCog):
 
         return await partial.read()
 
+    boost = app_commands.Group(name="boost", description="Commands for managing your boost.", guild_only=True)
     @app_commands.guild_only()
-    class BoostGroup(app_commands.Group):
-        pass
-
-    @app_commands.guild_only()
-    class RoleGroup(app_commands.Group):
-        pass
-
-    boost = BoostGroup(name="boost", description="Commands for managing your boost.")
-    role = RoleGroup(name="role", description="Commands for manging your boost role.", parent=boost)
+    role = app_commands.Group(name="role", description="Commands for manging your boost role.", parent=boost)
 
     @role.command()
     @app_commands.describe(
