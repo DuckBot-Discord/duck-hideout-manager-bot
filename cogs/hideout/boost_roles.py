@@ -1,3 +1,4 @@
+import logging
 from contextlib import suppress
 from io import BytesIO
 from typing import Optional, Union
@@ -11,6 +12,8 @@ from utils import HideoutCog
 
 from . import HideoutManager
 
+Interaction = discord.Interaction[HideoutManager]
+log = logging.getLogger(__name__)
 
 class BoostRoles(HideoutCog):
     @staticmethod
@@ -24,6 +27,51 @@ class BoostRoles(HideoutCog):
 
         return await partial.read()
 
+    @HideoutCog.listener()
+    async def on_member_update(self, before: discord.Member, after: discord.Member):
+        if before.premium_since and not after.premium_since:
+            db = await self.bot.pool.fetchrow("SELECT * FROM booster_roles WHERE user_id = $1", after.id)
+
+            if db is None:
+                return
+
+            role = after.guild.get_role(db["role_id"])
+
+            if role is None:
+                return
+
+            try:
+                await role.delete(reason=f"Nitro Boost Expired: {after}")
+
+            except (discord.HTTPException, discord.Forbidden) as exc:
+                log.error("Failed to delete booster role: %s (%s)", str(role), role.id, exc_info=exc)
+        
+        elif not before.premium_since and after.premium_since:
+            db = await self.bot.pool.fetchrow("SELECT * FROM booster_roles WHERE user_id = $1", after.id)
+            
+            if db is None:
+                return
+            
+            colour = discord.Colour.from_str(db["role_colour"])
+            icon: Optional[bytes] = db["role_icon"]
+            name: str = db["role_name"]
+            
+            try:
+                reason = f"Member re-boosted: {after}"
+                role = await after.guild.create_role(
+                    name=name,
+                    colour=colour,
+                    display_icon=icon or MISSING,
+                    reason=reason
+                )
+                await after.add_roles(role, reason=reason)
+            
+            except Exception as exc:
+                log.error("Failed to create or add booster role for %s (reboosting)", after, exc_info=exc)
+
+    boost = app_commands.Group(name="boost", description="Commands for managing your boost.", guild_only=True)
+    role = app_commands.Group(name="role", description="Commands for manging your boost role.", parent=boost)
+
     boost = app_commands.Group(name="boost", description="Commands for managing your boost.", guild_only=True)
     role = app_commands.Group(name="role", description="Commands for manging your boost role.", parent=boost)
 
@@ -36,7 +84,7 @@ class BoostRoles(HideoutCog):
     )
     async def create(
         self,
-        interaction: discord.Interaction[HideoutManager],
+        interaction: Interaction,
         name: str,
         colour: Optional[str] = None,
         icon: Optional[discord.Attachment] = None,
@@ -87,7 +135,7 @@ class BoostRoles(HideoutCog):
             role = await interaction.guild.create_role(name=name, colour=colour_, display_icon=icon_ or MISSING)
             await interaction.user.add_roles(role)
             await interaction.response.send_message(
-                f"Successfully created your role {role.mention}",
+                f"Successfully created your role {role.mention}.",
                 ephemeral=True,
                 allowed_mentions=discord.AllowedMentions.none(),
             )
@@ -110,7 +158,7 @@ class BoostRoles(HideoutCog):
     )
     async def edit(
         self,
-        interaction: discord.Interaction[HideoutManager],
+        interaction: Interaction,
         name: Optional[str] = None,
         colour: Optional[str] = None,
         icon: Optional[discord.Attachment] = None,
@@ -193,3 +241,20 @@ class BoostRoles(HideoutCog):
         )
         await interaction.response.send_message(text, file=role_icon or MISSING, embed=embed or MISSING)
 
+    @role.command()
+    async def delete(self, interaction: Interaction):
+        """Deletes your boost role."""
+        db = await interaction.client.pool.fetchrow("SELECT * FROM booster_roles WHERE user_id = $1", interaction.user.id)
+
+        if db is None:
+            return await interaction.response.send_message("You don't have a boost role.", ephemeral=True)
+
+        assert interaction.guild
+
+        role = interaction.guild.get_role(db["role_id"])
+        assert role
+
+        await role.delete(reason=f"Nitro Boost Expired: {interaction.user}")
+            
+        await interaction.client.pool.execute("DELETE FROM booster_roles WHERE user_id = $1", interaction.user.id)
+        await interaction.response.send_message("Successfully deleted your boost role.")
