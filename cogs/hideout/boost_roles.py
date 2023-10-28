@@ -22,7 +22,10 @@ class BoostRoles(HideoutCog):
             return input
 
         partial = discord.PartialEmoji.from_str(input)
-        if partial.id is None:
+        if partial.is_unicode_emoji():
+            return input
+            
+        elif partial.id is None:
             return None
 
         return await partial.read()
@@ -64,13 +67,12 @@ class BoostRoles(HideoutCog):
                     display_icon=icon or MISSING,
                     reason=reason
                 )
+                below = after.guild.get_role(1079187727695740960)
+                await role.edit(position=below.position + 1)  # type: ignore
                 await after.add_roles(role, reason=reason)
             
             except Exception as exc:
                 log.error("Failed to create or add booster role for %s (reboosting)", after, exc_info=exc)
-
-    boost = app_commands.Group(name="boost", description="Commands for managing your boost.", guild_only=True)
-    role = app_commands.Group(name="role", description="Commands for manging your boost role.", parent=boost)
 
     boost = app_commands.Group(name="boost", description="Commands for managing your boost.", guild_only=True)
     role = app_commands.Group(name="role", description="Commands for manging your boost role.", parent=boost)
@@ -115,15 +117,7 @@ class BoostRoles(HideoutCog):
             return await interaction.response.send_message("You can not supply both `icon` and `emoji`.", ephemeral=True)
 
         elif emoji is not None:
-            if is_emoji(emoji):
-                icon_ = emoji
-
-            else:
-                to_partial = discord.PartialEmoji.from_str(emoji)
-                if to_partial.id is None:
-                    return await interaction.response.send_message("Could not parse that emoji.", ephemeral=True)
-
-                icon_ = await to_partial.read()
+            icon_ = await self.get_emoji(emoji)
 
         elif icon is not None:
             icon_ = await icon.read()
