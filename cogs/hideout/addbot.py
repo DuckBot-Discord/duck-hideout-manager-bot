@@ -45,7 +45,7 @@ class Addbot(HideoutCog):
         if confirm is True:
             await self.bot.pool.execute(
                 'INSERT INTO addbot (owner_id, bot_id, reason) VALUES ($1, $2, $3) '
-                'ON CONFLICT (owner_id, bot_id) DO UPDATE SET pending = TRUE, added = FALSE, reason = $3',
+                'ON CONFLICT (bot_id) DO UPDATE SET pending = TRUE, added = FALSE, owner_id = $1, reason = $3',
                 ctx.author.id,
                 bot_id.id,
                 reason,
