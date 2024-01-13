@@ -697,7 +697,7 @@ class Tags(HideoutCog):
         """
         args = (ctx.guild.id, member.id)
 
-        amount: int | None = self.bot.pool.fetchval(query, *args)  # type: ignore
+        amount: int | None = await self.bot.pool.fetchval(query, *args)
 
         if amount == 0 or amount is None:
             await ctx.send(f"{member} has no tags!")
