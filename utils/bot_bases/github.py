@@ -5,7 +5,7 @@ from typing import AsyncIterator
 
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
-from aiohttp import BasicAuth, ClientSession, ClientResponse, ClientResponseError  # pyright: ignore[reportUnusedImport]
+from aiohttp import ClientSession
 
 __all__: tuple[str, ...] = ('GithubClient', 'FileData', 'TreeNode', 'Repository', 'create_client')
 

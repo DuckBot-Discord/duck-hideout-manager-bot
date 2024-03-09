@@ -62,7 +62,7 @@ class TagsWithOptionalOwners(TagsFromFetchedPageSource):
 
 
 class TagSelector(discord.ui.Select['TagSelectorMenu']):
-    async def callback(self, interaction: BotInteraction):
+    async def callback(self, interaction: BotInteraction):  # pyright: ignore[reportIncompatibleMethodOverride]
         await interaction.response.defer()
         tag_id = self.values[0]
         assert self.view
@@ -150,7 +150,7 @@ class UndoView(utils.View):
 
 
 class DeleteButton(discord.ui.Button['EmbedEditor']):
-    async def callback(self, interaction: BotInteraction):
+    async def callback(self, interaction: BotInteraction):  # pyright: ignore[reportIncompatibleMethodOverride]
         if interaction.message:
             await interaction.message.delete()
         await interaction.response.send_message(
@@ -279,7 +279,7 @@ class EmbedEditor(utils.View):
                 return self.shorten(self.embed)
         return self.help_embed()
 
-    async def interaction_check(self, interaction: BotInteraction, /):
+    async def interaction_check(self, interaction: BotInteraction, /):  # pyright: ignore[reportIncompatibleMethodOverride]
         if interaction.user == self.owner:
             return True
         await interaction.response.send_message('This is not your menu.', ephemeral=True)

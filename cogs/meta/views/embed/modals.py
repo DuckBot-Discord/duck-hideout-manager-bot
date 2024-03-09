@@ -26,8 +26,7 @@ def to_boolean(argument: str) -> bool:
         raise InvalidModalField(f'{argument} is not a valid boolean value.')
 
 
-class InvalidModalField(Exception):
-    ...
+class InvalidModalField(Exception): ...
 
 
 class BaseModal(discord.ui.Modal):
@@ -339,7 +338,9 @@ class ChooseATagName(discord.ui.Modal):
         super().__init__(title=title)
         self.parent = parent
 
-    async def on_submit(self, interaction: discord.Interaction[HideoutManager]):
+    async def on_submit(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self, interaction: discord.Interaction[HideoutManager]
+    ):
         try:
             tag = await self.parent.cog.make_tag(
                 interaction.guild, interaction.user, self.name.value, self.content.value, embed=self.parent.embed

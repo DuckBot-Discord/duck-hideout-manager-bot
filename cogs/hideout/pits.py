@@ -333,6 +333,7 @@ class PitsManagement(HideoutCog):
                 **pit.overwrites,
                 ctx.guild.default_role: discord.PermissionOverwrite(view_channel=False),
                 councillors: discord.PermissionOverwrite(view_channel=True),
+                ctx.guild.me: discord.PermissionOverwrite(view_channel=True, manage_channels=True, manage_permissions=True),
             }
             await pit.edit(
                 overwrites=new_overwrites, category=archive, reason=f"Pit archived by {ctx.author} ({ctx.author.id})"
@@ -367,9 +368,9 @@ class PitsManagement(HideoutCog):
         is_not_councillor = ctx.guild.get_role(COUNCILLORS_ROLE) not in ctx.author.roles
 
         if archive_mode is ArchiveMode.INACTIVE and ctx.author != owner or is_not_councillor:
-            raise ActionNotExecutable('This pit was manually archived, only the pit owner and counsellors can unarchive it.')
+            raise ActionNotExecutable('This pit was manually archived, only the pit owner and councillors can unarchive it.')
         elif archive_mode is ArchiveMode.MANUAL and is_not_councillor:
-            raise ActionNotExecutable('This pit was marked as inactive, only the counsellors can unarchive it.')
+            raise ActionNotExecutable('This pit was marked as inactive, only the councillors can unarchive it.')
 
         overs = {
             **pit.overwrites,
