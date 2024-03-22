@@ -15,6 +15,7 @@ from . import HideoutManager
 Interaction = discord.Interaction[HideoutManager]
 log = logging.getLogger(__name__)
 
+
 class BoostRoles(HideoutCog):
     @staticmethod
     async def get_emoji(input: str) -> Optional[Union[str, bytes]]:
@@ -24,7 +25,7 @@ class BoostRoles(HideoutCog):
         partial = discord.PartialEmoji.from_str(input)
         if partial.is_unicode_emoji():
             return input
-            
+
         elif partial.id is None:
             return None
 
@@ -48,29 +49,24 @@ class BoostRoles(HideoutCog):
 
             except (discord.HTTPException, discord.Forbidden) as exc:
                 log.error("Failed to delete booster role: %s (%s)", str(role), role.id, exc_info=exc)
-        
+
         elif not before.premium_since and after.premium_since:
             db = await self.bot.pool.fetchrow("SELECT * FROM booster_roles WHERE user_id = $1", after.id)
-            
+
             if db is None:
                 return
-            
+
             colour = discord.Colour.from_str(db["role_colour"])
             icon: Optional[bytes] = db["role_icon"]
             name: str = db["role_name"]
-            
+
             try:
                 reason = f"Member re-boosted: {after}"
-                role = await after.guild.create_role(
-                    name=name,
-                    colour=colour,
-                    display_icon=icon or MISSING,
-                    reason=reason
-                )
+                role = await after.guild.create_role(name=name, colour=colour, display_icon=icon or MISSING, reason=reason)
                 below = after.guild.get_role(1079187727695740960)
                 await role.edit(position=below.position + 1)  # type: ignore
                 await after.add_roles(role, reason=reason)
-            
+
             except Exception as exc:
                 log.error("Failed to create or add booster role for %s (reboosting)", after, exc_info=exc)
 
@@ -134,10 +130,23 @@ class BoostRoles(HideoutCog):
                 allowed_mentions=discord.AllowedMentions.none(),
             )
 
-            query = "INSERT INTO booster_roles VALUES ($1, $2, $3, $4, $5)"
-            await interaction.client.pool.execute(
-                query, role.id, interaction.user.id, name, str(role.colour), role.icon and await role.icon.read()
-            )
+            if role.icon is not None:
+                query = "INSERT INTO booster_roles (role_id, user_id, role_colour, role_icon) VALUES ($1, $2, $3, $4, $5)"
+                await interaction.client.pool.execute(
+                    query, role.id, interaction.user.id, name, str(role.colour), role.icon.read()
+                )
+
+            elif role.unicode_emoji is not None:
+                query = (
+                    "INSERT INTO booster_roles (role_id, user_id, role_colour, unicode_emoji) VALUES ($1, $2, $3, $4, $5)"
+                )
+                await interaction.client.pool.execute(
+                    query, role.id, interaction.user.id, name, str(role.colour), role.unicode_emoji
+                )
+
+            else:
+                query = "INSERT INTO booster_roles VALUES ($1, $2, $3, $4)"
+                await interaction.client.pool.execute(query, role.id, interaction.user.id, name, str(role.colour))
 
         except discord.HTTPException:
             await interaction.response.send_message("Something went wrong when trying to create the role.", ephemeral=True)
@@ -199,11 +208,16 @@ class BoostRoles(HideoutCog):
         role = interaction.guild.get_role(db["role_id"])
         assert role
 
-        role = await role.edit(
-            name=name or MISSING,
-            colour=colour_ if colour_ != discord.Colour.default() else MISSING,
-            display_icon=icon_ or MISSING,
-        )
+        if icon_ is not None:
+            role = await role.edit(
+                name=name or MISSING, colour=colour_ if colour_ != discord.Colour.default() else MISSING, display_icon=icon_
+            )
+
+        else:
+            role = await role.edit(
+                name=name or MISSING,
+                colour=colour_ if colour_ != discord.Colour.default() else MISSING,
+            )
 
         assert role
 
@@ -228,11 +242,7 @@ class BoostRoles(HideoutCog):
             role_icon = discord.File(filename=f"icon.png", fp=BytesIO(db["role_icon"]))
             embed = discord.Embed().set_thumbnail(url="attachment://icon.png")
 
-        text = (
-            f"Successfully edited {role.mention}"
-            f"\nName: {role}"
-            f"\nColor: {db['role_colour'].upper()}"
-        )
+        text = f"Successfully edited {role.mention}" f"\nName: {role}" f"\nColor: {db['role_colour'].upper()}"
         await interaction.response.send_message(text, file=role_icon or MISSING, embed=embed or MISSING)
 
     @role.command()
@@ -249,6 +259,6 @@ class BoostRoles(HideoutCog):
         assert role
 
         await role.delete(reason=f"Nitro Boost Expired: {interaction.user}")
-            
+
         await interaction.client.pool.execute("DELETE FROM booster_roles WHERE user_id = $1", interaction.user.id)
         await interaction.response.send_message("Successfully deleted your boost role.")
