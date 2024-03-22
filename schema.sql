@@ -125,5 +125,6 @@ CREATE TABLE IF NOT EXISTS booster_roles(
     role_name TEXT NOT NULL,
     role_colour VARCHAR(7) NOT NULL,
     role_icon BYTEA,
+    unicode_emoji TEXT,
     PRIMARY KEY (role_id, user_id)
 );
