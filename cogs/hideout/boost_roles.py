@@ -1,5 +1,4 @@
 import logging
-from contextlib import suppress
 from io import BytesIO
 from typing import Optional, Union
 
@@ -186,8 +185,10 @@ class BoostRoles(HideoutCog):
             return await interaction.response.send_message("You need to provide at least one argument.", ephemeral=True)
 
         if colour is not None:
-            with suppress(ValueError):
+            try:
                 colour_ = discord.Colour.from_str(colour)
+            except ValueError:
+                pass
 
         if icon and emoji:
             return await interaction.response.send_message("You can not supply both `icon` and `emoji`.", ephemeral=True)
