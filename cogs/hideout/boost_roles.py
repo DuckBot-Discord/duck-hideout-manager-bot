@@ -16,7 +16,6 @@ log = logging.getLogger(__name__)
 
 
 class BoostRoles(HideoutCog):
-
     @staticmethod
     async def get_emoji(input: str) -> Optional[Union[str, bytes]]:
         partial = discord.PartialEmoji.from_str(input)
@@ -44,7 +43,7 @@ class BoostRoles(HideoutCog):
             try:
                 await role.delete(reason=f"Nitro Boost Expired: {after}")
 
-            except discord.HTTPException as exc:  
+            except discord.HTTPException as exc:
                 log.error("Failed to delete booster role: %s (%s)", str(role), role.id, exc_info=exc)
 
         elif not before.premium_since and after.premium_since:
@@ -54,7 +53,7 @@ class BoostRoles(HideoutCog):
                 return
 
             colour = discord.Colour.from_str(db["role_colour"])
-            icon: Optional[Union[bytes, str]] = db["role_icon"] or db["unicode_emoji"]  
+            icon: Optional[Union[bytes, str]] = db["role_icon"] or db["unicode_emoji"]
             name: str = db["role_name"]
 
             try:
@@ -220,7 +219,9 @@ class BoostRoles(HideoutCog):
         assert role
 
         role = await role.edit(
-            name=name or MISSING, colour=colour_ if colour_ != discord.Colour.default() else MISSING, display_icon=icon_ or MISSING
+            name=name or MISSING,
+            colour=colour_ if colour_ != discord.Colour.default() else MISSING,
+            display_icon=icon_ or MISSING,
         )
 
         assert role
@@ -263,7 +264,7 @@ class BoostRoles(HideoutCog):
         role = interaction.guild.get_role(db["role_id"])
         assert role
 
-        await role.delete(reason=f"Manually deleted by: {interaction.user}") 
+        await role.delete(reason=f"Manually deleted by: {interaction.user}")
 
         await interaction.client.pool.execute("DELETE FROM booster_roles WHERE user_id = $1", interaction.user.id)
         await interaction.response.send_message("Successfully deleted your boost role.")
