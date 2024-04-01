@@ -92,7 +92,7 @@ class BoostRoles(HideoutCog):
         """Creates a new boost role."""
         assert interaction.guild and isinstance(interaction.user, discord.Member)
 
-        if interaction.guild.premium_subscriber_role in interaction.user.roles:
+        if interaction.guild.premium_subscriber_role not in interaction.user.roles:
             return await interaction.response.send_message("You're currently not boosting the server.", ephemeral=True)
 
         await interaction.response.defer(ephemeral=True)
@@ -176,7 +176,7 @@ class BoostRoles(HideoutCog):
         """Edits your boost role."""
         assert isinstance(interaction.user, discord.Member) and interaction.guild
 
-        if interaction.guild.premium_subscriber_role in interaction.user.roles:
+        if interaction.guild.premium_subscriber_role not in interaction.user.roles:
             return await interaction.response.send_message("You're currently not boosting the server.", ephemeral=True)
 
         await interaction.response.defer(ephemeral=True)
