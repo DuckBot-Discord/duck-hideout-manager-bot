@@ -42,6 +42,11 @@ class LeaderboardView(View):
 
         return True
 
+    async def on_timeout(self):
+        for btn in self.children:
+            if isinstance(btn, discord.ui.Button):
+                btn.disabled = True
+
     @discord.ui.button(style=discord.ButtonStyle.secondary, label="All Time", disabled=True)
     async def all_time_callback(self, interaction: discord.Interaction[HideoutManager], button: discord.ui.Button):
         for btn in self.children:
