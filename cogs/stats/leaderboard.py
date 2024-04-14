@@ -34,6 +34,7 @@ class LeaderboardView(View):
     def __init__(self, embed: LeaderboardEmbed, author: discord.User | discord.Member):
         self.author = author
         self.current_embed: LeaderboardEmbed = embed
+        self.message: discord.Message | None = None
         super().__init__(timeout=300)
 
     async def interaction_check(self, interaction: discord.Interaction):
@@ -46,6 +47,9 @@ class LeaderboardView(View):
         for btn in self.children:
             if isinstance(btn, discord.ui.Button):
                 btn.disabled = True
+
+        if self.message:
+            await self.message.edit(view=self)
 
     @discord.ui.button(style=discord.ButtonStyle.secondary, label="All Time", disabled=True)
     async def all_time_callback(self, interaction: discord.Interaction[HideoutManager], button: discord.ui.Button):
@@ -143,5 +147,6 @@ class LeaderboardCog(HideoutCog):
         async with ctx.typing():
             LBEmbed = LeaderboardEmbed(ctx.bot.pool, ctx.bot, ctx.author)
             embed = await LBEmbed.update_leaderboard(interval=None)
+            v = LeaderboardView(LBEmbed, ctx.author)
 
-            await ctx.send(embed=embed, view=LeaderboardView(LBEmbed, ctx.author))
+            v.message = await ctx.send(embed=embed, view=v)
