@@ -509,7 +509,7 @@ class PitsManagement(HideoutCog):
                 councillors: discord.PermissionOverwrite(view_channel=True),
             }
 
-            await pit.edit(overwrites=new_overwrites, category=archive, reason=f"Pit archived by automatically: member left")
+            await pit.edit(overwrites=new_overwrites, category=archive, reason=f"Pit archived automatically: member left")
             await self.bot.pool.execute("UPDATE pits SET archive_mode = 'leave' WHERE pit_id = $1", pit.id)
         except discord.Forbidden:
             return log.error('I do not have permission to edit channels.')
