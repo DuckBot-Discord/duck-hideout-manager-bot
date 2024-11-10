@@ -136,6 +136,7 @@ class TagSelectorMenu(utils.ViewMenuPages):
 class UndoView(utils.View):
     def __init__(self, parent: 'EmbedEditor'):
         self.parent = parent
+        self.interaction_check = self.parent.interaction_check
         super().__init__(timeout=10)
 
     @discord.ui.button(label='Undo deletion.')
@@ -162,9 +163,15 @@ class DeleteButton(discord.ui.Button['EmbedEditor']):
 
 
 class FieldSelectorView(utils.View):
-    def __init__(self, parent_view: EmbedEditor):
-        self.parent = parent_view
-        super().__init__(timeout=300, bot=parent_view.bot)
+    def __init_subclass__(cls, label: str, **kwargs):
+        cls.label = label
+        super().__init_subclass__(**kwargs)
+
+    def __init__(self, parent: EmbedEditor):
+        self.parent = parent
+        self.interaction_check = self.parent.interaction_check
+        super().__init__(timeout=300, bot=parent.bot)
+        self.pick_field.placeholder = self.label
         self.update_options()
 
     def update_options(self):
@@ -172,7 +179,7 @@ class FieldSelectorView(utils.View):
         for i, field in enumerate(self.parent.embed.fields):
             self.pick_field.add_option(label=f"{i + 1}) {(field.name or '')[0:95]}", value=str(i))
 
-    @discord.ui.select(placeholder='Select a field to delete.')
+    @discord.ui.select()
     async def pick_field(self, interaction: BotInteraction, select: discord.ui.Select):
         await self.actual_logic(interaction, select)
 
@@ -185,7 +192,7 @@ class FieldSelectorView(utils.View):
         raise NotImplementedError('Child classes must overwrite this method.')
 
 
-class DeleteFieldWithSelect(FieldSelectorView):
+class DeleteFieldWithSelect(FieldSelectorView, label = 'Select a field to delete.'):
     async def actual_logic(self, interaction: BotInteraction, select: discord.ui.Select[Self]):
         index = int(select.values[0])
         self.parent.embed.remove_field(index)
@@ -194,7 +201,7 @@ class DeleteFieldWithSelect(FieldSelectorView):
         self.stop()
 
 
-class EditFieldSelect(FieldSelectorView):
+class EditFieldSelect(FieldSelectorView, label = 'Select a field to edit.'):
     async def actual_logic(self, interaction: BotInteraction, select: discord.ui.Select[Self]):
         index = int(select.values[0])
         self.parent.timeout = 600
@@ -204,6 +211,7 @@ class EditFieldSelect(FieldSelectorView):
 class SendToView(utils.View):
     def __init__(self, *, parent: EmbedEditor):
         self.parent = parent
+        self.interaction_check = self.parent.interaction_check
         super().__init__(timeout=300, bot=parent.cog.bot)
 
     @discord.ui.select(
