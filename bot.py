@@ -280,6 +280,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
             max_messages=4000,
             help_command=None,
             tree_cls=HideoutCommandTree,
+            enable_debug_events=True,
         )
         self.pool: Pool[asyncpg.Record] = pool
         self.session: ClientSession = session

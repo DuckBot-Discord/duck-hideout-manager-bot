@@ -28,6 +28,7 @@ __all__: Tuple[str, ...] = (
     'NO_LIVE',
     'VIDEO',
     'NO_VIDEO',
+    'STATUS_ICON',
 )
 
 GITHUB = '<:github:895395664383598633>'
@@ -82,3 +83,4 @@ LIVE = "<:live:1163498500730921052>"
 NO_LIVE = "<:nolive:1163498503939571774>"
 VIDEO = "<:video:1162742336216895488>"
 NO_VIDEO = "<:novideo:1162742453888098314>"
+STATUS_ICON = "<:rich_presence:895414264016306196>"

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import json
+from logging import getLogger
 from typing import Any, DefaultDict
 from collections import defaultdict
 
@@ -22,7 +24,12 @@ from utils import (
     NO_LIVE,
     VIDEO,
     NO_VIDEO,
+    STATUS_ICON,
+    DUCK_HIDEOUT,
 )
+
+
+log = getLogger(__name__)
 
 
 class VoiceChatLogs(HideoutCog):
@@ -133,3 +140,44 @@ class VoiceChatLogs(HideoutCog):
                     f"[{ts}] {VIDEO} **{discord.utils.escape_markdown(member.display_name)}** turned on their camera.",
                     channel,
                 )
+
+    @commands.Cog.listener("on_socket_raw_receive")
+    async def send_channel_topic_log(self, msg: str):
+        if not msg:
+            return
+
+        raw = json.loads(msg)
+
+        if raw["t"] != "GUILD_AUDIT_LOG_ENTRY_CREATE":
+            return
+
+        data = raw["d"]
+
+        if data["action_type"] not in (192, 193):
+            return
+
+        guild = self.bot.get_guild(DUCK_HIDEOUT)
+
+        if not guild:
+            return
+
+        channel = guild.get_channel(int(data["target_id"]))
+        member = guild.get_member(int(data["user_id"]))
+
+        if not channel or not member:
+            return
+
+        status = data["options"].get("status", None)
+
+        ts = discord.utils.format_dt(discord.utils.utcnow(), 'T')
+
+        if status:
+            await self.enqueue_message(
+                f"[{ts}] {STATUS_ICON} **{discord.utils.escape_markdown(member.display_name)}** set channel status to **{discord.utils.escape_markdown(status)}**.",
+                channel,
+            )
+        else:
+            await self.enqueue_message(
+                f"[{ts}] {STATUS_ICON} **{discord.utils.escape_markdown(member.display_name)}** unset channel status`.",
+                channel,
+            )
