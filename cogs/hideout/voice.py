@@ -54,6 +54,7 @@ class VoiceChatLogs(HideoutCog):
     async def voice_channel_notifications(
         self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState
     ):
+
         ts = discord.utils.format_dt(discord.utils.utcnow(), 'T')
         if before.channel != after.channel:
             if before.channel:

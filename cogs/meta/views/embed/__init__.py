@@ -192,7 +192,7 @@ class FieldSelectorView(utils.View):
         raise NotImplementedError('Child classes must overwrite this method.')
 
 
-class DeleteFieldWithSelect(FieldSelectorView, label = 'Select a field to delete.'):
+class DeleteFieldWithSelect(FieldSelectorView, label='Select a field to delete.'):
     async def actual_logic(self, interaction: BotInteraction, select: discord.ui.Select[Self]):
         index = int(select.values[0])
         self.parent.embed.remove_field(index)
@@ -201,7 +201,7 @@ class DeleteFieldWithSelect(FieldSelectorView, label = 'Select a field to delete
         self.stop()
 
 
-class EditFieldSelect(FieldSelectorView, label = 'Select a field to edit.'):
+class EditFieldSelect(FieldSelectorView, label='Select a field to edit.'):
     async def actual_logic(self, interaction: BotInteraction, select: discord.ui.Select[Self]):
         index = int(select.values[0])
         self.parent.timeout = 600
