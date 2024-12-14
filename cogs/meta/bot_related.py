@@ -34,7 +34,7 @@ class BotInformation(HideoutCog):
 
     @commands.hybrid_command()
     @app_commands.describe(member='The member to look up.')
-    async def whatadd(self, ctx: HideoutContext, member: discord.Member):
+    async def whatadd(self, ctx: HideoutContext, member: discord.Member = commands.Author):
         """Checks the bots that a person added."""
 
         if member.bot:
