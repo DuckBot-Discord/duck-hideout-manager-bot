@@ -1,12 +1,21 @@
 from __future__ import annotations
+
+import asyncio
+import datetime
+import io
+import logging
 from typing import NamedTuple
 
 import asyncpg
 import discord
 from discord.ext import commands
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.figure import Figure
 
-from utils import HideoutCog, HideoutContext, View
 from bot import HideoutManager
+from utils import HideoutCog, HideoutContext, View
+
+logging.getLogger('matplotlib.font_manager').setLevel(logging.INFO)
 
 
 class DatabaseData(NamedTuple):
@@ -140,7 +149,7 @@ class LeaderboardEmbed(discord.Embed):
 
 
 class LeaderboardCog(HideoutCog):
-    @commands.hybrid_command()
+    @commands.hybrid_command(aliases=['lb'])
     @commands.guild_only()
     async def leaderboard(self, ctx: HideoutContext):
         """Shows the top 10 leaderboard"""
@@ -150,3 +159,63 @@ class LeaderboardCog(HideoutCog):
             v = LeaderboardView(LBEmbed, ctx.author)
 
             v.message = await ctx.send(embed=embed, view=v)
+
+    @staticmethod
+    def generate_graph(data: list[tuple[discord.abc.User, list[asyncpg.Record]]]) -> discord.File:
+        figure = Figure(figsize=(20, 15), dpi=100)
+        plot = figure.add_subplot()
+        plot.set_xlabel("message count")
+        plot.set_ylabel("Date")
+        plot.set_title(f"Message statistics")
+        plot.xaxis_date(tz=datetime.timezone.utc)
+
+        for user, entries in data:
+            x_axis = []
+            y_axis = []
+
+            for entry in entries:
+                message_count = entry['message_count']
+
+                x_axis.append(entry['day'])
+                y_axis.append(message_count)
+
+            plot.plot(x_axis, y_axis, linewidth=1, label=user.name)
+
+        plot.legend()
+        renderer = FigureCanvasAgg(figure)
+        buffer = io.BytesIO()
+
+        renderer.print_png(buffer)
+        buffer.seek(0)
+
+        return discord.File(buffer, filename="test.png")
+
+    @commands.command(name='message-stats')
+    async def message_stats(self, ctx: commands.Context, *users: discord.Member | discord.User):
+        """Sends message stats for a user.
+
+        Parameters
+        ----------
+        users: discord.Member
+            The users (max of 10) to query. Defaults to you.
+        """
+        users_as_a_set = {*users[:10]} if users else {ctx.author}
+        query = """
+            SELECT 
+                DATE_TRUNC('day', created_at) as day, 
+                COUNT(*) as message_count
+            FROM message_info
+            WHERE author_id = $1
+            GROUP BY day ORDER BY day DESC;
+        """
+
+        data = []
+
+        async with ctx.typing():
+            for user in users_as_a_set:
+                message_info_list = await ctx.bot.pool.fetch(query, user.id)
+                data.append((user, message_info_list))
+
+            graph = await asyncio.to_thread(self.generate_graph, data)
+
+            await ctx.send(file=graph)
