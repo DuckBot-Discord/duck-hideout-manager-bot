@@ -118,3 +118,13 @@ CREATE TABLE IF NOT EXISTS user_settings(
     user_id BIGINT PRIMARY KEY,
     timezone TEXT
 );
+
+CREATE TABLE IF NOT EXISTS booster_roles(
+    role_id BIGINT,
+    user_id BIGINT,
+    role_name TEXT NOT NULL,
+    role_colour VARCHAR(7) NOT NULL,
+    role_icon BYTEA,
+    unicode_emoji TEXT,
+    PRIMARY KEY (role_id, user_id)
+);
