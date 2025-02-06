@@ -127,6 +127,7 @@ class AsyncABCMeta(ABCMeta):
     """
     This metaclass ensures that the ``__ainit__`` method is a coroutine.
     """
+
     def __new__(
         cls,
         clsname: str,
@@ -160,6 +161,7 @@ class AsyncInstanceType(metaclass=AsyncABCMeta):
     loop: :class:`asyncio.AbstractEventLoop`
         The event loop to use for creating tasks and futures.
     """
+
     __slots__: tuple[str, ...] = ("_args", "_kwargs")
     _args: tuple[Any, ...]
     _kwargs: dict[str, Any]
@@ -188,8 +190,7 @@ class AsyncInstanceType(metaclass=AsyncABCMeta):
         self,
         *args: Any,
         **kwargs: Any,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 class AsyncInstance(AsyncInstanceType):
@@ -199,6 +200,7 @@ class AsyncInstance(AsyncInstanceType):
     async classes. It provides a ``__await__`` method which calls
     ``__ainit__`` and returns the instance.
     """
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.__closed = False
         self._async_class_task_store: Task
@@ -259,15 +261,12 @@ class AsyncInstance(AsyncInstanceType):
     # I just looked up the overload docs and I am still confused
     # hope this works, as plannend :p
     @overload
-    async def __ainit__(self) -> None:
-        ...
+    async def __ainit__(self) -> None: ...
 
     @overload
-    async def __ainit__(self, *args: Any, **kwargs: Any) -> None:
-        ...
+    async def __ainit__(self, *args: Any, **kwargs: Any) -> None: ...
 
-    async def __ainit__(self, *args: Any, **kwargs: Any) -> None:
-        ...
+    async def __ainit__(self, *args: Any, **kwargs: Any) -> None: ...
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         # We don't want to allow overriding __await__ as it is used

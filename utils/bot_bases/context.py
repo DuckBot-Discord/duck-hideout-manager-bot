@@ -116,8 +116,7 @@ class HideoutContext(commands.Context['HideoutManager']):
         view: Optional[discord.ui.View] = None,
         suppress_embeds: bool = False,
         ephemeral: bool = False,
-    ) -> Message:
-        ...
+    ) -> Message: ...
 
     async def send(self, content: str | None = None, **kwargs: Any) -> Message:
         """|coro|

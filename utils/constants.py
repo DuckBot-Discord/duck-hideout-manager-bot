@@ -24,6 +24,11 @@ __all__: Tuple[str, ...] = (
     'SELF_DEAF',
     'NO_MUTE',
     'NO_DEAF',
+    'LIVE',
+    'NO_LIVE',
+    'VIDEO',
+    'NO_VIDEO',
+    'STATUS_ICON',
 )
 
 GITHUB = '<:github:895395664383598633>'
@@ -74,3 +79,8 @@ SELF_MUTE = "<:self_muted:1162426678618894377>"
 SELF_DEAF = "<:self_deafened:1162426692036464751>"
 NO_MUTE = "<:unmuted:1162426685757591652>"
 NO_DEAF = "<:undeafened:1162426689196921034>"
+LIVE = "<:live:1163498500730921052>"
+NO_LIVE = "<:nolive:1163498503939571774>"
+VIDEO = "<:video:1162742336216895488>"
+NO_VIDEO = "<:novideo:1162742453888098314>"
+STATUS_ICON = "<:rich_presence:895414264016306196>"

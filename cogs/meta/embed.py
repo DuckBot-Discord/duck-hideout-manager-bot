@@ -63,7 +63,7 @@ class EmbedFlags(commands.FlagConverter, prefix='--', delimiter='', case_insensi
     save: TagName | None = None
 
     @classmethod
-    async def convert(cls, ctx: HideoutContext, argument: str):
+    async def convert(cls, ctx: HideoutContext, argument: str):  # pyright: ignore[reportIncompatibleMethodOverride]
         argument = strip_codeblock(argument).replace(' —', ' --')
         # Here we strip the code block if any and replace the iOS dash with
         # a regular double-dash for ease of use.

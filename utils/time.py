@@ -17,6 +17,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+
 # pyright: reportUnknownMemberType=false, reportGeneralTypeIssues=false
 # pyright: reportUnknownVariableType=false, reportMissingTypeStubs=false
 # pyright: reportUnknownArgumentType=false
@@ -181,7 +182,9 @@ class UserFriendlyTime(commands.Converter[str]):
         obj.default = self.default
         return obj
 
-    async def convert(self, ctx: HideoutContext, argument: str) -> UserFriendlyTime:
+    async def convert(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self, ctx: HideoutContext, argument: str
+    ) -> UserFriendlyTime:
         # Create a copy of ourselves to prevent race conditions from two
         # events modifying the same instance of a converter
         result = self.copy()

@@ -18,6 +18,7 @@ from ._checks import councillor_only, pit_owner_only
 log = getLogger('HM.pit')
 
 MANAGES_PIT_PERMISSIONS = discord.PermissionOverwrite(manage_messages=True, manage_channels=True, manage_threads=True)
+DHM_PIT_PERMISSIONS = discord.PermissionOverwrite(view_channel=True, manage_channels=True, manage_permissions=True)
 
 
 class ArchiveMode(enum.Enum):
@@ -128,6 +129,21 @@ class PitsManagement(HideoutCog):
 
         return f"{channel}@{user} ({user_id})"
 
+    async def get_pit_owner_permissions(self, owner: discord.Member):
+        """Gets all permissions for someone and their bots.
+
+        Parameters
+        ----------
+        owner: discord.Member
+            The owner of this pit.
+        """
+        records = await self.bot.pool.fetch('SELECT bot_id FROM addbot WHERE owner_id = $1 AND added = TRUE', owner.id)
+        user_ids = [record['bot_id'] for record in records]
+
+        users = [u for u in map(owner.guild.get_member, user_ids) if u] + [owner]
+
+        return {u: MANAGES_PIT_PERMISSIONS for u in users}
+
     @pit_owner_only()
     @commands.hybrid_group(name='pit')
     @app_commands.guild_only()
@@ -140,11 +156,16 @@ class PitsManagement(HideoutCog):
 
     @pit.command(name='ban')
     @pit_owner_only()
-    @app_commands.describe(
-        member='The member to ban from this pit.', duration='How long should this member stay banned? (e.g. 1h, 1d, 1h2m30s)'
-    )
     async def pit_ban(self, ctx: HideoutGuildContext, member: discord.Member, duration: Optional[ShortTime]):
-        """Ban a member from the pit."""
+        """Ban a member from the pit.
+
+        Parameters
+        ----------
+        member: discord.Member
+            The member to ban from this pit.
+        duration: Optional[ShortTime]
+            How long should this member stay banned? (e.g. 1h, 1d, 1h2m30s)
+        """
 
         if member.id == ctx.author.id:
             raise commands.BadArgument('You cannot ban yourself.')
@@ -177,9 +198,14 @@ class PitsManagement(HideoutCog):
 
     @pit.command(name='unban')
     @pit_owner_only()
-    @app_commands.describe(member='The member to unban from this pit.')
     async def pit_unban(self, ctx: HideoutGuildContext, *, member: discord.Member):
-        """Unban a member from the pit."""
+        """Unban a member from the pit.
+
+        Parameters
+        ----------
+        member: discord.Member
+            The member to unban from this pit.
+        """
 
         if member.id == ctx.author.id:
             raise commands.BadArgument('You cannot ban yourself.')
@@ -212,7 +238,7 @@ class PitsManagement(HideoutCog):
         try:
             await ctx.bot.pool.execute(
                 '''INSERT INTO pits (pit_id, pit_owner) VALUES ($1, $2)
-                                        ON CONFLICT (pit_id) DO UPDATE SET pit_owner = $2''',
+                    ON CONFLICT (pit_id) DO UPDATE SET pit_owner = $2''',
                 ctx.channel.id,
                 member.id,
             )
@@ -237,12 +263,13 @@ class PitsManagement(HideoutCog):
             raise commands.BadArgument('There is no category for pits, for some reason...')
 
         try:
-            _bot_ids = await self.bot.pool.fetch('SELECT bot_id FROM addbot WHERE owner_id = $1 AND added = TRUE', owner.id)
-            users = [
-                _ent for _ent in map(lambda ent: owner.guild.get_member(ent['bot_id']), _bot_ids) if _ent is not None
-            ] + [owner]
             channel = await ctx.guild.create_text_channel(
-                name, category=category, overwrites={user: MANAGES_PIT_PERMISSIONS for user in users}
+                name,
+                category=category,
+                overwrites={
+                    **await self.get_pit_owner_permissions(owner),
+                    ctx.guild.me: DHM_PIT_PERMISSIONS,
+                },
             )
 
         except discord.Forbidden:
@@ -251,7 +278,7 @@ class PitsManagement(HideoutCog):
         else:
             await ctx.bot.pool.execute(
                 '''INSERT INTO pits (pit_id, pit_owner) VALUES ($1, $2)
-                                          ON CONFLICT (pit_owner) DO UPDATE SET pit_id = $1''',
+                   ON CONFLICT (pit_owner) DO UPDATE SET pit_id = $1''',
                 channel.id,
                 owner.id,
             )
@@ -341,9 +368,9 @@ class PitsManagement(HideoutCog):
         is_not_councillor = ctx.guild.get_role(COUNCILLORS_ROLE) not in ctx.author.roles
 
         if archive_mode is ArchiveMode.INACTIVE and ctx.author != owner or is_not_councillor:
-            raise ActionNotExecutable('This pit was manually archived, only the pit owner and counsellors can unarchive it.')
+            raise ActionNotExecutable('This pit was manually archived, only the pit owner and councillors can unarchive it.')
         elif archive_mode is ArchiveMode.MANUAL and is_not_councillor:
-            raise ActionNotExecutable('This pit was marked as inactive, only the counsellors can unarchive it.')
+            raise ActionNotExecutable('This pit was marked as inactive, only the councillors can unarchive it.')
 
         overs = {
             **pit.overwrites,
@@ -357,6 +384,15 @@ class PitsManagement(HideoutCog):
             raise commands.BadArgument('I do not have permission to edit channels.')
         else:
             await ctx.send(f'✅ **|** Un-archived **{pit.name}**')
+
+    @pit_owner_only()
+    @pit.command(name='fixperms', with_app_command=False)
+    async def pit_fixperms(self, ctx: HideoutGuildContext):
+        """Fixes permissions for this pit."""
+        assert isinstance(ctx.channel, discord.TextChannel)
+
+        await ctx.channel.edit(overwrites={**ctx.channel.overwrites, **await self.get_pit_owner_permissions(ctx.author)})
+        await ctx.send('Done.')
 
     @commands.Cog.listener('on_member_join')
     async def block_handler(self, member: discord.Member):
@@ -384,15 +420,14 @@ class PitsManagement(HideoutCog):
 
             else:
                 try:
-                    if channel.permissions_for(guild.me).manage_permissions:
-                        await self.toggle_block(
-                            channel,  # type: ignore
-                            member,
-                            blocked=True,
-                            update_db=False,
-                            reason='[MEMBER-JOIN] Automatic re-block for previously blocked user.',
-                        )
-                        await asyncio.sleep(1)
+                    await self.toggle_block(
+                        channel,  # type: ignore
+                        member,
+                        blocked=True,
+                        update_db=False,
+                        reason='[MEMBER-JOIN] Automatic re-block for previously blocked user.',
+                    )
+                    await asyncio.sleep(1)
 
                 except discord.Forbidden:
                     log.debug(
@@ -470,14 +505,11 @@ class PitsManagement(HideoutCog):
 
             new_overwrites = {
                 **pit.overwrites,
-                member.guild.me: discord.PermissionOverwrite(
-                    view_channel=True, manage_channels=True, manage_permissions=True
-                ),
                 member.guild.default_role: discord.PermissionOverwrite(view_channel=False),
                 councillors: discord.PermissionOverwrite(view_channel=True),
             }
 
-            await pit.edit(overwrites=new_overwrites, category=archive, reason=f"Pit archived by automatically: member left")
+            await pit.edit(overwrites=new_overwrites, category=archive, reason=f"Pit archived automatically: member left")
             await self.bot.pool.execute("UPDATE pits SET archive_mode = 'leave' WHERE pit_id = $1", pit.id)
         except discord.Forbidden:
             return log.error('I do not have permission to edit channels.')
@@ -486,7 +518,7 @@ class PitsManagement(HideoutCog):
 
     @commands.Cog.listener('on_member_join')
     async def pit_auto_unarchive(self, member: discord.Member):
-        """Automatically archives pits that are not used."""
+        """Automatically unarchives pits when their owners return."""
         if self.bot.no_automatic_features:
             return
 
@@ -507,7 +539,7 @@ class PitsManagement(HideoutCog):
             overs = {
                 **pit.overwrites,
                 member.guild.default_role: discord.PermissionOverwrite(),
-                member: MANAGES_PIT_PERMISSIONS,
+                **await self.get_pit_owner_permissions(member),
             }
 
             await pit.edit(category=pits_category, overwrites=overs)
@@ -519,3 +551,26 @@ class PitsManagement(HideoutCog):
                 f'Pit un-archived automatically: {member.mention} rejoined',
                 allowed_mentions=discord.AllowedMentions(users=True),
             )
+
+    @commands.Cog.listener('on_member_join')
+    async def add_new_bots(self, member: discord.Member):
+        """Automatically adds bots to their owner's pit."""
+        if not member.bot:
+            return
+
+        query = """
+            SELECT pit_id 
+            FROM pits
+            WHERE pit_owner = (
+                SELECT owner_id
+                FROM addbot
+                WHERE bot_id = $1
+            )
+        """
+        pit_id = await self.bot.pool.fetchval(query, member.id)
+        channel = member.guild.get_channel(pit_id)
+
+        if not channel:
+            return
+
+        await channel.set_permissions(member, overwrite=MANAGES_PIT_PERMISSIONS)

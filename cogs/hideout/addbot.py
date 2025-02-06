@@ -45,7 +45,7 @@ class Addbot(HideoutCog):
         if confirm is True:
             await self.bot.pool.execute(
                 'INSERT INTO addbot (owner_id, bot_id, reason) VALUES ($1, $2, $3) '
-                'ON CONFLICT (owner_id, bot_id) DO UPDATE SET pending = TRUE, added = FALSE, reason = $3',
+                'ON CONFLICT (bot_id) DO UPDATE SET pending = TRUE, added = FALSE, owner_id = $1, reason = $3',
                 ctx.author.id,
                 bot_id.id,
                 reason,
@@ -125,6 +125,12 @@ class Addbot(HideoutCog):
             if mem:
                 embed.add_field(name='Added by', value=str(mem), inline=False)
                 await queue_channel.send(embed=embed)
+                has_bots = await self.bot.pool.fetchval(
+                    "SELECT EXISTS(SELECT 1 FROM addbot WHERE owner_id = $1 AND added = TRUE)", mem.id
+                )
+
+                if not has_bots:
+                    await mem.remove_roles(discord.Object(BOT_DEVS_ROLE))
 
             return
         _bot_ids = await self.bot.pool.fetch('SELECT bot_id FROM addbot WHERE owner_id = $1 AND added = TRUE', member.id)

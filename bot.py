@@ -11,9 +11,11 @@ from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     DefaultDict,
     Generator,
     Generic,
+    Iterable,
     Optional,
     Sequence,
     Set,
@@ -22,6 +24,7 @@ from typing import (
     TypeVar,
     Union,
     overload,
+    List,
 )
 
 import asyncpg
@@ -81,15 +84,47 @@ class HideoutCommandTree(app_commands.CommandTree):
 
     log = logging.getLogger('HideoutCommandTree')
 
-    async def sync(self, *, guild: Optional[discord.abc.Snowflake] = None) -> list[app_commands.AppCommand]:
-        commands = await super().sync(guild=guild)
-        self.client.app_commands[getattr(guild, 'id', None)] = commands
-        return commands
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self.application_commands: dict[Optional[discord.abc.Snowflake], List[app_commands.AppCommand]] = {}
 
-    async def fetch_commands(self, *, guild: Optional[discord.abc.Snowflake] = None) -> list[app_commands.AppCommand]:
-        commands = await super().fetch_commands(guild=guild)
-        self.client.app_commands[getattr(guild, 'id', None)] = commands
-        return commands
+    async def sync(self, *, guild: Optional[discord.abc.Snowflake] = None):
+        """Method overwritten to store the commands."""
+        ret = await super().sync(guild=guild)
+        self.application_commands[guild] = ret
+        return ret
+
+    async def fetch_commands(self, *, guild: Optional[discord.abc.Snowflake] = None):
+        """Method overwritten to store the commands."""
+        ret = await super().fetch_commands(guild=guild)
+        self.application_commands[guild] = ret
+        return ret
+
+    def get_mention_for(
+        self,
+        command: app_commands.Command[Any, Any, Any],
+        *,
+        guild: Optional[discord.abc.Snowflake] = None,
+    ) -> Optional[str]:
+        """Retrieves the mention of an AppCommand given a specific Command and optionally, a guild.
+        Note that for this to work, the :meth:`.sync` or :meth:`.fetch_commands` must be called.
+        Parameters
+        ----------
+        command: :class:`app_commands.Command`
+            The command which it's mention we will attempt to retrieve.
+        guild: Optional[:class:`discord.abc.Snowflake`]
+            The scope (guild) from which to retrieve the commands from.
+            If None is given or not passed, the global scope will be used.
+        """
+        try:
+            found_commands = self.application_commands[guild]
+            root_parent = command.root_parent or command
+            command_id_found = discord.utils.get(found_commands, name=root_parent.name)
+            if command_id_found:
+                return f"</{command.qualified_name}:{command_id_found}>"
+            return None
+        except KeyError:
+            return None
 
     async def on_error(
         self,
@@ -194,13 +229,11 @@ class HideoutHelper(TimerManager):
 
     @overload
     @staticmethod
-    def chunker(item: str, *, size: int = 2000) -> Generator[str, None, None]:
-        ...
+    def chunker(item: str, *, size: int = 2000) -> Generator[str, None, None]: ...
 
     @overload
     @staticmethod
-    def chunker(item: Sequence[T], *, size: int = 2000) -> Generator[Sequence[T], None, None]:
-        ...
+    def chunker(item: Sequence[T], *, size: int = 2000) -> Generator[Sequence[T], None, None]: ...
 
     @staticmethod
     def chunker(item: Union[str, Sequence[T]], *, size: int = 2000) -> Generator[Union[str, Sequence[T]], None, None]:
@@ -247,6 +280,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
             max_messages=4000,
             help_command=None,
             tree_cls=HideoutCommandTree,
+            enable_debug_events=True,
         )
         self.pool: Pool[asyncpg.Record] = pool
         self.session: ClientSession = session
@@ -297,10 +331,10 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         """  # copy_doc for create_pool maybe?
 
         def _encode_jsonb(value: Any):
-            return discord.utils._to_json(value)
+            return discord.utils._to_json(value)  # pyright: ignore[reportPrivateUsage]
 
         def _decode_jsonb(value: Any):
-            return discord.utils._from_json(value)
+            return discord.utils._from_json(value)  # pyright: ignore[reportPrivateUsage]
 
         old_init = kwargs.pop('init', None)
 

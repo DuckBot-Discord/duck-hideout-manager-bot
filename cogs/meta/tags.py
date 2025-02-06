@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import inspect
 import io
 import typing
 from collections import defaultdict
-from typing import Callable, List, Optional, Type, TypeVar, Union, Any, TypeAlias, TYPE_CHECKING
+from typing import Callable, List, Optional, Type, TypeVar, Union, Any, TypeAlias, TYPE_CHECKING, Annotated
 
 import asyncpg
 import discord
@@ -186,10 +185,10 @@ class TagName(commands.clean_content):
         self.lower = lower
         super().__init__()
 
-    def __class_getitem__(cls, attr: bool):
+    def __class_getitem__(cls, attr: bool | Any):
         if not isinstance(attr, bool):
             raise TypeError("Expected bool, not {}".format(type(attr).__name__))
-        return TagName(lower=attr)
+        return Annotated[str, TagName(lower=attr)]
 
     # Taken from R.Danny's code because I'm lazy
     async def actual_conversion(
@@ -264,7 +263,7 @@ class TagsFromFetchedPageSource(menus.ListPageSource):
 class Tags(HideoutCog):
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        self._tags_in_progress = defaultdict(set)
+        self._tags_in_progress: defaultdict[int | None, set[str | commands.clean_content]] = defaultdict(set)
 
     @staticmethod
     def maybe_file(text: str, *, filename: str = 'tag') -> dict[str, Any]:
@@ -492,9 +491,9 @@ class Tags(HideoutCog):
                         if inspect.ismethod(converter.convert):
                             content = await converter.convert(ctx, message.content)
                         else:
-                            content = await converter().convert(ctx, message.content)  # type: ignore
+                            content = await converter().convert(ctx, message.content)  # pyright: ignore[reportArgumentType]
                     elif isinstance(converter, commands.Converter):
-                        content = await converter.convert(ctx, message.content)  # type: ignore
+                        content = await converter.convert(ctx, message.content)  # pyright: ignore[reportArgumentType]
                     else:
                         content = message.content
                 except commands.CommandError:
@@ -509,7 +508,7 @@ class Tags(HideoutCog):
             if isinstance(content, str) and len(content) > 2000:
                 raise commands.BadArgument('Content is too long! 2000 characters max.')
             return content
-        except asyncio.TimeoutError:
+        except TimeoutError:
             raise commands.BadArgument(f'Timed out waiting for message from {str(author)}...')
 
     @commands.group(name='tag', invoke_without_command=True)
@@ -523,7 +522,13 @@ class Tags(HideoutCog):
         await tag.use(self.bot.pool)
 
     @tag.command(name='create', aliases=['new', 'add'])
-    async def tag_create(self, ctx: HideoutGuildContext, tag: TagName(lower=False), *, content: commands.clean_content):  # type: ignore
+    async def tag_create(
+        self,
+        ctx: HideoutGuildContext,
+        tag: Annotated[str, Annotated[str, TagName(lower=False)]],
+        *,
+        content: commands.clean_content,
+    ):
         """Creates a tag."""
         if len(str(content)) > 2000:
             raise commands.BadArgument("Tag content is too long! Max 2000 characters.")
@@ -697,7 +702,7 @@ class Tags(HideoutCog):
         """
         args = (ctx.guild.id, member.id)
 
-        amount: int | None = self.bot.pool.fetchval(query, *args)  # type: ignore
+        amount: int | None = await self.bot.pool.fetchval(query, *args)
 
         if amount == 0 or amount is None:
             await ctx.send(f"{member} has no tags!")

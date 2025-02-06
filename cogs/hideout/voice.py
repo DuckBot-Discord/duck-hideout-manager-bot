@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import json
+from logging import getLogger
 from typing import Any, DefaultDict
 from collections import defaultdict
 
@@ -8,7 +10,26 @@ import discord
 from discord.ext import commands, tasks
 from bot import HideoutManager
 
-from utils import HideoutCog, JOINED, LEFT, DEAF, MUTE, SELF_DEAF, SELF_MUTE, NO_DEAF, NO_MUTE
+from utils import (
+    HideoutCog,
+    JOINED,
+    LEFT,
+    DEAF,
+    MUTE,
+    SELF_DEAF,
+    SELF_MUTE,
+    NO_DEAF,
+    NO_MUTE,
+    LIVE,
+    NO_LIVE,
+    VIDEO,
+    NO_VIDEO,
+    STATUS_ICON,
+    DUCK_HIDEOUT,
+)
+
+
+log = getLogger(__name__)
 
 
 class VoiceChatLogs(HideoutCog):
@@ -40,6 +61,7 @@ class VoiceChatLogs(HideoutCog):
     async def voice_channel_notifications(
         self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState
     ):
+
         ts = discord.utils.format_dt(discord.utils.utcnow(), 'T')
         if before.channel != after.channel:
             if before.channel:
@@ -96,3 +118,66 @@ class VoiceChatLogs(HideoutCog):
                 await self.enqueue_message(
                     f"[{ts}] {SELF_MUTE} **{discord.utils.escape_markdown(member.display_name)}** muted themselves.", channel
                 )
+
+        if before.self_stream != after.self_stream:
+            if before.self_stream:
+                await self.enqueue_message(
+                    f"[{ts}] {NO_LIVE} **{discord.utils.escape_markdown(member.display_name)}** stopped streaming.", channel
+                )
+            if after.self_stream:
+                await self.enqueue_message(
+                    f"[{ts}] {LIVE} **{discord.utils.escape_markdown(member.display_name)}** started streaming.", channel
+                )
+
+        if before.self_video != after.self_video:
+            if before.self_video:
+                await self.enqueue_message(
+                    f"[{ts}] {NO_VIDEO} **{discord.utils.escape_markdown(member.display_name)}** turned off their camera.",
+                    channel,
+                )
+            if after.self_video:
+                await self.enqueue_message(
+                    f"[{ts}] {VIDEO} **{discord.utils.escape_markdown(member.display_name)}** turned on their camera.",
+                    channel,
+                )
+
+    @commands.Cog.listener("on_socket_raw_receive")
+    async def send_channel_topic_log(self, msg: str):
+        if not msg:
+            return
+
+        raw = json.loads(msg)
+
+        if raw["t"] != "GUILD_AUDIT_LOG_ENTRY_CREATE":
+            return
+
+        data = raw["d"]
+
+        if data["action_type"] not in (192, 193):
+            return
+
+        guild = self.bot.get_guild(DUCK_HIDEOUT)
+
+        if not guild:
+            return
+
+        channel = guild.get_channel(int(data["target_id"]))
+        member = guild.get_member(int(data["user_id"]))
+
+        if not channel or not member:
+            return
+
+        status = data["options"].get("status", None)
+
+        ts = discord.utils.format_dt(discord.utils.utcnow(), 'T')
+
+        if status:
+            await self.enqueue_message(
+                f"[{ts}] {STATUS_ICON} **{discord.utils.escape_markdown(member.display_name)}** set channel status to **{discord.utils.escape_markdown(status)}**.",
+                channel,
+            )
+        else:
+            await self.enqueue_message(
+                f"[{ts}] {STATUS_ICON} **{discord.utils.escape_markdown(member.display_name)}** unset channel status`.",
+                channel,
+            )

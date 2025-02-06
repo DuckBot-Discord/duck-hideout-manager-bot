@@ -40,7 +40,7 @@ class plural:
 
 
 class EvaluatedArg(commands.Converter[str]):
-    async def convert(self, ctx: HideoutContext, argument: str) -> str:
+    async def convert(self, ctx: HideoutContext, argument: str) -> str:  # pyright: ignore[reportIncompatibleMethodOverride]
         return eval(cleanup_code(argument), {'bot': ctx.bot, 'ctx': ctx})
 
 
