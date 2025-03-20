@@ -280,7 +280,7 @@ class EmbedEditor(utils.View):
     def current_embed(self) -> discord.Embed:
         if self.showing_help:
             return self.help_embed()
-        if self.embed:
+        if len(self.embed):
             if len(self.embed) < 6000:
                 return self.embed
             else:
