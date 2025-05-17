@@ -20,7 +20,7 @@ aggdraw
 colorthief
 numpy
 pydantic
-matploblib
+matplotlib
 numpy
 
 emoji
