@@ -31,11 +31,11 @@ import asyncpg
 import discord
 from discord import app_commands
 from discord.ext import commands
+from discord.ext.duck.errors import ErrorManager, CommandErrorSettings
 
 from utils import (
     HideoutCog,
     HideoutContext,
-    HideoutExceptionManager,
     TimerManager,
     col,
     constants,
@@ -75,6 +75,7 @@ initial_extensions: Tuple[str, ...] = (
     'cogs.stats',
     'cogs.events',
     'cogs.games',
+    'cogs.spotify',
 )
 
 
@@ -291,7 +292,13 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         self.error_webhook_url: Optional[str] = error_wh
         self._start_time: Optional[datetime.datetime] = None
 
-        self.exceptions: HideoutExceptionManager = HideoutExceptionManager(self)
+        self.exceptions: ErrorManager = ErrorManager(
+            self,  # type: ignore
+            webhook_url=self.error_webhook_url,
+            session=session,
+            hijack_bot_on_error=True,
+            on_command_error_settings=CommandErrorSettings(hijack=True),
+        )
         self.thread_pool: concurrent.futures.ThreadPoolExecutor = concurrent.futures.ThreadPoolExecutor(max_workers=20)
 
         self.constants = constants

@@ -128,3 +128,10 @@ CREATE TABLE IF NOT EXISTS booster_roles(
     unicode_emoji TEXT,
     PRIMARY KEY (role_id, user_id)
 );
+
+ CREATE TABLE obsessions (
+    user_id BIGINT PRIMARY KEY, 
+    title TEXT, 
+    rtist TEXT, 
+    track_id TEXT
+);
