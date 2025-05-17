@@ -1,4 +1,5 @@
 import discord
+import json
 
 from aiohttp.web import Request, json_response
 from discord.ext.duck.webserver import WebserverCog, route
@@ -10,6 +11,10 @@ from discord import app_commands
 
 def _404(detail: str):
     return json_response({'detail': detail}, status=404)
+
+
+def dumps(val):
+    return json.dumps(val, ensure_ascii=False)
 
 
 class Spotify(WebserverCog, HideoutCog, port=8716):
@@ -27,7 +32,7 @@ class Spotify(WebserverCog, HideoutCog, port=8716):
         if not spotify:
             return _404("no_activity")
 
-        return json_response(dict(title=spotify.title, artist=spotify.artist, track_id=spotify.track_id))
+        return json_response(dict(title=spotify.title, artist=spotify.artist, track_id=spotify.track_id), dumps=dumps)
 
     @route('get', '/obsession/{user_id}')
     async def get_user_obsession(self, request: Request):
@@ -40,7 +45,9 @@ class Spotify(WebserverCog, HideoutCog, port=8716):
         if not obsession:
             return _404("no_obsession")
 
-        return json_response(dict(title=obsession["title"], artist=obsession["artist"], track_id=obsession["track_id"]))
+        return json_response(
+            dict(title=obsession["title"], artist=obsession["artist"], track_id=obsession["track_id"]), dumps=dumps
+        )
 
     obsession = app_commands.Group(name='obsession', description='Manages song obsessions.')
 
