@@ -5,14 +5,14 @@ from .boost_roles import BoostRoles
 from .council import CouncilMessages
 from .help_forum import HelpForum
 from .moderation import Moderation
-from .pits import PitsManagement
+# from .pits import PitsManagement
 from .timed_guild_icons import TimedEvents
 from .voice import VoiceChatLogs
 
 
 class DuckHideout(
     Addbot,
-    PitsManagement,
+    #  PitsManagement,
     Moderation,
     CouncilMessages,
     HelpForum,
