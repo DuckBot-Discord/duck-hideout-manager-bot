@@ -138,7 +138,7 @@ class EditAuthorModal(BaseModal, title='Editing the embed author:'):
     name = discord.ui.TextInput[Self](
         label='Author name', max_length=256, placeholder='Leave any field empty to remove it', required=False
     )
-    url = discord.ui.TextInput[Self](label="Author URL", placeholder='Must be HTTP(S) format.', required=False)
+    url = discord.ui.TextInput[Self](label='Author URL', placeholder='Must be HTTP(S) format.', required=False)
     image = discord.ui.TextInput[Self](label='Author Icon URL', placeholder='Must be HTTP(S) format.', required=False)
 
     def update_defaults(self, embed: discord.Embed):

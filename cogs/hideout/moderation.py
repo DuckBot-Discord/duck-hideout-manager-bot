@@ -31,26 +31,26 @@ class Moderation(HideoutCog):
 
         if reason:
             if reason.value:
-                fmt = f" for {reason.value}"
+                fmt = f' for {reason.value}'
             else:
-                fmt = ""
+                fmt = ''
             time = reason.flags.until
             if time:
                 # await self.bot.create_timer(time.dt, 'tempban', ctx.guild.id, member.id, precise=False)
-                fmt += f"until {discord.utils.format_dt(time.dt, 'R')}"
+                fmt += f'until {discord.utils.format_dt(time.dt, "R")}'
         else:
-            fmt = ""
+            fmt = ''
 
         try:
             await member.send(
-                f"You have been banned from Duck Hideout{fmt}.\nAppeal this action by emailing `support@duck-bot.com`"
+                f'You have been banned from Duck Hideout{fmt}.\nAppeal this action by emailing `support@duck-bot.com`'
             )
         except discord.HTTPException:
             pass
-        await member.ban(reason=f"banned by {ctx.author}{fmt}."[:500])
-        await ctx.send(f"Banned {member} {fmt}")
+        await member.ban(reason=f'banned by {ctx.author}{fmt}.'[:500])
+        await ctx.send(f'Banned {member} {fmt}')
 
-    @commands.Cog.listener("on_tempban_time_complete")
+    @commands.Cog.listener('on_tempban_time_complete')
     async def on_tempban_time_complete(self, timer: Timer):
         guild_id, member_id = timer.args
         try:

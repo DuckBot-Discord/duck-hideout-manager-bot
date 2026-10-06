@@ -44,7 +44,7 @@ class EvaluatedArg(commands.Converter[str]):
         return eval(cleanup_code(argument), {'bot': ctx.bot, 'ctx': ctx})
 
 
-class SqlCommandFlags(commands.FlagConverter, prefix="--", delimiter=" ", case_insensitive=True):
+class SqlCommandFlags(commands.FlagConverter, prefix='--', delimiter=' ', case_insensitive=True):
     args: List[Any] = commands.flag(name='argument', aliases=['arg'], default=[], converter=List[EvaluatedArg])
 
 

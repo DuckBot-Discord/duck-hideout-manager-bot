@@ -31,7 +31,7 @@ class SelectAMessageView(discord.ui.View):
             content = data.decode()
             await self.message.edit(content='\n'.join(line.removesuffix('\\') for line in content.splitlines()))
         except discord.HTTPException as e:
-            await interaction.edit_original_response(content=f"__**Failed to edit the message:**__\n{type(e).__name__}: {e}")
+            await interaction.edit_original_response(content=f'__**Failed to edit the message:**__\n{type(e).__name__}: {e}')
         else:
             await interaction.edit_original_response(content='done, edited!')
 

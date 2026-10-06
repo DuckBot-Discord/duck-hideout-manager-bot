@@ -47,13 +47,13 @@ class CalendarStatus:
             ORDER BY changed_at ASC
         """
         self.time_zone_name: str | None = await self.bot.pool.fetchval(
-            "SELECT timezone FROM user_settings WHERE user_id = $1", user_id
+            'SELECT timezone FROM user_settings WHERE user_id = $1', user_id
         )
         time_zone = zoneinfo.ZoneInfo(self.time_zone_name or 'UTC')
 
         results = await self.bot.pool.fetch(query, user_id)
         if not results:
-            return "I do not have any status history for that user..."
+            return 'I do not have any status history for that user...'
         times: list[tuple[str | None, datetime.datetime]] = [(r['status'], r['changed_at']) for r in results]
 
         self.first = times[0][1].replace(hour=0, minute=0, second=0, microsecond=0)
@@ -163,8 +163,7 @@ class CalendarStatusCog(HideoutCog):
         except zoneinfo.ZoneInfoNotFoundError:
             raise commands.BadArgument(f'Unknown time zone: {timezone_name[:100]!r}')
         query = (
-            'INSERT INTO user_settings (user_id, timezone) VALUES ($1, $2)'
-            'ON CONFLICT (user_id) DO UPDATE SET timezone = $2'
+            'INSERT INTO user_settings (user_id, timezone) VALUES ($1, $2)ON CONFLICT (user_id) DO UPDATE SET timezone = $2'
         )
         await self.bot.pool.execute(query, ctx.author.id, tz.key)
         await ctx.send(f'Updated your timezone to {tz}', ephemeral=True)
@@ -182,7 +181,7 @@ class CalendarStatusCog(HideoutCog):
     @commands.command()
     async def time(self, ctx: HideoutContext, user: discord.Member | discord.User = commands.Author):
         """Shows a user's time, or yours."""
-        query = "SELECT timezone FROM user_settings WHERE user_id = $1"
+        query = 'SELECT timezone FROM user_settings WHERE user_id = $1'
         tz_name = await self.bot.pool.fetchval(query, user.id)
         if not tz_name:
             raise commands.BadArgument(
@@ -191,7 +190,7 @@ class CalendarStatusCog(HideoutCog):
         tz = zoneinfo.ZoneInfo(tz_name)
         dt = datetime.datetime.now(tz)
         await ctx.send(
-            dt.strftime("It is `%A, %B %d %Y at %I:%M %p` for **{}** ({})").format(
+            dt.strftime('It is `%A, %B %d %Y at %I:%M %p` for **{}** ({})').format(
                 discord.utils.escape_markdown(user.display_name), tz_name
             )
         )

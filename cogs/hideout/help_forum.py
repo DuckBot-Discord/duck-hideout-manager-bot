@@ -35,7 +35,7 @@ class HelpForum(HideoutCog):
             await ctx.message.add_reaction('\N{WHITE HEAVY CHECK MARK}')
             await self.solve_thread(ctx.channel, ctx.author)
         else:
-            msg = f"<@!{ctx.channel.owner_id}>, would you like to mark this thread as solved? This has been requested by {ctx.author.mention}."
+            msg = f'<@!{ctx.channel.owner_id}>, would you like to mark this thread as solved? This has been requested by {ctx.author.mention}.'
             confirm = await ctx.confirm(
                 msg, author_id=ctx.channel.owner_id, timeout=300, allowed_mentions=discord.AllowedMentions.all()
             )

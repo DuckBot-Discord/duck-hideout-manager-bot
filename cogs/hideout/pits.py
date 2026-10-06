@@ -22,9 +22,9 @@ DHM_PIT_PERMISSIONS = discord.PermissionOverwrite(view_channel=True, manage_chan
 
 
 class ArchiveMode(enum.Enum):
-    LEAVE = "leave"
-    INACTIVE = "inactive"
-    MANUAL = "manual"
+    LEAVE = 'leave'
+    INACTIVE = 'inactive'
+    MANUAL = 'manual'
 
 
 class PitsManagement(HideoutCog):
@@ -90,7 +90,7 @@ class PitsManagement(HideoutCog):
                         'ON CONFLICT (guild_id, channel_id, user_id) DO NOTHING'
                     )
                 else:
-                    query = "DELETE FROM blocks WHERE guild_id = $1 AND channel_id = $2 AND user_id = $3"
+                    query = 'DELETE FROM blocks WHERE guild_id = $1 AND channel_id = $2 AND user_id = $3'
 
                 async with self.bot.safe_connection() as conn:
                     await conn.execute(query, channel.guild.id, channel.id, member.id)
@@ -120,14 +120,14 @@ class PitsManagement(HideoutCog):
                 channel = '#deleted-channel - '
 
             else:
-                channel = f"#{channel} ({channel_id}) - "
+                channel = f'#{channel} ({channel_id}) - '
 
         else:
             channel = ''
 
-        user = await self.bot.get_or_fetch_member(guild, user_id) or f"Unknown User"
+        user = await self.bot.get_or_fetch_member(guild, user_id) or f'Unknown User'
 
-        return f"{channel}@{user} ({user_id})"
+        return f'{channel}@{user} ({user_id})'
 
     async def get_pit_owner_permissions(self, owner: discord.Member):
         """Gets all permissions for someone and their bots.
@@ -237,8 +237,8 @@ class PitsManagement(HideoutCog):
 
         try:
             await ctx.bot.pool.execute(
-                '''INSERT INTO pits (pit_id, pit_owner) VALUES ($1, $2)
-                    ON CONFLICT (pit_id) DO UPDATE SET pit_owner = $2''',
+                """INSERT INTO pits (pit_id, pit_owner) VALUES ($1, $2)
+                    ON CONFLICT (pit_id) DO UPDATE SET pit_owner = $2""",
                 ctx.channel.id,
                 member.id,
             )
@@ -253,7 +253,7 @@ class PitsManagement(HideoutCog):
     async def pit_create(self, ctx: HideoutGuildContext, owner: discord.Member, *, name: str):
         """Create a pit."""
 
-        pit_id: int | None = await ctx.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_owner = $1''', owner.id)
+        pit_id: int | None = await ctx.bot.pool.fetchval("""SELECT pit_id FROM pits WHERE pit_owner = $1""", owner.id)
         if pit_id is not None and ctx.guild.get_channel(pit_id):
             raise commands.BadArgument('User already owns a pit.')
 
@@ -277,8 +277,8 @@ class PitsManagement(HideoutCog):
 
         else:
             await ctx.bot.pool.execute(
-                '''INSERT INTO pits (pit_id, pit_owner) VALUES ($1, $2)
-                   ON CONFLICT (pit_owner) DO UPDATE SET pit_id = $1''',
+                """INSERT INTO pits (pit_id, pit_owner) VALUES ($1, $2)
+                   ON CONFLICT (pit_owner) DO UPDATE SET pit_id = $1""",
                 channel.id,
                 owner.id,
             )
@@ -289,7 +289,7 @@ class PitsManagement(HideoutCog):
     async def pit_delete(self, ctx: HideoutGuildContext, *, channel: discord.TextChannel = commands.CurrentChannel):
         """Deletes a pit."""
 
-        pit_id = await ctx.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_id = $1''', channel.id)
+        pit_id = await ctx.bot.pool.fetchval("""SELECT pit_id FROM pits WHERE pit_id = $1""", channel.id)
         if pit_id is None:
             raise commands.BadArgument('Could not find pit id')
 
@@ -298,13 +298,13 @@ class PitsManagement(HideoutCog):
             if pit is None:
                 raise commands.BadArgument('Could not find pit')
 
-            await pit.delete(reason=f"pit delete command executed | {ctx.author} ({ctx.author.id})")
+            await pit.delete(reason=f'pit delete command executed | {ctx.author} ({ctx.author.id})')
 
         except discord.Forbidden:
             raise commands.BadArgument('I do not have permission to delete a channel.')
 
         else:
-            await ctx.bot.pool.execute('''DELETE FROM pits WHERE pit_id = $1''', pit.id)
+            await ctx.bot.pool.execute("""DELETE FROM pits WHERE pit_id = $1""", pit.id)
             await ctx.send(f'✅ **|** Deleted **{pit.name}**')
 
     @councillor_only()
@@ -312,7 +312,7 @@ class PitsManagement(HideoutCog):
     async def pit_archive(self, ctx: HideoutGuildContext, *, channel: discord.TextChannel = commands.CurrentChannel):
         """Archives a pit."""
 
-        pit_id: int | None = await ctx.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_id = $1''', channel.id)
+        pit_id: int | None = await ctx.bot.pool.fetchval("""SELECT pit_id FROM pits WHERE pit_id = $1""", channel.id)
         if pit_id is None:
             raise commands.BadArgument('Could not find pit id')
 
@@ -336,7 +336,7 @@ class PitsManagement(HideoutCog):
                 ctx.guild.me: discord.PermissionOverwrite(view_channel=True, manage_channels=True, manage_permissions=True),
             }
             await pit.edit(
-                overwrites=new_overwrites, category=archive, reason=f"Pit archived by {ctx.author} ({ctx.author.id})"
+                overwrites=new_overwrites, category=archive, reason=f'Pit archived by {ctx.author} ({ctx.author.id})'
             )
             await ctx.bot.pool.execute("UPDATE pits SET archive_mode = 'manual' WHERE pit_id = $1", pit.id)
         except discord.Forbidden:
@@ -348,13 +348,13 @@ class PitsManagement(HideoutCog):
     @pit.command(name='unarchive', with_app_command=False)
     async def pit_unarchive(self, ctx: HideoutGuildContext, *, channel: discord.TextChannel = commands.CurrentChannel):
         """Archives a pit."""
-        record = await ctx.bot.pool.fetchrow('''SELECT * FROM pits WHERE pit_id = $1''', channel.id)
+        record = await ctx.bot.pool.fetchrow("""SELECT * FROM pits WHERE pit_id = $1""", channel.id)
 
         if record is None:
             raise commands.BadArgument('Could not find pit')
 
         owner = await self.bot.get_or_fetch_member(ctx.guild, record['pit_owner'])
-        pit = ctx.guild.get_channel(record["pit_id"])
+        pit = ctx.guild.get_channel(record['pit_id'])
         pits_category = ctx.guild.get_channel(PIT_CATEGORY)
 
         if owner is None:
@@ -379,7 +379,7 @@ class PitsManagement(HideoutCog):
 
         try:
             await pit.edit(category=pits_category, overwrites=overs)
-            await ctx.bot.pool.execute('''UPDATE pits SET archive_mode = NULL WHERE pit_id = $1''', pit.id)
+            await ctx.bot.pool.execute("""UPDATE pits SET archive_mode = NULL WHERE pit_id = $1""", pit.id)
         except discord.Forbidden:
             raise commands.BadArgument('I do not have permission to edit channels.')
         else:
@@ -431,12 +431,12 @@ class PitsManagement(HideoutCog):
 
                 except discord.Forbidden:
                     log.debug(
-                        f"Did not re-block user {member} in channel {channel} due to missing permissions.", exc_info=False
+                        f'Did not re-block user {member} in channel {channel} due to missing permissions.', exc_info=False
                     )
                     continue
 
                 except discord.HTTPException:
-                    log.debug(f"Unexpected error while re-blocking user {member} in channel {channel}.", exc_info=False)
+                    log.debug(f'Unexpected error while re-blocking user {member} in channel {channel}.', exc_info=False)
 
     @commands.Cog.listener('on_tempblock_timer_complete')
     async def on_tempblock_timer_complete(self, timer: Timer):
@@ -462,9 +462,9 @@ class PitsManagement(HideoutCog):
 
             try:
                 mod = self.bot.get_user(author_id) or await self.bot.fetch_user(author_id)
-                f"{mod} (ID: {author_id})"
+                f'{mod} (ID: {author_id})'
             except discord.HTTPException:
-                mod = f"unknown moderator (ID: {author_id})"
+                mod = f'unknown moderator (ID: {author_id})'
 
             await self.toggle_block(
                 channel,  # type: ignore
@@ -486,7 +486,7 @@ class PitsManagement(HideoutCog):
         if self.bot.no_automatic_features:
             return
 
-        pit_id: int | None = await self.bot.pool.fetchval('''SELECT pit_id FROM pits WHERE pit_owner = $1''', member.id)
+        pit_id: int | None = await self.bot.pool.fetchval("""SELECT pit_id FROM pits WHERE pit_owner = $1""", member.id)
         if pit_id is None:
             return log.error('Could not find pit id')
 
@@ -509,7 +509,7 @@ class PitsManagement(HideoutCog):
                 councillors: discord.PermissionOverwrite(view_channel=True),
             }
 
-            await pit.edit(overwrites=new_overwrites, category=archive, reason=f"Pit archived automatically: member left")
+            await pit.edit(overwrites=new_overwrites, category=archive, reason=f'Pit archived automatically: member left')
             await self.bot.pool.execute("UPDATE pits SET archive_mode = 'leave' WHERE pit_id = $1", pit.id)
         except discord.Forbidden:
             return log.error('I do not have permission to edit channels.')
@@ -522,13 +522,13 @@ class PitsManagement(HideoutCog):
         if self.bot.no_automatic_features:
             return
 
-        record = await self.bot.pool.fetchrow('''SELECT * FROM pits WHERE pit_owner = $1''', member.id)
+        record = await self.bot.pool.fetchrow("""SELECT * FROM pits WHERE pit_owner = $1""", member.id)
 
         if not record or record['archive_mode'] != 'leave':
             return
 
         try:
-            pit: discord.TextChannel | None = member.guild.get_channel(record["pit_id"])  # type: ignore
+            pit: discord.TextChannel | None = member.guild.get_channel(record['pit_id'])  # type: ignore
             if pit is None:
                 return log.info(f'Could not find pit from id {record["pit_id"]}')
 
@@ -543,7 +543,7 @@ class PitsManagement(HideoutCog):
             }
 
             await pit.edit(category=pits_category, overwrites=overs)
-            await self.bot.pool.execute("UPDATE pits SET archive_mode = NULL WHERE pit_id = $1", pit.id)
+            await self.bot.pool.execute('UPDATE pits SET archive_mode = NULL WHERE pit_id = $1', pit.id)
         except discord.Forbidden:
             return log.error('I do not have permission to edit channels.')
         else:

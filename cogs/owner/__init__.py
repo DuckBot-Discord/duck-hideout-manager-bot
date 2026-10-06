@@ -26,7 +26,7 @@ class Owner(
         for extension in list(self.bot.extensions.keys()):
             try:
                 await self.bot.reload_extension(extension)
-                paginator.add_line(f"\N{CLOCKWISE RIGHTWARDS AND LEFTWARDS OPEN CIRCLE ARROWS} `{extension}`")
+                paginator.add_line(f'\N{CLOCKWISE RIGHTWARDS AND LEFTWARDS OPEN CIRCLE ARROWS} `{extension}`')
 
             except Exception as e:
                 if isinstance(e, commands.ExtensionFailed):

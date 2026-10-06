@@ -22,7 +22,6 @@ log = logging.getLogger('HideoutManager.utils.timer')
 
 
 if TYPE_CHECKING:
-
     JSONValue = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
     JSONType = Union[JSONValue, Dict[str, JSONValue], List[JSONValue]]
 
@@ -179,7 +178,7 @@ class TimerManager:
         await self.bot.exceptions.add_error(error=error, ctx=ctx)
 
         embed = discord.Embed(title='Oh no!', description=f'I ran into a new error while trying to execute this command.')
-        embed.add_field(name='No worries!', value='I\'ve contacted our developers and they\'ll be looking into it.')
+        embed.add_field(name='No worries!', value="I've contacted our developers and they'll be looking into it.")
         return await ctx.send(embed=embed)
 
     async def get_active_timer(
@@ -201,7 +200,7 @@ class TimerManager:
         Optional[:class:`Timer`]
             The timer that is expired and should be dispatched.
         """
-        query = f"SELECT * FROM timers WHERE (expires IS NOT NULL AND expires < (CURRENT_DATE + $1::interval)) ORDER BY expires LIMIT 1;"
+        query = f'SELECT * FROM timers WHERE (expires IS NOT NULL AND expires < (CURRENT_DATE + $1::interval)) ORDER BY expires LIMIT 1;'
         con = connection or self.bot.pool
 
         record = await con.fetchrow(query, datetime.timedelta(days=days))
@@ -271,7 +270,7 @@ class TimerManager:
                 # see: http://bugs.python.org/issue20493
                 timer = self._current_timer = await self.wait_for_active_timers(days=40)
                 if not timer:
-                    log.warning('Timer was supposted to be here, but isn\'t.. oh no.')
+                    log.warning("Timer was supposted to be here, but isn't.. oh no.")
                     return
 
                 now = datetime.datetime.utcnow()

@@ -122,7 +122,7 @@ class HideoutCommandTree(app_commands.CommandTree):
             root_parent = command.root_parent or command
             command_id_found = discord.utils.get(found_commands, name=root_parent.name)
             if command_id_found:
-                return f"</{command.qualified_name}:{command_id_found}>"
+                return f'</{command.qualified_name}:{command_id_found}>'
             return None
         except KeyError:
             return None
@@ -275,7 +275,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
             case_insensitive=True,
             allowed_mentions=discord.AllowedMentions.none(),
             intents=intents,
-            activity=discord.Activity(name=f"{prefix}help", type=discord.ActivityType.listening),
+            activity=discord.Activity(name=f'{prefix}help', type=discord.ActivityType.listening),
             strip_after_prefix=True,
             chunk_guilds_at_startup=False,
             max_messages=4000,
@@ -353,7 +353,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
                 await old_init(con)
 
         pool = await asyncpg.create_pool(uri, init=init, **kwargs)
-        log.info(f"{col(2)}Successfully created connection pool.")
+        log.info(f'{col(2)}Successfully created connection pool.')
         assert pool is not None, 'Pool is None'
         return pool
 
@@ -375,7 +375,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         AttributeError
             The bot has not hit on-ready yet.
         """
-        return re.compile(rf"<@!?{self.user.id}>")
+        return re.compile(rf'<@!?{self.user.id}>')
 
     @discord.utils.cached_property
     def invite_url(self) -> str:
@@ -492,7 +492,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
             The message that was created for replying to the user.
         """
         if self.mention_regex.fullmatch(message.content):
-            await message.reply(f"My prefix is `-`!")
+            await message.reply(f'My prefix is `-`!')
         else:
             await self.process_commands(message)
 
@@ -637,7 +637,7 @@ class HideoutManager(commands.AutoShardedBot, HideoutHelper):
         """
         assert ctx.command is not None
         await self.pool.execute(
-            "INSERT INTO commands (guild_id, user_id, command, timestamp) VALUES ($1, $2, $3, $4)",
+            'INSERT INTO commands (guild_id, user_id, command, timestamp) VALUES ($1, $2, $3, $4)',
             (ctx.guild and ctx.guild.id),
             ctx.author.id,
             ctx.command.qualified_name,

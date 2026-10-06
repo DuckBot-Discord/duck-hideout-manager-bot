@@ -198,7 +198,7 @@ class ProfileCard:
 
     # Image generations
     def paste_status_bar(self):
-        canvas = Image.new('RGBA', (self.WIDTH, self.STATUSBAR_HEIGHT), "white")
+        canvas = Image.new('RGBA', (self.WIDTH, self.STATUSBAR_HEIGHT), 'white')
         draw = ImageDraw.Draw(canvas)
         ret: list[tuple[int, int, discord.Colour]] = []
         for (next, _), (current, status) in itertools.pairwise([(self.now, None)] + list(self.data.times)):  # type: ignore
@@ -241,8 +241,8 @@ class ProfileCard:
         self.canvas.paste(border, (self.OVERALL_PADDING, self.OVERALL_PADDING), border)
 
     def cached_drop_shadow(self) -> Image.Image:
-        stem = "assets/images/profile/shadows/"
-        filename = f"DS-{self.AVATAR_BORDER_SIZE}-{self.DROP_SHADOW_ITERATIONS}-{self.DROP_SHADOW_OFFSET}.png"
+        stem = 'assets/images/profile/shadows/'
+        filename = f'DS-{self.AVATAR_BORDER_SIZE}-{self.DROP_SHADOW_ITERATIONS}-{self.DROP_SHADOW_OFFSET}.png'
         try:
             return Image.open(stem + filename)
         except FileNotFoundError:
@@ -315,8 +315,8 @@ class ProfileCard:
             self.draw.text(text_pos, str(self.author), fill=self.SECONDARY_COLOR, font=font)
 
     def draw_secondary_text(self):
-        top_text = f"RANK #{self.data.rank}"
-        bottom_text = f"OUT OF {self.data.max} {'BOTS' if self.author.bot else 'USERS'}"
+        top_text = f'RANK #{self.data.rank}'
+        bottom_text = f'OUT OF {self.data.max} {"BOTS" if self.author.bot else "USERS"}'
 
         # Top text (tt)
         ttfont = ImageFont.truetype('assets/fonts/Oswald-SemiBold.ttf', 60)
@@ -343,17 +343,17 @@ class ProfileCard:
         to_rm = bty
         width = self.WIDTH - self.BOTTOM_CORNER_FONT_PADDING
 
-        text = f"{self.data.delete_count:,} MESSAGES DELETED"
+        text = f'{self.data.delete_count:,} MESSAGES DELETED'
         _, _, msx, _ = self.draw.textbbox((0, 0), text, font=btfont)
         height -= to_rm
         self.draw.text((width - msx, height), text, font=btfont, fill=self.SECONDARY_COLOR)
 
-        text = f"{self.data.edit_count:,} MESSAGES EDITED"
+        text = f'{self.data.edit_count:,} MESSAGES EDITED'
         _, _, msx, _ = self.draw.textbbox((0, 0), text, font=btfont)
         height -= to_rm
         self.draw.text((width - msx, height), text, font=btfont, fill=self.SECONDARY_COLOR)
 
-        text = f"{self.data.message_count:,} MESSAGES SENT"
+        text = f'{self.data.message_count:,} MESSAGES SENT'
         _, _, msx, _ = self.draw.textbbox((0, 0), text, font=btfont)
         height -= to_rm
         self.draw.text((width - msx, height), text, font=btfont, fill=self.SECONDARY_COLOR)
@@ -361,23 +361,23 @@ class ProfileCard:
         if self.data.requested:
             height -= to_rm // 3
 
-            text = f"{self.data.bots_added} BOTS JOINED"
+            text = f'{self.data.bots_added} BOTS JOINED'
             _, _, msx, _ = self.draw.textbbox((0, 0), text, font=btfont)
             height -= to_rm
             self.draw.text((width - msx, height), text, font=btfont, fill=self.SECONDARY_COLOR)
 
-            text = f"{self.data.requested} BOTS REQUESTED"
+            text = f'{self.data.requested} BOTS REQUESTED'
             _, _, msx, _ = self.draw.textbbox((0, 0), text, font=btfont)
             height -= to_rm
             self.draw.text((width - msx, height), text, font=btfont, fill=self.SECONDARY_COLOR)
 
         # Status text
-        text = f"LAST 24 HOURS OF STATUS:"
+        text = f'LAST 24 HOURS OF STATUS:'
         font = ImageFont.truetype('assets/fonts/Oswald-SemiBold.ttf', 22)
         _, _, _, msy = self.draw.textbbox((0, 0), text, font=font)
         self.draw.text((3, self.HEIGHT - self.STATUSBAR_HEIGHT - msy - 2), text, font=font, fill=self.SECONDARY_COLOR)
 
-        text = f"NOW"
+        text = f'NOW'
         _, _, msx, msy = self.draw.textbbox((0, 0), text, font=font)
         self.draw.text(
             (self.WIDTH - msx - 3, self.HEIGHT - self.STATUSBAR_HEIGHT - msy - 2), text, font=font, fill=self.SECONDARY_COLOR

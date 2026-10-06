@@ -149,9 +149,9 @@ class EmbedMaker(HideoutCog):
                 confirm = await ctx.bot.pool.fetchval(query, flags.save, ctx.guild.id, ctx.author.id, is_mod)
                 if confirm is True:
                     confirm = await ctx.confirm(
-                        f"{ctx.author.mention} do you want to add this embed to "
-                        f"tag {flags.save!r}\n_This prompt will time out in 3 minutes, "
-                        f"so take your time_",
+                        f'{ctx.author.mention} do you want to add this embed to '
+                        f'tag {flags.save!r}\n_This prompt will time out in 3 minutes, '
+                        f'so take your time_',
                         embed=embed,
                         timeout=180,
                     )
@@ -174,13 +174,13 @@ class EmbedMaker(HideoutCog):
                             await ctx.send(f'Added embed to tag {flags.save!r}!')
                         else:
                             await ctx.send(
-                                f"Could not edit tag. Are you sure it exists{'' if is_mod else ' and you own it'}?"
+                                f'Could not edit tag. Are you sure it exists{"" if is_mod else " and you own it"}?'
                             )
                     elif confirm is False:
                         await ctx.send(f'Cancelled!')
                 else:
                     await ctx.send(
-                        f"Could not edit tag {flags.save!r}. Are you sure it exists {'' if is_mod else ' and you own it'}?"
+                        f'Could not edit tag {flags.save!r}. Are you sure it exists {"" if is_mod else " and you own it"}?'
                     )
             else:
                 raise commands.NoPrivateMessage

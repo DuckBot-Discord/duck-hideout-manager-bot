@@ -13,7 +13,7 @@ from .bot_bases.context import HideoutContext
 if TYPE_CHECKING:
     from bot import HideoutManager
 
-__all__: Tuple[str, ...] = ("ViewMenuPages",)
+__all__: Tuple[str, ...] = ('ViewMenuPages',)
 
 
 log = logging.getLogger('HideoutManager.paginators')  # noqa

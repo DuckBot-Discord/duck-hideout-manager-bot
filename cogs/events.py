@@ -36,7 +36,7 @@ class DiscordEvents(HideoutCog):
             try:
                 await meth(role)
             except discord.HTTPException as e:
-                return await interaction.response.send_message(f"Failed to assign role: {e.text}", ephemeral=True)
+                return await interaction.response.send_message(f'Failed to assign role: {e.text}', ephemeral=True)
             await interaction.response.send_message(message.format(role.name), ephemeral=True)
 
 

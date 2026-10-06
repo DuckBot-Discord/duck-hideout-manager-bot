@@ -57,7 +57,7 @@ class Addbot(HideoutCog):
             embed = discord.Embed(description=reason)
             embed.set_author(icon_url=bot_id.display_avatar.url, name=str(bot_id), url=url)
             embed.add_field(name='invite:', value=f'[invite {discord.utils.remove_markdown(str(bot_id))}]({url})')
-            embed.set_footer(text=f"Requested by {ctx.author} ({ctx.author.id})")
+            embed.set_footer(text=f'Requested by {ctx.author} ({ctx.author.id})')
             await bot_queue.send(embed=embed)
             await ctx.reply('✅ | Done, you will be @pinged when the bot is added!')
 
@@ -126,7 +126,7 @@ class Addbot(HideoutCog):
                 embed.add_field(name='Added by', value=str(mem), inline=False)
                 await queue_channel.send(embed=embed)
                 has_bots = await self.bot.pool.fetchval(
-                    "SELECT EXISTS(SELECT 1 FROM addbot WHERE owner_id = $1 AND added = TRUE)", mem.id
+                    'SELECT EXISTS(SELECT 1 FROM addbot WHERE owner_id = $1 AND added = TRUE)', mem.id
                 )
 
                 if not has_bots:
@@ -143,7 +143,7 @@ class Addbot(HideoutCog):
 
         await self.bot.create_timer(then, 'member_leave', member.id, [m.id for m in bots])
 
-        await queue_channel.send(f'Scheduled banning {member}\'s bots in 1 day.')
+        await queue_channel.send(f"Scheduled banning {member}'s bots in 1 day.")
 
     @commands.Cog.listener('on_ready')
     async def on_ready(self):
@@ -222,6 +222,6 @@ class Addbot(HideoutCog):
                 pass
 
             embed = discord.Embed(
-                title=f'{member} left!', description=f"**Kicking all their bots:**\n{', '.join(map(str, bots))}"
+                title=f'{member} left!', description=f'**Kicking all their bots:**\n{", ".join(map(str, bots))}'
             )
             await queue_channel.send(embed=embed)

@@ -7,7 +7,7 @@ from contextlib import suppress
 from typing import Any, Callable, Coroutine, Generator, MutableSet, Optional, overload, Self
 from weakref import WeakSet
 
-__all__: tuple[str, ...] = ("AsyncInstance",)
+__all__: tuple[str, ...] = ('AsyncInstance',)
 
 
 _log: logging.Logger = logging.getLogger(__name__)
@@ -84,7 +84,7 @@ class Task:
                 continue
 
             future.set_exception(
-                exc or asyncio.CancelledError("Object %r closed" % self),
+                exc or asyncio.CancelledError('Object %r closed' % self),
             )
 
         tasks: list[asyncio.Task[Any] | Coroutine[Any, Any, Any]] = []
@@ -97,8 +97,8 @@ class Task:
                 # the object. We need to log this and continue.
                 _log.exception(
                     (
-                        "Error while trying to close %r. "
-                        "The exception was not retrieved due to an error in "
+                        'Error while trying to close %r. '
+                        'The exception was not retrieved due to an error in '
                         "asyncio's exception handler. ",
                         func,
                     ),
@@ -142,7 +142,7 @@ class AsyncABCMeta(ABCMeta):
         )
 
         if not asyncio.iscoroutinefunction(instance.__ainit__):  # type: ignore
-            raise TypeError("__ainit__ must be coroutine")
+            raise TypeError('__ainit__ must be coroutine')
 
         return instance
 
@@ -162,7 +162,7 @@ class AsyncInstanceType(metaclass=AsyncABCMeta):
         The event loop to use for creating tasks and futures.
     """
 
-    __slots__: tuple[str, ...] = ("_args", "_kwargs")
+    __slots__: tuple[str, ...] = ('_args', '_kwargs')
     _args: tuple[Any, ...]
     _kwargs: dict[str, Any]
 
@@ -223,7 +223,7 @@ class AsyncInstance(AsyncInstanceType):
         pass
 
     def __await__(self) -> Generator[Any, None, Self]:
-        if not hasattr(self, "_async_class_task_store"):
+        if not hasattr(self, '_async_class_task_store'):
             self._async_class_task_store = Task(self.loop)
 
         yield from self.compose_task(
@@ -244,7 +244,7 @@ class AsyncInstance(AsyncInstanceType):
 
         tasks: list[asyncio.Task[Any] | Coroutine[Any, Any, Any]] = []
 
-        if hasattr(self, "_async_class_task_store"):
+        if hasattr(self, '_async_class_task_store'):
             # Allows for graceful closing of the task manager.
             tasks.append(self.__adel__())
             tasks.append(self.__tasks__.close(exc))
@@ -272,5 +272,5 @@ class AsyncInstance(AsyncInstanceType):
         # We don't want to allow overriding __await__ as it is used
         if cls.__await__ is not AsyncInstance.__await__:
             raise TypeError(
-                f"{cls.__name__} cannot override __await__",
+                f'{cls.__name__} cannot override __await__',
             )

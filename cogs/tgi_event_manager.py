@@ -40,7 +40,7 @@ class EventNotFound(Exception):
     """Raised when an event is not found."""
 
     def __init__(self, the_date: date) -> None:
-        super().__init__(f"No event found for date {the_date!r}")
+        super().__init__(f'No event found for date {the_date!r}')
 
 
 class EventsManager:
@@ -78,12 +78,12 @@ class EventsManager:
         filename = file.name
         try:
             SINGLE_PERIOD_PATTERN = re.compile(
-                r"^(?P<DAY>[0-3][0-9]|x)-(?P<MONTH>[0-1][0-9])-\[(?P<EVENT>.+)\].(?P<EXT>gif|png)$"
+                r'^(?P<DAY>[0-3][0-9]|x)-(?P<MONTH>[0-1][0-9])-\[(?P<EVENT>.+)\].(?P<EXT>gif|png)$'
             )
             COMPOSITE_PERIOD_PATTERN = re.compile(
-                r"^(?P<DAY1>[0-3][0-9]|x)-(?P<MONTH1>[0-1][0-9])-(?P<DAY2>[0-3][0-9]|x)-(?P<MONTH2>[0-1][0-9])-\[(?P<EVENT>.+)\].(?P<EXT>gif|png)$"
+                r'^(?P<DAY1>[0-3][0-9]|x)-(?P<MONTH1>[0-1][0-9])-(?P<DAY2>[0-3][0-9]|x)-(?P<MONTH2>[0-1][0-9])-\[(?P<EVENT>.+)\].(?P<EXT>gif|png)$'
             )
-            SPECIAL_CASE_PATTERN = re.compile(r"^special_(?P<CID>[a-zA-Z]{2})-\[(?P<EVENT>.+)\].(?P<EXT>gif|png)$")
+            SPECIAL_CASE_PATTERN = re.compile(r'^special_(?P<CID>[a-zA-Z]{2})-\[(?P<EVENT>.+)\].(?P<EXT>gif|png)$')
 
             if match := SINGLE_PERIOD_PATTERN.fullmatch(filename):
                 # This is the match that can either correspond to a full day or a full month.

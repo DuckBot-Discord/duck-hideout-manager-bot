@@ -11,8 +11,8 @@ __all__: tuple[str, ...] = ('GithubClient', 'FileData', 'TreeNode', 'Repository'
 
 # Constants
 BASE_URL = 'https://api.github.com'
-REPO_URL = f"{BASE_URL}/repos/{{0}}/{{1}}"
-REPO_CONTENTS_URL = f"{BASE_URL}/{REPO_URL}/contents"
+REPO_URL = f'{BASE_URL}/repos/{{0}}/{{1}}'
+REPO_CONTENTS_URL = f'{BASE_URL}/{REPO_URL}/contents'
 
 
 class GithubClient:
@@ -71,9 +71,9 @@ class TreeNode(BaseModel):
     async def fetch_filedata(self) -> FileData | list[TreeNode]:
         async with self.client.session.get(self.url) as response:
             response.raise_for_status()
-            if self.type == "blob":
+            if self.type == 'blob':
                 return FileData(**await response.json())
-            elif self.type == "tree":
+            elif self.type == 'tree':
                 data = await response.json()
                 return [TreeNode(**node, client=self.client) for node in data['tree']]
             else:

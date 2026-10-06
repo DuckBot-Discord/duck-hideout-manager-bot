@@ -50,17 +50,17 @@ def col(color: int | None = None, /, *, fmt: int = 0, bg: bool = False) -> str:
     :param fmt: The format number.
     :param bg: Whether to return as a background color
     """
-    base = "\u001b["
+    base = '\u001b['
     if fmt != 0:
-        base += "{fmt};"
+        base += '{fmt};'
     if color is None:
-        base += "{color}m"
+        base += '{color}m'
         color = 0
     else:
         if bg is True:
-            base += "4{color}m"
+            base += '4{color}m'
         else:
-            base += "3{color}m"
+            base += '3{color}m'
     return base.format(fmt=fmt, color=color)
 
 
@@ -113,7 +113,7 @@ def format_date(date: datetime) -> str:
     str
         The formatted date.
     """
-    return date.strftime("%b %d, %Y %H:%M %Z")
+    return date.strftime('%b %d, %Y %H:%M %Z')
 
 
 def add_logging(func: Callable[P, Union[Awaitable[T], T]]) -> Callable[P, Union[Awaitable[T], T]]:
@@ -183,9 +183,9 @@ class View(discord.ui.View):
         bot: HideoutManager = interaction.client  # type: ignore
         await bot.exceptions.add_error(error=error)
         if interaction.response.is_done():
-            await interaction.followup.send(f"Sorry! something went wrong....", ephemeral=True)
+            await interaction.followup.send(f'Sorry! something went wrong....', ephemeral=True)
         else:
-            await interaction.response.send_message(f"Sorry! something went wrong....", ephemeral=True)
+            await interaction.response.send_message(f'Sorry! something went wrong....', ephemeral=True)
 
     def stop(self) -> None:
         if self.bot:

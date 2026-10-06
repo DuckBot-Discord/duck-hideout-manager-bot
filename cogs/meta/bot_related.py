@@ -11,7 +11,7 @@ from .tags import UnknownUser
 
 class BotInformation(HideoutCog):
     @commands.hybrid_command()
-    @app_commands.describe(bot="The bot to look up.")
+    @app_commands.describe(bot='The bot to look up.')
     async def whoadd(self, ctx: HideoutContext, bot: discord.Member):
         """Checks who added a specific bot."""
 
@@ -26,7 +26,7 @@ class BotInformation(HideoutCog):
         embed = discord.Embed(title='Bot info', timestamp=ctx.message.created_at, color=bot.color)
         embed.set_author(name=str(bot), icon_url=bot.display_avatar.url)
         user: discord.User = await ctx.bot.get_or_fetch_user(data['owner_id'])
-        embed.add_field(name='Added by', value=f"{user.mention} (`{user.id}`)", inline=False)
+        embed.add_field(name='Added by', value=f'{user.mention} (`{user.id}`)', inline=False)
         embed.add_field(name='Reason', value=data['reason'])
         embed.add_field(name='Joined at', value=discord.utils.format_dt(bot.joined_at or bot.created_at, 'R'))
         embed.set_footer(text=f'bot ID: {bot.id}')
@@ -45,7 +45,7 @@ class BotInformation(HideoutCog):
         if not data:
             raise commands.BadArgument('No data found...')
 
-        embed = discord.Embed(title=f'{member}\'s bots', timestamp=ctx.message.created_at)
+        embed = discord.Embed(title=f"{member}'s bots", timestamp=ctx.message.created_at)
 
         for _, bot_id, is_added, _, reason in data:
             try:
@@ -53,7 +53,7 @@ class BotInformation(HideoutCog):
             except discord.HTTPException:
                 user = UnknownUser(bot_id)
 
-            embed.add_field(name=str(user), value=f"Added: {is_added}\nReason: {reason}", inline=False)
+            embed.add_field(name=str(user), value=f'Added: {is_added}\nReason: {reason}', inline=False)
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -70,10 +70,10 @@ class BotInformation(HideoutCog):
 
         if amount > 25:
             if not ctx.channel.permissions_for(ctx.author).manage_messages:
-                await ctx.send("You must have `manage_messages` permission to perform a search greater than 25")
+                await ctx.send('You must have `manage_messages` permission to perform a search greater than 25')
                 return
             if not ctx.channel.permissions_for(ctx.guild.me).manage_messages:
-                await ctx.send("I need the `manage_messages` permission to perform a search greater than 25")
+                await ctx.send('I need the `manage_messages` permission to perform a search greater than 25')
                 return
 
         use_bulk_delete = ctx.channel.permissions_for(ctx.guild.me).manage_messages

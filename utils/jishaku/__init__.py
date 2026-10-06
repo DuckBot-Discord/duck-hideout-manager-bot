@@ -28,44 +28,44 @@ from .. import HideoutCog, add_logging
 if TYPE_CHECKING:
     from bot import HideoutManager
 
-T = TypeVar("T")
+T = TypeVar('T')
 
 
 class OverwrittenManagementFeature(ManagementFeature):
-    @Feature.Command(parent="jsk", name="load", aliases=["reload"])
+    @Feature.Command(parent='jsk', name='load', aliases=['reload'])
     async def jsk_load(self, ctx: HideoutContext, *extensions: Annotated[list[str], ExtensionConverter]):
         """
         Loads or reloads the given extension names.
 
         Reports any extensions that failed to load.
         """
-        paginator = WrappedPaginator(prefix="", suffix="")
+        paginator = WrappedPaginator(prefix='', suffix='')
 
         # 'jsk reload' on its own just reloads jishaku
-        if ctx.invoked_with == "reload" and not extensions:
-            extensions = (["utils.jishaku"],)
+        if ctx.invoked_with == 'reload' and not extensions:
+            extensions = (['utils.jishaku'],)
 
         for extension in itertools.chain(*extensions):
             method, icon = (
                 (
                     self.bot.reload_extension,
-                    "\N{CLOCKWISE RIGHTWARDS AND LEFTWARDS OPEN CIRCLE ARROWS}",
+                    '\N{CLOCKWISE RIGHTWARDS AND LEFTWARDS OPEN CIRCLE ARROWS}',
                 )
                 if extension in self.bot.extensions
-                else (self.bot.load_extension, "\N{INBOX TRAY}")
+                else (self.bot.load_extension, '\N{INBOX TRAY}')
             )
 
             try:
                 await discord.utils.maybe_coroutine(method, extension)
             except Exception as exc:  # pylint: disable=broad-except
-                traceback_data = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__, 1))
+                traceback_data = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__, 1))
 
                 paginator.add_line(
-                    f"{icon}\N{WARNING SIGN} `{extension}`\n```py\n{traceback_data}\n```",
+                    f'{icon}\N{WARNING SIGN} `{extension}`\n```py\n{traceback_data}\n```',
                     empty=True,
                 )
             else:
-                paginator.add_line(f"{icon} `{extension}`", empty=True)
+                paginator.add_line(f'{icon} `{extension}`', empty=True)
 
         for page in paginator.pages:
             await ctx.send(page)
@@ -99,7 +99,7 @@ class HideoutManagerJishaku(
         redirect_stdout: Optional[str] = None,
     ):
         if isinstance(result, discord.Message):
-            return await ctx.send(f"<Message <{result.jump_url}>>")
+            return await ctx.send(f'<Message <{result.jump_url}>>')
 
         elif isinstance(result, discord.File):
             return await ctx.send(file=result)
@@ -113,19 +113,19 @@ class HideoutManagerJishaku(
         if not isinstance(result, str):
             result = repr(result)
 
-        stripper = "**Redirected stdout**:\n{}"
+        stripper = '**Redirected stdout**:\n{}'
         total = 2000
         if redirect_stdout:
-            total -= len(f"{stripper.format(redirect_stdout)}\n")
+            total -= len(f'{stripper.format(redirect_stdout)}\n')
 
         if len(result) <= total:
-            if result.strip == "":
-                result = "\u200b"
+            if result.strip == '':
+                result = '\u200b'
 
             if redirect_stdout:
-                result = f"{stripper.format(redirect_stdout)}\n{result}"
+                result = f'{stripper.format(redirect_stdout)}\n{result}'
 
-            return await ctx.send(result.replace(self.bot.http.token or "", "[token omitted]"))
+            return await ctx.send(result.replace(self.bot.http.token or '', '[token omitted]'))
 
         if use_file_check(ctx, len(result)):  # File "full content" preview limit
             # Discord's desktop and web client now supports an interactive file content
@@ -133,11 +133,11 @@ class HideoutManagerJishaku(
             # Since this avoids escape issues and is more intuitive than pagination for
             #  long results, it will now be prioritized over PaginatorInterface if the
             #  resultant content is below the filesize threshold
-            return await ctx.send(file=discord.File(filename="output.py", fp=io.BytesIO(result.encode("utf-8"))))
+            return await ctx.send(file=discord.File(filename='output.py', fp=io.BytesIO(result.encode('utf-8'))))
 
         # inconsistency here, results get wrapped in codeblocks when they are too large
         #  but don't if they're not. probably not that bad, but noting for later review
-        paginator = WrappedPaginator(prefix="```py", suffix="```", max_size=1985)
+        paginator = WrappedPaginator(prefix='```py', suffix='```', max_size=1985)
 
         if redirect_stdout:
             for chunk in self.bot.chunker(f'{stripper.format(redirect_stdout).replace("**", "")}\n', size=1975):
@@ -150,7 +150,7 @@ class HideoutManagerJishaku(
         return await interface.send_to(ctx)
 
     @discord.utils.copy_doc(PythonFeature.jsk_python)
-    @Feature.Command(parent="jsk", name="py", aliases=["python"])
+    @Feature.Command(parent='jsk', name='py', aliases=['python'])
     async def jsk_python(self, ctx: HideoutContext, *, argument: Annotated[Codeblock, codeblock_converter]) -> None:
         """|coro|
 
@@ -201,7 +201,7 @@ class HideoutManagerJishaku(
                                     ctx,
                                     result,
                                     start_time=start,
-                                    redirect_stdout=None if value == "" else value,
+                                    redirect_stdout=None if value == '' else value,
                                 )
                             )
 

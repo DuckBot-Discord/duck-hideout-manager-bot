@@ -66,11 +66,11 @@ class VoiceChatLogs(HideoutCog):
         if before.channel != after.channel:
             if before.channel:
                 await self.enqueue_message(
-                    f"[{ts}] {LEFT} **{discord.utils.escape_markdown(member.display_name)}** left.", before.channel
+                    f'[{ts}] {LEFT} **{discord.utils.escape_markdown(member.display_name)}** left.', before.channel
                 )
             if after.channel:
                 await self.enqueue_message(
-                    f"[{ts}] {JOINED} **{discord.utils.escape_markdown(member.display_name)}** joined.", after.channel
+                    f'[{ts}] {JOINED} **{discord.utils.escape_markdown(member.display_name)}** joined.', after.channel
                 )
 
         channel = after.channel or before.channel
@@ -80,80 +80,80 @@ class VoiceChatLogs(HideoutCog):
         if before.deaf != after.deaf:
             if before.deaf:
                 await self.enqueue_message(
-                    f"[{ts}] {NO_DEAF} **{discord.utils.escape_markdown(member.display_name)}** got undeafened.", channel
+                    f'[{ts}] {NO_DEAF} **{discord.utils.escape_markdown(member.display_name)}** got undeafened.', channel
                 )
             if after.deaf:
                 await self.enqueue_message(
-                    f"[{ts}] {DEAF} **{discord.utils.escape_markdown(member.display_name)}** got deafened.", channel
+                    f'[{ts}] {DEAF} **{discord.utils.escape_markdown(member.display_name)}** got deafened.', channel
                 )
 
         if before.mute != after.mute:
             if before.mute:
                 await self.enqueue_message(
-                    f"[{ts}] {NO_MUTE} **{discord.utils.escape_markdown(member.display_name)}** got unmuted.", channel
+                    f'[{ts}] {NO_MUTE} **{discord.utils.escape_markdown(member.display_name)}** got unmuted.', channel
                 )
             if after.mute:
                 await self.enqueue_message(
-                    f"[{ts}] {MUTE} **{discord.utils.escape_markdown(member.display_name)}** got muted.", channel
+                    f'[{ts}] {MUTE} **{discord.utils.escape_markdown(member.display_name)}** got muted.', channel
                 )
 
         if before.self_deaf != after.self_deaf:
             if before.self_deaf:
                 await self.enqueue_message(
-                    f"[{ts}] {NO_DEAF} **{discord.utils.escape_markdown(member.display_name)}** undeafened themselves.",
+                    f'[{ts}] {NO_DEAF} **{discord.utils.escape_markdown(member.display_name)}** undeafened themselves.',
                     channel,
                 )
             if after.self_deaf:
                 await self.enqueue_message(
-                    f"[{ts}] {SELF_DEAF} **{discord.utils.escape_markdown(member.display_name)}** deafened themselves.",
+                    f'[{ts}] {SELF_DEAF} **{discord.utils.escape_markdown(member.display_name)}** deafened themselves.',
                     channel,
                 )
 
         elif before.self_mute != after.self_mute:
             if before.self_mute:
                 await self.enqueue_message(
-                    f"[{ts}] {NO_MUTE} **{discord.utils.escape_markdown(member.display_name)}** unmuted themselves.", channel
+                    f'[{ts}] {NO_MUTE} **{discord.utils.escape_markdown(member.display_name)}** unmuted themselves.', channel
                 )
             if after.self_mute:
                 await self.enqueue_message(
-                    f"[{ts}] {SELF_MUTE} **{discord.utils.escape_markdown(member.display_name)}** muted themselves.", channel
+                    f'[{ts}] {SELF_MUTE} **{discord.utils.escape_markdown(member.display_name)}** muted themselves.', channel
                 )
 
         if before.self_stream != after.self_stream:
             if before.self_stream:
                 await self.enqueue_message(
-                    f"[{ts}] {NO_LIVE} **{discord.utils.escape_markdown(member.display_name)}** stopped streaming.", channel
+                    f'[{ts}] {NO_LIVE} **{discord.utils.escape_markdown(member.display_name)}** stopped streaming.', channel
                 )
             if after.self_stream:
                 await self.enqueue_message(
-                    f"[{ts}] {LIVE} **{discord.utils.escape_markdown(member.display_name)}** started streaming.", channel
+                    f'[{ts}] {LIVE} **{discord.utils.escape_markdown(member.display_name)}** started streaming.', channel
                 )
 
         if before.self_video != after.self_video:
             if before.self_video:
                 await self.enqueue_message(
-                    f"[{ts}] {NO_VIDEO} **{discord.utils.escape_markdown(member.display_name)}** turned off their camera.",
+                    f'[{ts}] {NO_VIDEO} **{discord.utils.escape_markdown(member.display_name)}** turned off their camera.',
                     channel,
                 )
             if after.self_video:
                 await self.enqueue_message(
-                    f"[{ts}] {VIDEO} **{discord.utils.escape_markdown(member.display_name)}** turned on their camera.",
+                    f'[{ts}] {VIDEO} **{discord.utils.escape_markdown(member.display_name)}** turned on their camera.',
                     channel,
                 )
 
-    @commands.Cog.listener("on_socket_raw_receive")
+    @commands.Cog.listener('on_socket_raw_receive')
     async def send_channel_topic_log(self, msg: str):
         if not msg:
             return
 
         raw = json.loads(msg)
 
-        if raw["t"] != "GUILD_AUDIT_LOG_ENTRY_CREATE":
+        if raw['t'] != 'GUILD_AUDIT_LOG_ENTRY_CREATE':
             return
 
-        data = raw["d"]
+        data = raw['d']
 
-        if data["action_type"] not in (192, 193):
+        if data['action_type'] not in (192, 193):
             return
 
         guild = self.bot.get_guild(DUCK_HIDEOUT)
@@ -161,23 +161,23 @@ class VoiceChatLogs(HideoutCog):
         if not guild:
             return
 
-        channel = guild.get_channel(int(data["target_id"]))
-        member = guild.get_member(int(data["user_id"]))
+        channel = guild.get_channel(int(data['target_id']))
+        member = guild.get_member(int(data['user_id']))
 
         if not channel or not member:
             return
 
-        status = data["options"].get("status", None)
+        status = data['options'].get('status', None)
 
         ts = discord.utils.format_dt(discord.utils.utcnow(), 'T')
 
         if status:
             await self.enqueue_message(
-                f"[{ts}] {STATUS_ICON} **{discord.utils.escape_markdown(member.display_name)}** set channel status to **{discord.utils.escape_markdown(status)}**.",
+                f'[{ts}] {STATUS_ICON} **{discord.utils.escape_markdown(member.display_name)}** set channel status to **{discord.utils.escape_markdown(status)}**.',
                 channel,
             )
         else:
             await self.enqueue_message(
-                f"[{ts}] {STATUS_ICON} **{discord.utils.escape_markdown(member.display_name)}** unset channel status`.",
+                f'[{ts}] {STATUS_ICON} **{discord.utils.escape_markdown(member.display_name)}** unset channel status`.',
                 channel,
             )

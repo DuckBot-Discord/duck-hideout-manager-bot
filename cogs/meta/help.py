@@ -73,7 +73,7 @@ class Help(HideoutCog):
         ret: list[str] = []
         for command in command_list:
             if isinstance(command, commands.Group) and command.commands:
-                ret.append(f"__{command.qualified_name}__")
+                ret.append(f'__{command.qualified_name}__')
             else:
                 ret.append(command.qualified_name)
         return ret
@@ -86,7 +86,7 @@ class Help(HideoutCog):
         )
         embed.add_field(
             name='\N{BLACK QUESTION MARK ORNAMENT} Getting Help',
-            value=("Use the `-help <entry>` command to get help on a\nspecific command, category or topic."),
+            value=('Use the `-help <entry>` command to get help on a\nspecific command, category or topic.'),
             inline=False,
         )
         query = """
@@ -95,10 +95,10 @@ class Help(HideoutCog):
         """
         if ctx.guild:
             topics: list[str] = await self.bot.pool.fetchval(query, ctx.guild.id)
-            joined = (f"__{human_join(topics, delim='__, __', final='__ or __', spaces=False, width=65)}__",)
+            joined = (f'__{human_join(topics, delim="__, __", final="__ or __", spaces=False, width=65)}__',)
             embed.add_field(
                 name='\N{GLOWING STAR} Topics',
-                value=f"Handwritten guides by our moderation team.\n{joined}",
+                value=f'Handwritten guides by our moderation team.\n{joined}',
                 inline=False,
             )
         embed.add_field(
@@ -115,10 +115,10 @@ class Help(HideoutCog):
             commands = await self.filter_commands(ctx, cog.get_commands())
             if not commands:
                 continue
-            joined = f"{human_join(self.commands_to_str(commands), final='and', width=55)}"
+            joined = f'{human_join(self.commands_to_str(commands), final="and", width=55)}'
             embed.add_field(
                 name=f'{name.title()}',
-                value=f"{joined}",
+                value=f'{joined}',
                 inline=False,
             )
         embed.set_footer(
@@ -173,15 +173,15 @@ class Help(HideoutCog):
         except commands.CommandError:
             can_run = False
 
-        params = [f"**{param.name}** {param.description}" for param in command.params.values() if param.description]
+        params = [f'**{param.name}** {param.description}' for param in command.params.values() if param.description]
 
         if params:
             embed.add_field(name='Parameters', value='\n'.join(params), inline=False)
 
         embed.set_footer(
             text=(
-                f"This command is{' ' if is_slash else ' not '}a slash command."
-                f"\nYou can{' ' if can_run else 'not '}run this command."
+                f'This command is{" " if is_slash else " not "}a slash command.'
+                f'\nYou can{" " if can_run else "not "}run this command.'
             )
         )
         await ctx.send(embed=embed)
@@ -209,7 +209,7 @@ class Help(HideoutCog):
 
         embed = discord.Embed(title=formatted, description=group.help)
 
-        params = [f"**{param.name}** {param.description}" for param in group.params.values() if param.description]
+        params = [f'**{param.name}** {param.description}' for param in group.params.values() if param.description]
 
         if params:
             embed.add_field(name='Parameters', value='\n'.join(params), inline=False)
@@ -217,15 +217,15 @@ class Help(HideoutCog):
         embed.add_field(
             name='Metadata',
             value=(
-                f"This command is{' ' if is_slash else ' not '}a slash command."
-                f"\nYou can{' ' if can_run else 'not '}run this command."
+                f'This command is{" " if is_slash else " not "}a slash command.'
+                f'\nYou can{" " if can_run else "not "}run this command.'
             ),
             inline=False,
         )
 
         paginator = commands.Paginator(max_size=1024)
         for line in await self.command_tree(ctx, group):
-            paginator.add_line(f"\u200b{line}")
+            paginator.add_line(f'\u200b{line}')
         for page in paginator.pages:
             embed.add_field(name='all sub-commands', value=page, inline=False)
         embed.set_footer(

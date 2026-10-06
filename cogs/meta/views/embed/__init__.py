@@ -55,9 +55,9 @@ class TagsWithOptionalOwners(TagsFromFetchedPageSource):
         ret: list[str] = []
         for idx, tag in records:
             if 'owned' in tag.keys() and not tag['owned']:
-                ret.append(f"{idx}. {tag['name']} (Owner: {str(self.bot.get_user(tag['owner_id']))})")
+                ret.append(f'{idx}. {tag["name"]} (Owner: {str(self.bot.get_user(tag["owner_id"]))})')
             else:
-                ret.append(f"{idx}. {tag['name']}")
+                ret.append(f'{idx}. {tag["name"]}')
         return '\n'.join(ret)
 
 
@@ -177,7 +177,7 @@ class FieldSelectorView(utils.View):
     def update_options(self):
         self.pick_field.options = []
         for i, field in enumerate(self.parent.embed.fields):
-            self.pick_field.add_option(label=f"{i + 1}) {(field.name or '')[0:95]}", value=str(i))
+            self.pick_field.add_option(label=f'{i + 1}) {(field.name or "")[0:95]}', value=str(i))
 
     @discord.ui.select()
     async def pick_field(self, interaction: BotInteraction, select: discord.ui.Select):
@@ -348,8 +348,8 @@ class EmbedEditor(utils.View):
             self.send_to.style = ButtonStyle.red
             self.add_to_tag.style = ButtonStyle.red
 
-        self.character_count.label = f"{len(self.embed)}/6,000 Characters"
-        self.fields_count.label = f"{len(self.embed.fields)}/25 Total Fields"
+        self.character_count.label = f'{len(self.embed)}/6,000 Characters'
+        self.fields_count.label = f'{len(self.embed.fields)}/25 Total Fields'
 
         if self.showing_help:
             self.help_page.label = 'Show My Embed'
@@ -361,11 +361,11 @@ class EmbedEditor(utils.View):
             title='__`M⬇`__ This is the embed title',
             color=self.cog.bot.color,
             description=(
-                "__`M⬇`__ This is the embed description. This field "
-                "**supports** __*Mark*`Down`__, which means you can "
-                "use features like ~~strikethrough~~, *italics*, **bold** "
-                "and `mono`, and they will be rendered!"
-                "\nText that supports MarkDown have this: __`M⬇`__"
+                '__`M⬇`__ This is the embed description. This field '
+                '**supports** __*Mark*`Down`__, which means you can '
+                'use features like ~~strikethrough~~, *italics*, **bold** '
+                'and `mono`, and they will be rendered!'
+                '\nText that supports MarkDown have this: __`M⬇`__'
             ),
             url='https://this-is.the/title-url',
         )
@@ -391,7 +391,7 @@ class EmbedEditor(utils.View):
         )
         embed.set_image(url='https://cdn.duck-bot.com/file/IMAGE')
         embed.set_thumbnail(url='https://cdn.duck-bot.com/file/THUMBNAIL')
-        footer_text = "This is the footer, which like the author, does not support markdown."
+        footer_text = 'This is the footer, which like the author, does not support markdown.'
         if not self.embed and not self.showing_help:
             footer_text += '\n💢This embed will be replaced by yours once it has characters💢'
         embed.set_footer(icon_url='https://cdn.duck-bot.com/file/ICON', text=footer_text)

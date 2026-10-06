@@ -34,7 +34,7 @@ class LeaderboardCard:
     DROP_SHADOW_ITERATIONS = 15
     DROP_SHADOW_EXTRA_SIZE = 10
 
-    BG_COLOR = discord.Color.from_str("#1b1d21")
+    BG_COLOR = discord.Color.from_str('#1b1d21')
 
     """WIP. Using embed for now"""
 
@@ -48,7 +48,7 @@ class LeaderboardView(View):
 
     async def interaction_check(self, interaction: discord.Interaction):
         if interaction.user != self.author:
-            return await interaction.response.send_message("This is not your view!", ephemeral=True)
+            return await interaction.response.send_message('This is not your view!', ephemeral=True)
 
         return True
 
@@ -60,7 +60,7 @@ class LeaderboardView(View):
         if self.message:
             await self.message.edit(view=self)
 
-    @discord.ui.button(style=discord.ButtonStyle.secondary, label="All Time", disabled=True)
+    @discord.ui.button(style=discord.ButtonStyle.secondary, label='All Time', disabled=True)
     async def all_time_callback(self, interaction: discord.Interaction[HideoutManager], button: discord.ui.Button):
         for btn in self.children:
             if isinstance(btn, discord.ui.Button):
@@ -72,7 +72,7 @@ class LeaderboardView(View):
 
         await interaction.response.edit_message(embed=embed, view=self)
 
-    @discord.ui.button(style=discord.ButtonStyle.secondary, label="Last 30 Days")
+    @discord.ui.button(style=discord.ButtonStyle.secondary, label='Last 30 Days')
     async def _30_day_callback(self, interaction: discord.Interaction[HideoutManager], button: discord.ui.Button):
         for btn in self.children:
             if isinstance(btn, discord.ui.Button):
@@ -84,7 +84,7 @@ class LeaderboardView(View):
 
         await interaction.response.edit_message(embed=embed, view=self)
 
-    @discord.ui.button(style=discord.ButtonStyle.secondary, label="Last 7 Days")
+    @discord.ui.button(style=discord.ButtonStyle.secondary, label='Last 7 Days')
     async def _7_day_callback(self, interaction: discord.Interaction[HideoutManager], button: discord.ui.Button):
         for btn in self.children:
             if isinstance(btn, discord.ui.Button):
@@ -102,7 +102,7 @@ class LeaderboardEmbed(discord.Embed):
         self._pool = pool
         self._bot = bot
         self._creator = creator
-        super().__init__(title="Leaderboard", color=discord.Color.from_str("#1b1d21"))
+        super().__init__(title='Leaderboard', color=discord.Color.from_str('#1b1d21'))
 
     async def update_leaderboard(self, interval: str | None) -> discord.Embed:
         self.clear_fields()
@@ -126,13 +126,13 @@ class LeaderboardEmbed(discord.Embed):
         OR author_id = $2
         """
         self._data: list[asyncpg.Record] = await self._pool.fetch(
-            query.format("--" if interval is None else f"AND created_at > NOW() - INTERVAL {interval}"),
+            query.format('--' if interval is None else f'AND created_at > NOW() - INTERVAL {interval}'),
             False,
             self._creator.id,
         )
 
         if not self._data:
-            raise RuntimeError("No leaderboard can be generated.")
+            raise RuntimeError('No leaderboard can be generated.')
 
         for user in self._data:
             # Fetch the user
@@ -142,7 +142,7 @@ class LeaderboardEmbed(discord.Embed):
                 pos_user = await self._bot.fetch_user(user['author_id'])
 
             self.add_field(
-                name=f"Rank {user['rank']}", value=f"{pos_user}\n{user['message_count']:,} messages", inline=False
+                name=f'Rank {user["rank"]}', value=f'{pos_user}\n{user["message_count"]:,} messages', inline=False
             )
 
         return self
@@ -164,9 +164,9 @@ class LeaderboardCog(HideoutCog):
     def generate_graph(data: list[tuple[discord.abc.User, list[asyncpg.Record]]]) -> discord.File:
         figure = Figure(figsize=(20, 15), dpi=100)
         plot = figure.add_subplot()
-        plot.set_xlabel("message count")
-        plot.set_ylabel("Date")
-        plot.set_title(f"Message statistics")
+        plot.set_xlabel('message count')
+        plot.set_ylabel('Date')
+        plot.set_title(f'Message statistics')
         plot.xaxis_date(tz=datetime.timezone.utc)
 
         for user, entries in data:
@@ -188,13 +188,13 @@ class LeaderboardCog(HideoutCog):
         renderer.print_png(buffer)
         buffer.seek(0)
 
-        return discord.File(buffer, filename="test.png")
+        return discord.File(buffer, filename='test.png')
 
     @commands.command(name='message-stats')
     async def message_stats(
         self,
         ctx: commands.Context,
-        precision: Optional[Literal["day", "week", "month"]] = "week",
+        precision: Optional[Literal['day', 'week', 'month']] = 'week',
         *users: discord.Member | discord.User,
     ):
         """Sends message stats for a user.

@@ -17,12 +17,12 @@ from utils import HideoutCog, HideoutContext, View
 def num_as_emoji(num: int) -> str:
     if num == 10:
         return '\N{KEYCAP TEN}'
-    return f"{num}\N{VARIATION SELECTOR-16}\N{COMBINING ENCLOSING KEYCAP}"
+    return f'{num}\N{VARIATION SELECTOR-16}\N{COMBINING ENCLOSING KEYCAP}'
 
 
 def num_as_letter(num: int) -> str:
     if 1 > num > 26:
-        raise TypeError(f"You must provide a number between 1 and 26 (amount of letters in the alphabet.)")
+        raise TypeError(f'You must provide a number between 1 and 26 (amount of letters in the alphabet.)')
 
     initial = ord('\N{REGIONAL INDICATOR SYMBOL LETTER A}')
     return chr(initial + num - 1)
@@ -319,7 +319,7 @@ class MSView(View):
     async def stop_game(self, interaction: discord.Interaction, button: discord.ui.Button[Self]):
         self.board.game_is_over = True
         self.stop()
-        await interaction.response.edit_message(content=f"Stopped by the user.\n{self.board.draw()}", view=None)
+        await interaction.response.edit_message(content=f'Stopped by the user.\n{self.board.draw()}', view=None)
 
     async def on_timeout(self):
         try:
