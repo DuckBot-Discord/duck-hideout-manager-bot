@@ -48,7 +48,8 @@ class LeaderboardView(View):
 
     async def interaction_check(self, interaction: discord.Interaction):
         if interaction.user != self.author:
-            return await interaction.response.send_message('This is not your view!', ephemeral=True)
+            await interaction.response.send_message('This is not your view!', ephemeral=True)
+            return False
 
         return True
 
@@ -122,7 +123,7 @@ class LeaderboardEmbed(discord.Embed):
             SELECT *, row_number() over() as rank FROM counts
         )
         SELECT * FROM ret
-        WHERE (message_count > (SELECT message_count FROM ret LIMIT 1 OFFSET 10))
+        WHERE (message_count > (SELECT message_count FROM ret LIMIT 1 OFFSET 12))
         OR author_id = $2
         """
         self._data: list[asyncpg.Record] = await self._pool.fetch(
@@ -134,6 +135,9 @@ class LeaderboardEmbed(discord.Embed):
         if not self._data:
             raise RuntimeError('No leaderboard can be generated.')
 
+        if len(self._data) == 13:
+            self._data.pop(11)
+
         for user in self._data:
             # Fetch the user
             pos_user = self._bot.get_user(user['author_id'])
@@ -141,9 +145,10 @@ class LeaderboardEmbed(discord.Embed):
             if not pos_user:
                 pos_user = await self._bot.fetch_user(user['author_id'])
 
-            self.add_field(
-                name=f'Rank {user["rank"]}', value=f'{pos_user}\n{user["message_count"]:,} messages', inline=False
-            )
+            badge = ''
+            if pos_user == self._creator:
+                badge = '⭐ '
+            self.add_field(name=f'{badge}Rank {user["rank"]}', value=f'{pos_user}\n{user["message_count"]:,} messages')
 
         return self
 
