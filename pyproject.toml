@@ -17,9 +17,12 @@ reportDuplicateImport = "error"
 reportUntypedFunctionDecorator = "error"
 reportUnnecessaryTypeIgnoreComment = "warning"
 reportImportCycles = false
-[tool.black]
+
+[tool.ruff]
 line-length = 125
-skip-string-normalization = true
+
+[tool.ruff.format]
+quote-style = "preserve"
 
 [tool.isort]
 profile = "black"

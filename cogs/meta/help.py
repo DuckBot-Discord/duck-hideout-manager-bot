@@ -86,7 +86,7 @@ class Help(HideoutCog):
         )
         embed.add_field(
             name='\N{BLACK QUESTION MARK ORNAMENT} Getting Help',
-            value=("Use the `-help <entry>` command to get help on a\n" "specific command, category or topic."),
+            value=("Use the `-help <entry>` command to get help on a\nspecific command, category or topic."),
             inline=False,
         )
         query = """
@@ -95,7 +95,7 @@ class Help(HideoutCog):
         """
         if ctx.guild:
             topics: list[str] = await self.bot.pool.fetchval(query, ctx.guild.id)
-            joined = f"__{human_join(topics, delim='__, __', final='__ or __', spaces=False)}__"
+            joined = (f"__{human_join(topics, delim='__, __', final='__ or __', spaces=False, width=65)}__",)
             embed.add_field(
                 name='\N{GLOWING STAR} Topics',
                 value=f"Handwritten guides by our moderation team.\n{joined}",
@@ -115,7 +115,7 @@ class Help(HideoutCog):
             commands = await self.filter_commands(ctx, cog.get_commands())
             if not commands:
                 continue
-            joined = f"{human_join(self.commands_to_str(commands), final='and')}"
+            joined = f"{human_join(self.commands_to_str(commands), final='and', width=55)}"
             embed.add_field(
                 name=f'{name.title()}',
                 value=f"{joined}",
@@ -133,14 +133,16 @@ class Help(HideoutCog):
             embed.color = self.bot.color
         await ctx.send(topic.content, embed=embed)
 
-    async def format_command(self, ctx: HideoutContext, command: commands.Command[Any, ..., Any], x: bool = False) -> str:
+    async def format_command(
+        self, ctx: HideoutContext, command: commands.Command[Any, ..., Any], check_permissions: bool = False
+    ) -> str:
         prefix = ''
         if isinstance(command, (commands.HybridCommand, commands.HybridGroup)):
             if command.with_app_command and not getattr(command, 'commands', None):
                 prefix = '[/]'
 
         lock = ''
-        if x:
+        if check_permissions:
             try:
                 can_run = await command.can_run(ctx)
             except commands.CommandError:
@@ -187,7 +189,7 @@ class Help(HideoutCog):
     async def command_tree(
         self, ctx: HideoutContext, command: commands.Group[Any, ..., Any] | commands.Command[Any, ..., Any], level: int = 0
     ) -> list[str]:
-        lines = [' ' * level * self.indent + await self.format_command(ctx, command, x=True)]
+        lines = [' ' * level * self.indent + await self.format_command(ctx, command, check_permissions=True)]
         if isinstance(command, commands.Group):
             for command in await self.filter_commands(ctx, command.commands, verify_checks=False):
                 lines.extend(await self.command_tree(ctx, command, level=level + 1))

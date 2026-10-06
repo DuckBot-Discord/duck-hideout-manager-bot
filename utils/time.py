@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import datetime
 import re
+from textwrap import wrap
 from typing import TYPE_CHECKING, Any, Callable, Optional, Sequence, Tuple, Type, TypeVar, Union
 
 import discord.utils
@@ -283,7 +284,13 @@ class plural:
         return f'{v} {singular}'
 
 
-def human_join(seq: Sequence[str], delim: str = ', ', final: str = 'or', spaces: bool = True) -> str:
+def human_join(
+    seq: Sequence[str],
+    delim: str = ', ',
+    final: str = 'or',
+    spaces: bool = True,
+    width: int | None = None,
+) -> str:
     size = len(seq)
     if size == 0:
         return ''
@@ -296,7 +303,10 @@ def human_join(seq: Sequence[str], delim: str = ', ', final: str = 'or', spaces:
     if size == 2:
         return f'{seq[0]}{final}{seq[1]}'
 
-    return delim.join(seq[:-1]) + f'{final}{seq[-1]}'
+    if width:
+        return '\n'.join(wrap(delim.join(seq[:-1]) + f'{final}{seq[-1]}', width=width))
+    else:
+        return delim.join(seq[:-1]) + f'{final}{seq[-1]}'
 
 
 def human_timedelta(

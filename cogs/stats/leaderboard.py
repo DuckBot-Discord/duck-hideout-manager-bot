@@ -4,7 +4,7 @@ import asyncio
 import datetime
 import io
 import logging
-from typing import NamedTuple
+from typing import NamedTuple, Optional, Literal
 
 import asyncpg
 import discord
@@ -191,18 +191,25 @@ class LeaderboardCog(HideoutCog):
         return discord.File(buffer, filename="test.png")
 
     @commands.command(name='message-stats')
-    async def message_stats(self, ctx: commands.Context, *users: discord.Member | discord.User):
+    async def message_stats(
+        self,
+        ctx: commands.Context,
+        precision: Optional[Literal["day", "week", "month"]] = "week",
+        *users: discord.Member | discord.User,
+    ):
         """Sends message stats for a user.
 
         Parameters
         ----------
+        precision: Optional[str]
+            Precision for date aggregation. day/week/month
         users: discord.Member
             The users (max of 10) to query. Defaults to you.
         """
         users_as_a_set = {*users[:10]} if users else {ctx.author}
-        query = """
+        query = f"""
             SELECT 
-                DATE_TRUNC('day', created_at) as day, 
+                DATE_TRUNC('{precision}', created_at) as day, 
                 COUNT(*) as message_count
             FROM message_info
             WHERE author_id = $1
